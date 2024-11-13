@@ -1,3 +1,4 @@
+import openai
 import os
 import argparse
 import json
@@ -17,6 +18,85 @@ from generators.model import model_factory  # Adjust this import based on your a
 import logging
 import json
 from datetime import datetime
+from openai import OpenAI
+
+client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))  # Ensure this is imported
+import numpy as np
+import random
+
+# Set the OpenAI API key
+openai.api_key = os.getenv('OPENAI_API_KEY')
+
+# New functions added below
+def identify_independent_themes(problem_description, num_themes=5):
+    prompt = f"Identify the {num_themes} most independent themes in the following problem description. Provide them as a numbered list:\n\n{problem_description}"
+    try:
+        response = client.chat.completions.create(model="gpt-4",  # or "gpt-3.5-turbo" if you don't have access to GPT-4
+        messages=[
+            {"role": "system", "content": "You are an expert at identifying themes."},
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=150,
+        n=1,
+        temperature=0.5)
+        themes_text = response.choices[0].message.content.strip()
+        themes = parse_themes_from_response(themes_text)
+        return themes
+    except Exception as e:
+        print(f"Error identifying themes: {e}")
+        return []
+
+def parse_themes_from_response(response_text):
+    """
+    Parses the LLM response to extract a list of themes.
+    """
+    themes = []
+    lines = response_text.strip().split('\n')
+    for line in lines:
+        if line.strip():
+            # Remove numbering if present
+            theme = line.lstrip('0123456789.- ').strip()
+            if theme:
+                themes.append(theme)
+    return themes
+
+def rank_themes(themes, problem_description):
+    """
+    Ranks the themes in order of relevance to the problem space from -1 to 1.
+    """
+    ranked_themes = []
+    for theme in themes:
+        prompt = (
+            f"On a scale from -1 to 1, how relevant is the theme '{theme}' "
+            f"to the following problem description?\n\n{problem_description}\n\n"
+            f"Provide only the numerical score."
+        )
+        try:
+            response = client.chat.completions.create(model="gpt-4",  # or "gpt-3.5-turbo"
+            messages=[
+                {"role": "system", "content": "You are an expert at ranking themes."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=5,
+            n=1,
+            temperature=0)
+            score_str = response.choices[0].message.content.strip()
+            score = float(score_str)
+        except (ValueError, Exception) as e:
+            print(f"Error ranking theme '{theme}': {e}")
+            score = 0.0  # Default score if parsing fails
+        ranked_themes.append((theme, score))
+    # Sort themes based on the score in descending order
+    ranked_themes.sort(key=lambda x: x[1], reverse=True)
+    return ranked_themes
+
+def print_ranked_themes(ranked_themes):
+    """
+    Prints the ranked themes and their relevance scores.
+    """
+    print("\nRanked Themes:")
+    for idx, (theme, score) in enumerate(ranked_themes, start=1):
+        print(f"{idx}. Theme: '{theme}' with relevance score: {score}")
 
 class JSONFormatter(logging.Formatter):
     def format(self, record):
@@ -126,7 +206,7 @@ def save_results(results, output_path):
 def main(args):
     logger.info(f"Number of agents specified: {args.num_agents}")
     logger.debug(f"Initializing MAFIM with {args.num_agents} agents")
-    
+
     try:
         model = model_factory(args.model)
         print(f"Model created successfully: {type(model)}")
@@ -134,7 +214,32 @@ def main(args):
         print(f"Error creating model: {str(e)}")
         return
 
+    # Load dataset
     dataset = load_dataset(args.dataset_path)
+    logger.info(f"Dataset loaded with {len(dataset)} items")
+
+    # Extract problem descriptions
+    problem_descriptions = "\n".join([
+        item.get('prompt', '') for item in dataset if 'prompt' in item
+    ])
+
+    if not problem_descriptions.strip():
+        print("No problem descriptions found in the dataset.")
+        return
+
+    # Step 1: Identify Independent Themes
+    themes = identify_independent_themes(problem_descriptions)
+    if not themes or len(themes) < 5:
+        print("Less than 5 themes identified.")
+        return
+
+    # Step 2: Rank Themes
+    ranked_themes = rank_themes(themes, problem_descriptions)
+
+    # Step 3: Print Ranked Themes
+    print_ranked_themes(ranked_themes)
+
+    # Proceed with existing functionalities
     results = run_multi_agent_mcts(
         dataset=dataset,
         model=model,
@@ -143,6 +248,8 @@ def main(args):
         num_agents=args.num_agents,
         num_categories=args.num_categories
     )
+
+    # Save results
     save_results(results, args.output_path)
 
     print(f"Processed {len(results)} items.")
