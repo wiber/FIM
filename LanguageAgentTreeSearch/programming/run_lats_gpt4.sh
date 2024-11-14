@@ -1,9 +1,11 @@
 #!/bin/bash
 
+# Activate the virtual environment
+source venv/bin/activate
+
 # Echo the API key (be careful not to share this output)
 echo "OPENAI_API_KEY: ${OPENAI_API_KEY:0:5}...${OPENAI_API_KEY: -5}"
 
-#!/bin/bash
 # Run the Python script
 python main.py \
   --run_name "test_run" \

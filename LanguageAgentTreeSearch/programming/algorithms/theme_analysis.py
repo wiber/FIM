@@ -1,39 +1,92 @@
 # LanguageAgentTreeSearch/programming/algorithms/theme_analysis.py
+import openai
+import os
 
-from openai import OpenAI
+import time
+import datetime
+import logging
 
-client = OpenAI()
 import numpy as np
 import random
 
 # Ensure OpenAI API key is set elsewhere in your project setup
 # openai.api_key = os.getenv('OPENAI_API_KEY')
 
-def identify_independent_themes(problem_description, num_themes=5):
+def identify_independent_themes(problem_description, num_themes=5, depth=0, max_depth=2):
     """
-    Identifies the most independent themes in the problem space using the LLM.
+    Recursively identifies the most independent themes in the problem space using the LLM.
+
+    Parameters:
+    - problem_description (str): The text describing the problem.
+    - num_themes (int): Number of themes to identify at each level.
+    - depth (int): Current recursion depth.
+    - max_depth (int): Maximum depth of recursion.
+
+    Returns:
+    - list: A list of themes and their subthemes.
     """
-    prompt = f"Identify the {num_themes} most independent themes in the following problem description. Provide them as a numbered list:\n\n{problem_description}"
-    response = client.completions.create(engine="text-davinci-003",
-    prompt=prompt,
-    max_tokens=150,
-    n=1,
-    temperature=0.5)
-    themes_text = response.choices[0].text.strip()
-    themes = parse_themes_from_response(themes_text)
-    return themes
+    if depth > max_depth:
+        return []
+
+    prompt = f"Identify the {num_themes} most independent themes in the following description. Provide them as a numbered list:\n\n{problem_description}"
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are an assistant that identifies themes."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=150,
+            temperature=0.7,
+        )
+        themes = parse_themes_from_response(response['choices'][0]['message']['content'])
+        
+        # Recursively identify subthemes for each theme
+        all_themes = []
+        for theme in themes:
+            subthemes = identify_independent_themes(theme, num_themes=num_themes, depth=depth+1, max_depth=max_depth)
+            all_themes.append({
+                'theme': theme,
+                'subthemes': subthemes
+            })
+        return all_themes
+    except Exception as e:
+        print(f"Error identifying themes: {e}")
+        return []
+
+def generate_subcategories(theme, num_subcategories=5):
+    """
+    Generates subcategories for a given theme using the LLM.
+    """
+    prompt = f"For the theme '{theme}', identify {num_subcategories} subcategories. Provide them as a numbered list:"
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are an assistant that identifies subcategories."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=150,
+            temperature=0.7,
+        )
+        subcategories = parse_themes_from_response(response['choices'][0]['message']['content'])
+        return subcategories
+    except Exception as e:
+        print(f"Error generating subcategories for '{theme}': {e}")
+        return []
 
 def parse_themes_from_response(response_text):
     """
-    Parses the LLM response to extract a list of themes.
+    Parses the themes from the response text into a list.
     """
     themes = []
-    lines = response_text.split('\n')
-    for line in lines:
+    for line in response_text.strip().split('\n'):
         if line.strip():
             # Remove numbering if present
-            theme = line.lstrip('0123456789.- ').strip()
-            themes.append(theme)
+            line = line.strip()
+            if '.' in line:
+                line = line.split('.', 1)[1].strip()
+            themes.append(line)
     return themes
 
 def rank_themes(themes, problem_description):
@@ -43,12 +96,16 @@ def rank_themes(themes, problem_description):
     ranked_themes = []
     for theme in themes:
         prompt = f"On a scale from -1 to 1, how relevant is the theme '{theme}' to the following problem description?\n\n{problem_description}\n\nProvide only the numerical score."
-        response = client.completions.create(engine="text-davinci-003",
-        prompt=prompt,
-        max_tokens=5,
-        n=1,
-        temperature=0)
-        score_str = response.choices[0].text.strip()
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are an assistant that evaluates theme relevance."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=5,
+            temperature=0,
+        )
+        score_str = response['choices'][0]['message']['content'].strip()
         try:
             score = float(score_str)
         except ValueError:
@@ -66,12 +123,16 @@ def initialize_symmetric_matrix(themes):
     for i in range(n):
         for j in range(i+1, n):
             prompt = f"On a scale from 0 to 1, how strongly is the theme '{themes[i]}' related to the theme '{themes[j]}'? Provide only the numerical score."
-            response = client.completions.create(engine="text-davinci-003",
-            prompt=prompt,
-            max_tokens=5,
-            n=1,
-            temperature=0)
-            weight_str = response.choices[0].text.strip()
+            response = openai.ChatCompletion.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": "You are an assistant that evaluates theme relationships."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=5,
+                temperature=0,
+            )
+            weight_str = response['choices'][0]['message']['content'].strip()
             try:
                 weight = float(weight_str)
             except ValueError:
@@ -132,3 +193,9 @@ def sort_submatrix(matrix, themes, start_index=0):
 
     # Recursively sort the next submatrix
     return sort_submatrix(matrix, themes, start_index=k+1)
+
+def generate_timestamp():
+    return datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+# Example usage:
+timestamp = generate_timestamp()
