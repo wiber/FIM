@@ -64,182 +64,165 @@ def parse_themes_from_response(response_text):
             themes.append(line)
     return themes
 
-def identify_independent_themes(problem_description, num_themes=5):
-    prompt = f"Identify the {num_themes} most independent themes in the following problem description. Provide them as a numbered list:\n\n{problem_description}"
-    response = openai_completion_with_retry(prompt, model="gpt-4")
-    if response:
-        # Extract the content from the first choice
-        response_text = response['choices'][0]['message']['content']
-        themes = parse_themes_from_response(response_text)
-        return themes
+def rank_themes(themes, problem_description):
+    """
+    Ranks the themes in order of relevance to the problem space from -1 to 1.
+    """
+    ranked_themes = []
+    for theme in themes:
+        prompt = (
+            f"On a scale from -1 to 1, how relevant is the theme '{theme}' "
+            f"to the following problem description?\n\n{problem_description}\n\n"
+            f"Provide only the numerical score."
+        )
+        try:
+            response = client.chat.completions.create(model="gpt-4",  # or "gpt-3.5-turbo"
+            messages=[
+                {"role": "system", "content": "You are an expert at ranking themes."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=5,
+            n=1,
+            temperature=0)
+            score_str = response.choices[0].message.content.strip()
+            score = float(score_str)
+        except (ValueError, Exception) as e:
+            print(f"Error ranking theme '{theme}': {e}")
+            score = 0.0  # Default score if parsing fails
+        ranked_themes.append((theme, score))
+    # Sort themes based on the score in descending order
+    ranked_themes.sort(key=lambda x: x[1], reverse=True)
+    return ranked_themes
+
+def print_ranked_themes(ranked_themes):
+    """
+    Prints the ranked themes and their relevance scores.
+    """
+    print("\nRanked Themes:")
+    for idx, (theme, score) in enumerate(ranked_themes, start=1):
+        print(f"{idx}. Theme: '{theme}' with relevance score: {score}")
+
+class JSONFormatter(logging.Formatter):
+    def format(self, record):
+        log_entry = {
+            'timestamp': datetime.utcnow().isoformat(),
+            'level': record.levelname,
+            'message': record.getMessage(),
+        }
+        return json.dumps(log_entry)
+
+def setup_logging(output_file):
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    console_handler.setFormatter(console_formatter)
+    logger.addHandler(console_handler)
+
+    # File handler with JSON formatting
+    file_handler = logging.FileHandler(output_file, mode='w')
+    file_handler.setLevel(logging.DEBUG)
+    file_formatter = JSONFormatter()
+    file_handler.setFormatter(file_formatter)
+    logger.addHandler(file_handler)
+
+    return logger
+
+# Use this logger instead of print statements
+logger = setup_logging('output.json')
+
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--run_name", type=str, help="The name of the run")
+    parser.add_argument("--root_dir", type=str,
+                        help="The root logging directory", default="root")
+    parser.add_argument("--dataset_path", type=str,
+                        help="The path to the benchmark dataset", default="root")
+    parser.add_argument("--strategy", type=str,
+                        help="Strategy: `simple`, `reflexion`")
+    parser.add_argument("--language", type=str, help="Strategy: `py` or `rs`")
+    parser.add_argument(
+        "--model", type=str, help="OpenAI models only for now. For best results, use GPT-4")
+    parser.add_argument("--pass_at_k", type=int,
+                        help="Pass@k metric", default=1)
+    parser.add_argument("--max_iters", type=int,
+                        help="The maximum number of self-improvement iterations", default=10)
+    parser.add_argument("--expansion_factor", type=int,
+                        help="The expansion factor for the reflexion UCS and A* strategy", default=3)
+    parser.add_argument("--number_of_tests", type=int,
+                        help="The maximum number of internal tests for each question", default=6)
+    parser.add_argument("--is_leetcode", action='store_true',
+                        help="To run the leetcode benchmark")  # Temporary
+
+    parser.add_argument("--verbose", action='store_true',
+                        help="To print live logs")
+    # TODO: implement this
+    # parser.add_argument("--is_resume", action='store_true', help="To resume run")
+    # parser.add_argument("--resume_dir", type=str, help="If resume, the logging directory", default="")
+    parser.add_argument("--output_path", type=str, required=True)  # Add this line
+    parser.add_argument('--num_agents', type=int, default=1, help='Number of agents to use')
+    parser.add_argument('--num_categories', type=int, default=10, help='Number of categories for FIM')
+    args = parser.parse_args()
+    return args
+
+
+def strategy_factory(strategy: str):
+    def kwargs_wrapper_gen(func, delete_keys=[]):
+        def kwargs_wrapper(**kwargs):
+            for key in delete_keys:
+                del kwargs[key]
+            return func(**kwargs)
+        return kwargs_wrapper
+
+    if strategy == "simple":
+        return kwargs_wrapper_gen(run_simple, delete_keys=["expansion_factor", "max_iters"])
+    elif strategy == "reflexion":
+        return kwargs_wrapper_gen(run_reflexion, delete_keys=["expansion_factor"])
+    elif strategy == "mcts":
+        return kwargs_wrapper_gen(run_mcts, delete_keys=["expansion_factor"])
+    elif strategy == "dfs":
+        return kwargs_wrapper_gen(run_dfs, delete_keys=["expansion_factor"])
+    elif strategy == "immediate-reflexion":
+        return kwargs_wrapper_gen(run_immediate_reflexion, delete_keys=["expansion_factor"])
+    elif strategy == "immediate-refinement":
+        return kwargs_wrapper_gen(run_immediate_refinement, delete_keys=["expansion_factor"])
+    elif strategy == "test-acc":
+        return kwargs_wrapper_gen(run_test_acc, delete_keys=["expansion_factor", "max_iters"])
     else:
-        print("Failed to identify themes.")
-        return []
+        raise ValueError(f"Strategy `{strategy}` is not supported")
 
-def generate_subcategories(theme, num_subcategories=5):
-    prompt = f"For the theme '{theme}', identify {num_subcategories} subcategories. Provide them as a numbered list:"
-    response = openai_completion_with_retry(prompt, model="gpt-4")
-    if response:
-        response_text = response['choices'][0]['message']['content']
-        subcategories = parse_themes_from_response(response_text)
-        return subcategories
-    else:
-        print(f"Failed to generate subcategories for theme: {theme}")
-        return []
 
-def visualize_matrix(matrix, labels):
-    plt.figure(figsize=(10, 10))
-    plt.imshow(matrix, cmap='viridis', interpolation='nearest')
-    plt.colorbar()
-    plt.xticks(ticks=range(len(labels)), labels=labels, rotation='vertical')
-    plt.yticks(ticks=range(len(labels)), labels=labels)
-    plt.tight_layout()
-    plt.show()
+def load_dataset(dataset_path):
+    with open(dataset_path, 'r') as f:
+        return [json.loads(line) for line in f]
 
-def generate_timestamp():
-    return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
-def build_theme_matrix(themes):
-    """
-    Builds a symmetric matrix representing themes and their relationships.
+def save_results(results, output_path):
+    with open(output_path, 'w') as f:
+        for result in results:
+            json.dump(result, f)
+            f.write('\n')
 
-    Parameters:
-    - themes (list): Nested list of themes and subthemes.
-
-    Returns:
-    - matrix (np.ndarray): The constructed theme relationship matrix.
-    - theme_list (list): Flattened list of themes in order.
-    """
-    theme_list = []
-    parent_child_pairs = []
-
-    def extract_themes(theme_dict, parent=None):
-        theme = theme_dict['theme']
-        theme_list.append(theme)
-        if parent is not None:
-            parent_child_pairs.append((parent, theme))
-        for subtheme in theme_dict.get('subthemes', []):
-            extract_themes(subtheme, parent=theme)
-
-    for theme_dict in themes:
-        extract_themes(theme_dict)
-
-    n = len(theme_list)
-    matrix = np.zeros((n, n))
-
-    # Populate the matrix based on parent-child relationships
-    index_map = {theme: idx for idx, theme in enumerate(theme_list)}
-    for parent, child in parent_child_pairs:
-        i = index_map[parent]
-        j = index_map[child]
-        weight = 1  # Assign a default weight or calculate based on relevance
-        matrix[i, j] = weight
-        matrix[j, i] = weight  # Ensure symmetry
-
-    return matrix, theme_list
-
-def symmetrical_matrix_transformation(matrix, origin_index, depth=0, max_depth=2, cutoff_ratio=0.2):
-    n = len(matrix)
-    if depth > max_depth:
-        return matrix
-
-    logging.info(f"Recursion Depth {depth}: Moving origin index {origin_index} to (0,0)")
-    matrix = swap_rows_columns(matrix, 0, origin_index)
-
-    # Rank and filter significant interactions
-    significant_matrix = rank_significant_interactions(matrix, theme_list, cutoff_ratio=cutoff_ratio)
-    
-    sorted_indices = [0]
-    unsorted_indices = list(range(1, n))
-
-    while unsorted_indices:
-        last_sorted = sorted_indices[-1]
-        # Consider only significant connections for sorting
-        unsorted_indices.sort(key=lambda x: significant_matrix[last_sorted][x], reverse=True)
-
-        next_index = unsorted_indices.pop(0)
-        if significant_matrix[last_sorted][next_index] == 0:
-            logging.info(f"Recursion Depth {depth}: No more significant connections.")
-            break
-
-        logging.info(f"Recursion Depth {depth}: Swapping index {len(sorted_indices)} with {next_index} (Weight: {significant_matrix[last_sorted][next_index]})")
-        matrix = swap_rows_columns(matrix, len(sorted_indices), next_index)
-
-        sorted_indices.append(next_index)
-        # Recursively sort the submatrix starting at the newly added index
-        matrix = recursive_sort_submatrix(matrix, len(sorted_indices) - 1, n, depth + 1, max_depth)
-
-    return matrix
-
-def recursive_sort_submatrix(matrix, start_idx, n, depth, max_depth):
-    if depth > max_depth or start_idx >= n - 1:
-        return matrix
-
-    logging.info(f"Recursion Depth {depth}: Sorting submatrix starting at index {start_idx}")
-    unsorted_indices = list(range(start_idx + 1, n))
-    unsorted_indices.sort(key=lambda x: matrix[start_idx][x], reverse=True)
-
-    for idx in unsorted_indices:
-        if matrix[start_idx][idx] > 0:
-            logging.info(f"Recursion Depth {depth}: Swapping index {start_idx + 1} with {idx}")
-            matrix = swap_rows_columns(matrix, start_idx + 1, idx)
-            matrix = recursive_sort_submatrix(matrix, start_idx + 1, n, depth + 1, max_depth)
-        else:
-            logging.info(f"Recursion Depth {depth}: No significant connection for index {idx}")
-            break
-
-    return matrix
-
-def swap_rows_columns(matrix, i, j):
-    matrix[[i, j], :] = matrix[[j, i], :]
-    matrix[:, [i, j]] = matrix[:, [j, i]]
-    return matrix
-
-def rank_significant_interactions(matrix, theme_list, cutoff_ratio=0.2):
-    """
-    Uses the LLM to rank interactions and identify significant ones based on the cutoff ratio.
-
-    Parameters:
-    - matrix (np.ndarray): The relationship matrix.
-    - theme_list (list): List of theme names.
-    - cutoff_ratio (float): Ratio to determine the top significant interactions.
-
-    Returns:
-    - significant_matrix (np.ndarray): Matrix with only significant interactions.
-    """
-    n = len(matrix)
-    significant_matrix = np.zeros_like(matrix)
-    
-    for i in range(n):
-        interactions = list(enumerate(matrix[i]))
-        # Exclude self-interaction
-        interactions = [ (j, weight) for j, weight in interactions if j != i ]
-        # Sort interactions by weight descending
-        interactions.sort(key=lambda x: x[1], reverse=True)
-        # Determine cutoff
-        cutoff = max(1, int(len(interactions) * cutoff_ratio))
-        top_interactions = interactions[:cutoff]
-        
-        for j, weight in top_interactions:
-            significant_matrix[i][j] = weight
-            significant_matrix[j][i] = weight  # Maintain symmetry
-
-    return significant_matrix
 
 def main(args):
     if not openai.api_key:
         print("Error: OPENAI_API_KEY is not set.")
         return
 
-    # Example problem description; replace with actual input as needed
-    problem_description = """
-    We are developing a platform to help individuals and AIs overcome information overload by organizing and prioritizing personal and professional goals using innovative AI algorithms. The origin node is interpretability - think of it as the map that lets you save on your electricity bill because you can understand where what your are looking for is located, which tradeoffs are being made so you can make informed decisions about them etc. Just as humans can reason about a map and we'd expect you to find what you are looking for more efficiently we also expect that watching your eyes glide across the map tells us about how you think about the process. In short you get efficiency from the map and intepretability as a byproduct.
-    """
+    # Load dataset
+    dataset = load_dataset(args.dataset_path)
+    logger.info(f"Dataset loaded with {len(dataset)} items")
 
-    # Step 1: Identify independent themes
-    themes = identify_independent_themes(problem_description, num_themes=5)
-    if not themes:
-        print("No themes identified.")
+    # Extract problem descriptions
+    problem_descriptions = "\n".join([
+        item.get('prompt', '') for item in dataset if 'prompt' in item
+    ])
+
+    if not problem_descriptions.strip():
+        print("No problem descriptions found in the dataset.")
         return
 
     print("Identified Themes:")
