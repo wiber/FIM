@@ -220,9 +220,7 @@ def rank_significant_interactions(matrix, theme_list, cutoff_ratio=0.2):
         cutoff = max(1, int(len(interactions) * cutoff_ratio))
         top_interactions = interactions[:cutoff]
         
-        for j, weight in top_interactions:
-            significant_matrix[i][j] = weight
-            significant_matrix[j][i] = weight  # Maintain symmetry
+
 
     return significant_matrix
 
