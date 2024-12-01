@@ -76,6 +76,7 @@ def identify_independent_themes(problem_description, num_themes=5):
         print("Failed to identify themes.")
         return []
 
+
 def generate_subcategories(theme, num_subcategories=5):
     prompt = f"For the theme '{theme}', identify {num_subcategories} subcategories. Provide them as a numbered list:"
     response = openai_completion_with_retry(prompt, model="gpt-4")
@@ -223,6 +224,31 @@ def rank_significant_interactions(matrix, theme_list, cutoff_ratio=0.2):
 
 
     return significant_matrix
+=======
+
+def generate_subcategories(theme, num_subcategories=5):
+    prompt = f"For the theme '{theme}', identify {num_subcategories} subcategories. Provide them as a numbered list:"
+    response = openai_completion_with_retry(prompt, model="gpt-4")
+    if response:
+        response_text = response['choices'][0]['message']['content']
+        subcategories = parse_themes_from_response(response_text)
+        return subcategories
+    else:
+        print(f"Failed to generate subcategories for theme: {theme}")
+        return []
+
+def visualize_matrix(matrix, labels):
+    plt.figure(figsize=(10, 10))
+    plt.imshow(matrix, cmap='viridis', interpolation='nearest')
+    plt.colorbar()
+    plt.xticks(ticks=range(len(labels)), labels=labels, rotation='vertical')
+    plt.yticks(ticks=range(len(labels)), labels=labels)
+    plt.tight_layout()
+    plt.show()
+
+def generate_timestamp():
+    return datetime.datetime.now(datetime.timezone.utc).isoformat()
+
 
 def main(args):
     if not openai.api_key:
@@ -231,6 +257,7 @@ def main(args):
 
     # Example problem description; replace with actual input as needed
     problem_description = """
+
     We are developing a platform to help individuals and AIs overcome information overload by organizing and prioritizing personal and professional goals using innovative AI algorithms. The origin node is interpretability - think of it as the map that lets you save on your electricity bill because you can understand where what your are looking for is located, which tradeoffs are being made so you can make informed decisions about them etc. Just as humans can reason about a map and we'd expect you to find what you are looking for more efficiently we also expect that watching your eyes glide across the map tells us about how you think about the process. In short you get efficiency from the map and intepretability as a byproduct.
     """
 
@@ -259,6 +286,37 @@ def main(args):
     if not themes_dict:
         print("No subcategories generated. Exiting.")
         return
+
+=======
+    We are developing a platform to help individuals overcome information overload by organizing and prioritizing personal and professional goals using innovative AI algorithms.
+    """
+
+    # Step 1: Identify independent themes
+    themes = identify_independent_themes(problem_description, num_themes=5)
+    if not themes:
+        print("No themes identified.")
+        return
+
+    print("Identified Themes:")
+    for theme in themes:
+        print(f"- {theme}")
+
+    # Step 2: Generate subcategories for each theme
+    themes_dict = {}
+    for theme in themes:
+        subcategories = generate_subcategories(theme, num_subcategories=5)
+        if not subcategories:
+            logging.warning(f"No subcategories identified for theme '{theme}'.")
+            continue
+        themes_dict[theme] = subcategories
+        logging.info(f"\nSubcategories for '{theme}':")
+        for subcat in subcategories:
+            logging.info(f"  - {subcat}")
+
+    if not themes_dict:
+        print("No subcategories generated. Exiting.")
+        return
+
 
     # Step 3: Build the Fractal Identity Matrix
     fim = FractalIdentityMatrix(themes_dict)

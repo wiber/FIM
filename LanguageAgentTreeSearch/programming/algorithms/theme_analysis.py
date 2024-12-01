@@ -25,10 +25,12 @@ def identify_independent_themes(problem_description, num_themes=5, depth=0, max_
     Returns:
     - list: A list of themes and their subthemes.
     """
+
     if depth > max_depth:
         return []
 
     prompt = f"Identify the {num_themes} most independent themes in the following description. Provide them as a numbered list:\n\n{problem_description}"
+
     try:
         response = openai.ChatCompletion.create(
             model="gpt-4",
@@ -40,6 +42,7 @@ def identify_independent_themes(problem_description, num_themes=5, depth=0, max_
             temperature=0.7,
         )
         themes = parse_themes_from_response(response['choices'][0]['message']['content'])
+
         
         # Recursively identify subthemes for each theme
         all_themes = []
@@ -50,6 +53,7 @@ def identify_independent_themes(problem_description, num_themes=5, depth=0, max_
                 'subthemes': subthemes
             })
         return all_themes
+
     except Exception as e:
         print(f"Error identifying themes: {e}")
         return []
@@ -198,6 +202,7 @@ def generate_timestamp():
     return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
 # Example usage:
+
 timestamp = generate_timestamp()
 
 def rank_theme_interactions(theme, subtheme, cutoff_ratio=0.2, num_interactions=None):
@@ -400,3 +405,5 @@ def visualize_colored_matrix(self, matrix, theme_list, title="Fractal Identity M
     except UserWarning as e:
         logging.warning(f"Tight layout not applied: {e}")
     plt.show()
+=======
+timestamp = generate_timestamp()
