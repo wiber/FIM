@@ -30,223 +30,241 @@ def openai_chat_completion(prompt, model="gpt-4", temperature=0.7, max_tokens=30
 # ------------------------------------------------------------------
 # Step 1: Ask the LLM for top-level categories
 # ------------------------------------------------------------------
-def get_top_level_categories(description, num_categories=5):
-    prompt_content = (
-        f"Given this context:\n\n{description}\n\n"
-        f"Return exactly {num_categories} major categories in valid JSON array form, e.g.:\n"
-        '["Category1", "Category2", ..., "CategoryN"]\n'
-    )
-    raw_output = openai_chat_completion(prompt_content)
-    print("\n[LLM Response for Top-Level Categories]\n", raw_output)
-
-    try:
-        categories = json.loads(raw_output)
-        if not isinstance(categories, list):
-            categories = []
-    except:
-        categories = []
-    return categories
+def get_top_level_categories(description, num_categories=3):
+    """Mock function—replace or extend as needed."""
+    return [f"TopCat{i}" for i in range(1, num_categories + 1)]
 
 # ------------------------------------------------------------------
 # Step 2: Ask the LLM for subcategories of a given category
 # ------------------------------------------------------------------
-def get_subcategories(category, num_subcategories=3):
-    prompt_content = (
-        f"For the category '{category}', list {num_subcategories} subcategories in valid JSON, e.g.:\n"
-        '["Sub1", "Sub2", "Sub3"]\n'
-    )
-    raw_output = openai_chat_completion(prompt_content)
-    print(f"\n[LLM Response for Subcategories of '{category}']\n", raw_output)
-
-    try:
-        subs = json.loads(raw_output)
-        if not isinstance(subs, list):
-            subs = []
-    except:
-        subs = []
-    return subs
+def get_subcategories(cat_label, num_subcategories=2):
+    """Mock function—replace or extend as needed."""
+    return [f"{cat_label}_Sub{i}" for i in range(1, num_subcategories + 1)]
 
 # ------------------------------------------------------------------
-# For demonstration, a small "FractalSorter2D" class that can
-#  insert categories incrementally and do a final pivot-based sort.
+# For demonstration, a small "FractalSymSorter" class that can
+# sort a matrix using a symmetrical pivot-based approach.
 # ------------------------------------------------------------------
-class FractalSorter2D:
-    def __init__(self, prompt_text=None):
+class FractalSymSorter:
+    def __init__(self, matrix, labels=None):
         """
-        Optionally store a 'prompt_text' as the 'origin' label.
+        matrix: n x n adjacency (not necessarily perfectly symmetric, 
+                but we impose symmetrical ordering).
+        labels: optional labels for each row/column.
         """
-        self.prompt_text = prompt_text or "Origin"
-        self.labels = []
-        self.label_to_index = {}
-        self.matrix = None
+        self.matrix = np.array(matrix, dtype=float)
+        self.n = len(self.matrix)
+        if labels is None:
+            labels = [f"Item{i}" for i in range(self.n)]
+        self.labels = labels
 
-    def initialize_origin(self):
+    def fractal_sort_2d(self, start=0, end=None):
         """
-        Begin with a 1x1 matrix containing the 'origin' category (self.prompt_text).
-        """
-        origin_label = self.prompt_text
-        self.labels = [origin_label]
-        self.label_to_index = {origin_label: 0}
-        self.matrix = np.array([[1.0]])  # A single cell at diagonal=1.0
-        print(f"[Initialize Origin] '{origin_label}' as pivot.")
-        self._print_current_structure()
-
-    def insert_placeholder(self, placeholder_label="Placeholder"):
-        """
-        Optionally insert a dummy label (placeholder) so that
-        the pivot can later be pinned at index=2.
-        """
-        old_size = len(self.labels)
-        new_size = old_size + 1
-        self.labels.append(placeholder_label)
-        self.label_to_index[placeholder_label] = new_size - 1
-
-        new_matrix = np.zeros((new_size, new_size))
-        new_matrix[:old_size, :old_size] = self.matrix
-
-        for i in range(new_size):
-            new_matrix[i, i] = 1.0
-
-        # For demonstration, link placeholder to origin with a super-low weight
-        # so it doesn't significantly affect the fractal sort.
-        origin_idx = 0
-        placeholder_idx = self.label_to_index[placeholder_label]
-        new_matrix[origin_idx, placeholder_idx] = 0.01
-        new_matrix[placeholder_idx, origin_idx] = 0.01
-
-        self.matrix = new_matrix
-        print(f"[Insert Placeholder] '{placeholder_label}' inserted at index={placeholder_idx}.")
-        self._print_current_structure()
-
-    def insert_category_and_subs(self, category, sub_list):
-        """
-        Insert a new top-level category plus its subcategories.
-        Subcategories get a weight <= parent's weight.
-        """
-        insert_labels = [category] + sub_list
-        old_size = len(self.labels)
-        new_size = old_size + len(insert_labels)
-
-        for lbl in insert_labels:
-            self.labels.append(lbl)
-            self.label_to_index[lbl] = len(self.labels) - 1
-
-        new_matrix = np.zeros((new_size, new_size))
-        new_matrix[:old_size, :old_size] = self.matrix
-
-        for i in range(new_size):
-            new_matrix[i, i] = 1.0
-
-        # Link new category to Origin (index=0) with some decreasing base_weight
-        origin_index = 0
-        cat_idx = self.label_to_index[category]
-        base_weight = 0.8 - (len(self.labels) - 2) * 0.05
-        base_weight = max(base_weight, 0.3)
-        new_matrix[origin_index, cat_idx] = base_weight
-        new_matrix[cat_idx, origin_index] = base_weight
-        print(f"Link (Origin -> {category}) = {base_weight:.2f}")
-
-        # Subcategories get weights in [0.3..0.6] but <= base_weight
-        for sub in sub_list:
-            sub_idx = self.label_to_index[sub]
-            sub_weight = random.uniform(0.3, 0.6)
-            sub_weight = min(sub_weight, base_weight)
-            new_matrix[cat_idx, sub_idx] = sub_weight
-            new_matrix[sub_idx, cat_idx] = sub_weight
-            print(f"Sub ({category} -> {sub}) = {sub_weight:.2f}")
-
-        self.matrix = new_matrix
-        print(f"[Insert Category + Subs] Inserted '{category}' + {len(sub_list)} subcategories.")
-        self._print_current_structure()
-
-    def fractal_sort_2d(self, start=2, end=None):
-        """
-        2D pivot-based sorting, beginning at start=2 so:
-          - The 'Origin' at row/col=0 remains untouched,
-          - row/col=1 can remain a placeholder or dummy,
-          - The first pivot is row/col=2, ensuring top-cats appear in col>=3.
+        Symmetrical pivot-based sort for the submatrix [start..end-1],
+        with 'start' as the pivot row/column.
         """
         if end is None:
-            end = len(self.labels)
+            end = self.n
         if end - start <= 1:
-            return
+            return  # no submatrix to sort
 
-        pivot_index = start
-        sub_indices = list(range(start + 1, end))
-        def compare_func(idx):
-            return self.matrix[idx, pivot_index]
-        sub_indices.sort(key=compare_func, reverse=True)
+        pivot = start
 
-        block_order = [start] + sub_indices
-        new_order = list(range(0, start)) + block_order + list(range(end, len(self.labels)))
-        self._reorder_labels(new_order)
+        # 1) Sort the rows [start+1..end-1] by adjacency to pivot's column (descending).
+        row_indices = list(range(start + 1, end))
+        def pivot_adjacency(row_idx):
+            return self.matrix[row_idx, pivot]
+        row_indices.sort(key=pivot_adjacency, reverse=True)
 
-        boundary = self._find_boundary(start, end)
-        print(f"Pivot at row/col={start}, boundary={boundary}")
+        # 2) Reorder those rows, and reorder columns symmetrically.
+        self._reorder_rows(start+1, row_indices)
+        self._reorder_cols(start+1, row_indices)
 
-        self.fractal_sort_2d(boundary + 1, end)
+        # 3) Identify boundary where adjacency > threshold * pivot_value.
+        boundary = self._find_boundary(pivot, start+1, end)
 
-    def _reorder_labels(self, new_order):
-        current_labels = [self.labels[i] for i in new_order]
-        index_map = {old_idx: new_idx for new_idx, old_idx in enumerate(new_order)}
-        size = len(self.labels)
-        new_mat = np.zeros((size, size))
+        # 4) Recursively sort the pivot's sub-block [start+1..boundary].
+        self.fractal_sort_2d(start+1, boundary+1)
+        # 5) Recursively sort leftover [boundary+1..end].
+        self.fractal_sort_2d(boundary+1, end)
 
-        for old_r in range(size):
-            for old_c in range(size):
-                r = index_map[old_r]
-                c = index_map[old_c]
-                new_mat[r, c] = self.matrix[old_r, old_c]
-
-        self.labels = current_labels
-        self.label_to_index = {lbl: i for i, lbl in enumerate(self.labels)}
-        self.matrix = new_mat
-
-    def _find_boundary(self, start, end):
-        if start >= end:
-            return start
-        pivot_col = start
-        pivot_val = self.matrix[start, pivot_col]
-        threshold_factor = 0.4
-        boundary = start
-
-        for row_idx in range(start + 1, end):
-            val = self.matrix[row_idx, pivot_col]
-            if val >= threshold_factor * pivot_val:
-                boundary = row_idx
+    def _find_boundary(self, pivot, begin, end):
+        """
+        Returns the largest row i in [begin..end-1] such that
+        matrix[i, pivot] >= threshold * matrix[pivot, pivot].
+        """
+        pivot_val = self.matrix[pivot, pivot]
+        threshold = 0.4
+        boundary = pivot
+        for i in range(begin, end):
+            if self.matrix[i, pivot] >= threshold * pivot_val:
+                boundary = i
             else:
                 break
         return boundary
 
-    def _print_current_structure(self):
-        print("Current Labels:", self.labels)
-        n = len(self.labels)
-        limit = min(n, 5)
-        for i in range(limit):
-            row_vals = " ".join(f"{self.matrix[i,j]:.2f}" for j in range(limit))
-            print(f"  Row {i:2d}: {row_vals}")
+    def _reorder_rows(self, block_start, new_row_order):
+        """
+        Reorder the rows [block_start..block_start+len(new_row_order)-1]
+        to match new_row_order exactly.
+        """
+        full_indices = list(range(self.n))
+        full_indices[block_start:block_start + len(new_row_order)] = new_row_order
+        self._reindex(full_indices, axis='row')
+
+    def _reorder_cols(self, block_start, new_col_order):
+        """
+        Reorder columns symmetrically with the same ordering used for rows.
+        """
+        full_indices = list(range(self.n))
+        full_indices[block_start:block_start + len(new_col_order)] = new_col_order
+        self._reindex(full_indices, axis='col')
+
+    def _reindex(self, indices, axis='row'):
+        """
+        Reindex rows or columns of self.matrix according to 'indices',
+        and keep labels consistent for row reindexing.
+        """
+        if axis == 'row':
+            self.matrix = self.matrix[indices, :]
+            self.labels = [self.labels[i] for i in indices]
+        else:  # axis == 'col'
+            self.matrix = self.matrix[:, indices]
+
+    def show_matrix(self):
+        """
+        Print out the final matrix along with the label order.
+        """
+        print("\n=== Final Fractal-Sorted Matrix ===")
+        for i, lbl in enumerate(self.labels):
+            print(f"{i}: {lbl}")
+        for i, row in enumerate(self.matrix):
+            print(f"{i}: " + " ".join(f"{val:.2f}" for val in row))
+
+# ------------------------------------------------------------------
+# Manual incremental layout
+# ------------------------------------------------------------------
+class CustomPivotLayout:
+    """
+    Manual incremental layout:
+    - 'Origin' at row/col=0
+    - We start top-level categories at col=1 (each in the next_free_col)
+    - Subcategories appended immediately after all top-level categories
+    """
+    def __init__(self, origin_label="Origin"):
+        self.labels = [origin_label]
+        self.label_to_idx = {origin_label: 0}
+        self.matrix = np.array([[1.0]])
+        # Start from col=1 for the first top-level cat to avoid out-of-range issues
+        self.next_free_col = 1
+
+    def _move_label(self, old_idx, new_idx):
+        """
+        Symmetrically swap row+col: old_idx ↔ new_idx.
+        This ensures the label at old_idx is moved to new_idx in both rows and columns.
+        """
+        if old_idx == new_idx:
+            return
+
+        size = len(self.labels)
+        row_perm = list(range(size))
+        col_perm = list(range(size))
+
+        row_perm[old_idx], row_perm[new_idx] = row_perm[new_idx], row_perm[old_idx]
+        col_perm[old_idx], col_perm[new_idx] = col_perm[new_idx], col_perm[old_idx]
+
+        new_mat = np.zeros_like(self.matrix)
+        for r in range(size):
+            for c in range(size):
+                new_mat[r, c] = self.matrix[row_perm[r], col_perm[c]]
+        self.matrix = new_mat
+
+        new_labels = [self.labels[i] for i in row_perm]
+        self.labels = new_labels
+        self.label_to_idx = {lbl: i for i, lbl in enumerate(self.labels)}
+
+    def insert_top_cat(self, cat_label):
+        """
+        Insert a new top-level category at self.next_free_col without adding subcategories.
+        """
+        print(f"\n[Top-Level Insert] '{cat_label}' at col={self.next_free_col}")
+        old_size = len(self.labels)
+        new_size = old_size + 1
+
+        # Extend matrix & labels
+        self.labels.append(cat_label)
+        self.label_to_idx[cat_label] = len(self.labels) - 1
+
+        new_mat = np.zeros((new_size, new_size))
+        new_mat[:old_size, :old_size] = self.matrix
+        new_mat[-1, -1] = 1.0
+        self.matrix = new_mat
+
+        origin_idx = 0
+        cat_idx = self.label_to_idx[cat_label]
+        base_weight = 0.8
+        self.matrix[origin_idx, cat_idx] = base_weight
+        self.matrix[cat_idx, origin_idx] = base_weight
+
+        # Move the top-level cat to next_free_col
+        self._move_label(cat_idx, self.next_free_col)
+
+        # Advance next_free_col
+        self.next_free_col += 1
+
+    def insert_subcats(self, top_cat_label, subcats=None):
+        """
+        Insert subcategories for a given top-level category.
+        Subcategories are added as a contiguous sorted block immediately after all top-level categories.
+        """
+        if subcats is None:
+            subcats = []
+        print(f"\n[Subcategories Insert] for '{top_cat_label}'")
+        parent_idx = self.label_to_idx[top_cat_label]
+
+        # Determine the insertion point (after all top-level categories)
+        insertion_point = self.next_free_col
+
+        for subcat in subcats:
+            print(f"  Inserting subcategory '{subcat}' at position {insertion_point}")
+            self.labels.append(subcat)
+            self.label_to_idx[subcat] = insertion_point
+
+            # Extend the matrix
+            self.matrix = np.pad(self.matrix, ((0,1),(0,1)), 'constant', constant_values=0)
+            self.matrix[insertion_point, insertion_point] = 1.0
+
+            # Link subcategory with its parent
+            self.matrix[parent_idx, insertion_point] = 0.5
+            self.matrix[insertion_point, parent_idx] = 0.5
+
+            # Advance insertion point
+            insertion_point += 1
+
+        # Update next_free_col to the new insertion_point
+        self.next_free_col = insertion_point
 
     def show_map(self):
-        print("\n=== Final FIM Matrix & Labels ===")
-        print("Labels in final order:")
+        """Print matrix and label layout."""
+        print("\n=== Current Matrix & Labels ===")
         for i, lbl in enumerate(self.labels):
-            print(f" {i}: {lbl}")
-
-        print("\nMatrix:")
-        for i, row_data in enumerate(self.matrix):
-            row_str = " ".join(f"{val:.2f}" for val in row_data)
-            print(f"{i:2d}: {row_str}")
+            print(f"{i}: {lbl}")
+        print("")
+        for i, row in enumerate(self.matrix):
+            row_vals = " ".join(f"{val:.2f}" for val in row)
+            print(f"{i} : {row_vals}")
 
 # ------------------------------------------------------------------
 # Visualization
 # ------------------------------------------------------------------
 def visualize_matrix(matrix, labels):
-    plt.figure(figsize=(7, 6))
-    plt.imshow(matrix, cmap='viridis', aspect='auto')
+    """Simple matplotlib-based visualization."""
+    plt.figure(figsize=(12, 12))
+    plt.imshow(matrix, cmap="Blues", interpolation="nearest")
     plt.colorbar(label="Weight")
     plt.xticks(range(len(labels)), labels, rotation=90)
     plt.yticks(range(len(labels)), labels)
-    plt.title("Fractal Sorted Matrix (pivot at row/col=2)")
+    plt.title("Fractal / Manual Layout")
     plt.tight_layout()
     plt.show()
 
@@ -272,33 +290,33 @@ def main():
 
     origin_category = origin_list[0]
 
-    # 2. Prompt for 4 more categories to add incrementally
+    # 2. Prompt for 4 more top-level categories to add incrementally
     main_description = (
-        "Now let's define 4 more categories for HPC interpretability."
+        "Now let's define 4 more top-level categories for HPC interpretability."
         "Return exactly 4 major categories in valid JSON array form."
     )
     more_cats = get_top_level_categories(main_description, num_categories=4)
 
-    # 3. Initialize FIM with the origin pivot
-    sorter = FractalSorter2D()
-    sorter.initialize_origin()
+    # 3. Initialize CustomPivotLayout with the origin pivot
+    layout = CustomPivotLayout(origin_label=origin_category)
 
-    # 4. For each of these 4 categories, retrieve subcategories and insert
-    #    one category at a time (plus its subcategories).
+    # 4. Insert all top-level categories first
     for cat in more_cats:
-        subs = get_subcategories(cat, num_subcategories=3)
-        sorter.insert_category_and_subs(cat, subs)
+        layout.insert_top_cat(cat)
 
-    # 5. Once everything is inserted, do a final fractal sort
-    sorter.fractal_sort_2d()
-    sorter.show_map()
+    # 5. Insert subcategories for each top-level category in sorted blocks
+    for cat in more_cats:
+        subcats = get_subcategories(cat, num_subcategories=3)
+        # Sort subcategories as needed; here we sort alphabetically
+        subcats_sorted = sorted(subcats)
+        layout.insert_subcats(cat, subcats_sorted)
 
-    # 6. Visualize the matrix
-    visualize_matrix(sorter.matrix, sorter.labels)
+    # 6. Show final layout and visualize
+    layout.show_map()
+    visualize_matrix(layout.matrix, layout.labels)
 
-    # Example HPC measurement
-    total_blocks = len(sorter.labels)
-    # Suppose we only access half
+    # 7. HPC skip factor example
+    total_blocks = len(layout.labels)
     accessed_blocks = total_blocks // 2
     skip_factor = 1.0 - (accessed_blocks / total_blocks)
     cost = 1.0 - skip_factor
