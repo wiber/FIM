@@ -108,6 +108,30 @@ def assign_similarity_weights(label_a, label_b):
         print(f"[Warning] Failed to parse similarity weight. Defaulting to random.")
         return random.uniform(0, 1)
 
+def assign_similarity_weights_batch(comparisons):
+    """
+    Assigns similarity weights for a batch of category pairs using LLM.
+    Returns a dictionary of weights.
+    """
+    # Create a prompt that includes all comparisons
+    prompt = "Rate the similarity for the following category pairs on a scale from 0 to 1:\n"
+    for idx, (label_a, label_b) in enumerate(comparisons):
+        prompt += f"{idx + 1}. From '{label_a}' to '{label_b}'\n"
+
+    prompt += "Provide only the numerical ratings in the same order, separated by commas."
+
+    response = openai_chat_completion(prompt, max_tokens=50)
+    try:
+        # Parse the response into a list of weights
+        weights = [float(w.strip()) for w in response.split(',')]
+        # Clamp weights between 0 and 1
+        weights = [max(0.0, min(1.0, w)) for w in weights]
+        return {pair: weight for pair, weight in zip(comparisons, weights)}
+    except Exception as e:
+        print(f"[Error] Failed to parse batch similarity weights: {e}")
+        # Return random weights if parsing fails
+        return {pair: random.uniform(0, 1) for pair in comparisons}
+
 # ------------------------------------------------------------------
 # FractalSymSorter Class with Enhanced Weight Assignments
 # ------------------------------------------------------------------
@@ -123,6 +147,7 @@ class FractalSymSorter:
         self.labels = labels if labels else []
         self.label_to_idx = {label: idx for idx, label in enumerate(self.labels)}
         self.use_llm_weights = use_llm_weights
+        self.block_indices = []  # To store indices where new blocks start
 
     def _add_category_to_matrix(self, new_label):
         """
@@ -165,6 +190,9 @@ class FractalSymSorter:
         self.matrix[cat_idx, origin_idx] = weight  # Transpose the assignment
         print(f"[Top-Level Insert] from '{self.labels[0]}' to '{label}' at row={cat_idx} with weight={weight}")
 
+        # Track the index where the new block ends
+        self.block_indices.append(cat_idx + 1)
+
     def insert_subcats(self, parent_label, subcats):
         """
         Inserts subcategories under a parent category and assigns weights.
@@ -178,45 +206,50 @@ class FractalSymSorter:
                 weight = random.uniform(0, 1)
             subcat_idx = self.label_to_idx[subcat]
             # Assign weight from parent to subcategory
-            self.matrix[subcat_idx, parent_idx] = weight  # Transpose the assignment
+            self.matrix[subcat_idx, parent_idx] = weight
             print(f"[Subcategory Insert] from '{parent_label}' to '{subcat}' at row={subcat_idx} with weight={weight}")
 
         # After inserting all subcategories, assign weights among them
-        self.assign_top_subcat_interactions(subcats)
+        self.assign_top_interactions(subcats)
 
-    def assign_top_subcat_interactions(self, subcats):
+        # Track the index where the new block ends
+        self.block_indices.append(self.label_to_idx[subcats[-1]] + 1)
+
+    def assign_top_interactions(self, categories, top_n=20):
         """
-        Assigns similarity weights to the top 10% most significant subcategory interactions.
+        Assigns similarity weights to the top N most significant interactions, including both intra-category and inter-category.
         """
         interactions = []
-        for i in range(len(subcats)):
-            for j in range(len(subcats)):
-                if i != j:
-                    label_a = subcats[i]
-                    label_b = subcats[j]
-                    interactions.append((label_a, label_b))
+        num_categories = len(categories)
+
+        # Include all possible pairs for top-level and subcategories
+        for i in range(num_categories):
+            for j in range(i + 1, num_categories):  # Ensure no duplicate pairs and no self-comparison
+                label_a = categories[i]
+                label_b = categories[j]
+                interactions.append((label_a, label_b))
 
         # Shuffle to avoid any inherent ordering
         random.shuffle(interactions)
 
-        # Assign weights to all interactions
-        weights = {}
-        for (a, b) in interactions:
-            weight = assign_similarity_weights(a, b)
-            weights[(a, b)] = weight
+        # Batch assign weights to all interactions
+        weights = assign_similarity_weights_batch(interactions)
 
-        # Determine the top 10% based on weights
+        # Determine the top N based on weights
         sorted_interactions = sorted(weights.items(), key=lambda item: item[1], reverse=True)
-        top_k = max(1, int(0.10 * len(sorted_interactions)))  # Ensure at least one interaction
-        top_interactions = sorted_interactions[:top_k]
+        top_interactions = sorted_interactions[:top_n]
 
-        print(f"[Top Subcategory Interactions] Assigning weights to top {top_k} interactions out of {len(sorted_interactions)}")
+        # Track block indices
+        if top_n < num_categories:
+            step = max(1, num_categories // top_n)
+            for i in range(step, num_categories, step):
+                self.block_indices.append(i)
 
         for ((a, b), weight) in top_interactions:
             idx_a = self.label_to_idx[a]
             idx_b = self.label_to_idx[b]
             self.matrix[idx_a, idx_b] = weight
-            print(f"[Top Interaction] '{a}' -> '{b}' with weight={weight}")
+            print(f"[Top Interaction] from '{a}' to '{b}' with weight={weight}")
 
     def show_map(self):
         """Prints the current matrix and label mapping."""
@@ -225,12 +258,15 @@ class FractalSymSorter:
             print(f"{idx}: {label}")
         print(self.matrix)
 
+    def get_block_indices(self):
+        return self.block_indices
+
 # ------------------------------------------------------------------
 # Visualization Function
 # ------------------------------------------------------------------
-def visualize_matrix(matrix, labels):
+def visualize_matrix(matrix, labels, block_indices):
     """
-    Visualizes the adjacency matrix using matplotlib.
+    Visualizes the adjacency matrix using matplotlib, with lines to indicate submatrix boundaries.
     """
     plt.figure(figsize=(12, 10))
     plt.imshow(matrix, cmap='viridis', interpolation='none')
@@ -238,6 +274,12 @@ def visualize_matrix(matrix, labels):
     plt.xticks(ticks=range(len(labels)), labels=labels, rotation=90)
     plt.yticks(ticks=range(len(labels)), labels=labels)
     plt.title('FractalSymSorter Adjacency Matrix')
+
+    # Draw lines to indicate submatrix boundaries
+    for index in block_indices:
+        plt.axhline(y=index - 0.5, color='white', linestyle='--', linewidth=0.5)
+        plt.axvline(x=index - 0.5, color='white', linestyle='--', linewidth=0.5)
+
     plt.tight_layout()
     plt.show()
 
@@ -275,11 +317,16 @@ def main():
         subcats = get_subcategories(cat, num_subcategories=3)
         layout.insert_subcats(cat, subcats)
 
-    # 6. Show final layout and visualize
-    layout.show_map()
-    visualize_matrix(layout.matrix, layout.labels)
+    # 6. Highlight the top 20 most significant interactions, including inter-category
+    all_categories = layout.labels  # Consider all categories for inter-category interactions
+    layout.assign_top_interactions(all_categories, top_n=20)
 
-    # 7. HPC skip factor example
+    # 7. Show final layout and visualize
+    layout.show_map()
+    block_indices = layout.get_block_indices()
+    visualize_matrix(layout.matrix, layout.labels, block_indices)
+
+    # 8. HPC skip factor example
     total_blocks = len(layout.labels)
     accessed_blocks = max(1, total_blocks // 20)  # Access top 1/20 of the blocks
     skip_factor = 1.0 - (accessed_blocks / total_blocks)
