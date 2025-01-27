@@ -24,11 +24,14 @@ def openai_chat_completion(prompt, model="gpt-4", temperature=0.3, max_tokens=15
         "Welcome to the Fractal Identity Matrix (FIM) Integration Prompt. "
         "This guide enables the Language Model (LLM) to utilize FIM principles for effective problem space subdivision. "
         "By acting as a working memory proprioception, the LLM will optimize operations to reduce HPC costs using the FIM skip formula. "
-        "Understand FIM concepts, subdivide problem spaces, optimize HPC costs, and maintain interpretability. "
+        "The expected improvement in relevance is achieved when the LLM efficiently performs proprioception for working memory in an interpretable way. "
+        "Focus on creating relevancy through energy efficiency and interpretability, extending these principles to embody the direction of the problem space. "
         "FIM acts as AI's internal body sense, organizing data into self-similar submatrices for efficient retrieval. "
         "The goal is to reduce unnecessary data processing, lowering HPC costs and enhancing performance. "
         "Use the FIM skip formula: FI = (c/t)^n, where c is the subset of relevant categories, t is the total categories, and n is the number of dimensions. "
-        "Ensure each decision is transparent and traceable within the FIM structure."
+        "Ensure each decision is transparent and traceable within the FIM structure, fostering a synergy between energy efficiency and interpretability. "
+        "Emphasize cognitive economy, where the LLM's ability to efficiently allocate cognitive resources enhances trust and interpretability, moving away from the traditional 'black box' model. "
+        "While not every response needs to perfectly address these aspects, increasing their presence in LLM outputs can significantly enhance user trust and system transparency."
     )
     try:
         response = openai.ChatCompletion.create(
