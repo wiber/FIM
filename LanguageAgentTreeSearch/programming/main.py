@@ -21,11 +21,14 @@ def openai_chat_completion(prompt, model="gpt-4", temperature=0.3, max_tokens=15
     The system prompt includes context from the White Paper to guide responses.
     """
     system_prompt = (
-        "You are an assistant integrated with the Fractal Identity Matrix (FIM) system. "
-        "Your role is to provide similarity ratings between categories on a scale from 0 to 1, "
-        "aligned with the principles outlined in the FIM White Paper. "
-        "Ensure that your responses support the goals of reducing HPC overhead, enhancing interpretability, "
-        "and maintaining a fractal, hierarchical structure in category relationships."
+        "Welcome to the Fractal Identity Matrix (FIM) Integration Prompt. "
+        "This guide enables the Language Model (LLM) to utilize FIM principles for effective problem space subdivision. "
+        "By acting as a working memory proprioception, the LLM will optimize operations to reduce HPC costs using the FIM skip formula. "
+        "Understand FIM concepts, subdivide problem spaces, optimize HPC costs, and maintain interpretability. "
+        "FIM acts as AI's internal body sense, organizing data into self-similar submatrices for efficient retrieval. "
+        "The goal is to reduce unnecessary data processing, lowering HPC costs and enhancing performance. "
+        "Use the FIM skip formula: FI = (c/t)^n, where c is the subset of relevant categories, t is the total categories, and n is the number of dimensions. "
+        "Ensure each decision is transparent and traceable within the FIM structure."
     )
     try:
         response = openai.ChatCompletion.create(
@@ -159,8 +162,8 @@ class FractalSymSorter:
         # Assign weight from origin to this category
         origin_idx = self.label_to_idx[self.labels[0]]
         cat_idx = self.label_to_idx[label]
-        self.matrix[origin_idx, cat_idx] = weight
-        print(f"[Top-Level Insert] '{label}' at col={cat_idx} with weight={weight}")
+        self.matrix[cat_idx, origin_idx] = weight  # Transpose the assignment
+        print(f"[Top-Level Insert] from '{self.labels[0]}' to '{label}' at row={cat_idx} with weight={weight}")
 
     def insert_subcats(self, parent_label, subcats):
         """
@@ -175,8 +178,8 @@ class FractalSymSorter:
                 weight = random.uniform(0, 1)
             subcat_idx = self.label_to_idx[subcat]
             # Assign weight from parent to subcategory
-            self.matrix[parent_idx, subcat_idx] = weight
-            print(f"[Subcategory Insert] '{subcat}' under '{parent_label}' at col={subcat_idx} with weight={weight}")
+            self.matrix[subcat_idx, parent_idx] = weight  # Transpose the assignment
+            print(f"[Subcategory Insert] from '{parent_label}' to '{subcat}' at row={subcat_idx} with weight={weight}")
 
         # After inserting all subcategories, assign weights among them
         self.assign_top_subcat_interactions(subcats)
