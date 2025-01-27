@@ -12,17 +12,25 @@ import random
 # Ensure OpenAI API key is set elsewhere in your project setup
 # openai.api_key = os.getenv('OPENAI_API_KEY')
 
-def identify_independent_themes(problem_description, num_themes=5, depth=0, max_depth=2):
+def identify_independent_themes(problem_description, num_themes=5, depth=0, max_depth=2, prompt_prefix=None):
     """
     Identifies the most independent themes in the problem space using the LLM.
+    Now includes an optional 'prompt_prefix' for added context or constraints.
     """
-    prompt = f"Identify the {num_themes} most independent themes in the following problem description. Provide them as a numbered list:\n\n{problem_description}"
+    if prompt_prefix is None:
+        prompt_prefix = ""
+
+    prompt = (
+        f"{prompt_prefix}\n\n"
+        f"Identify the {num_themes} most independent themes in the following problem description. "
+        f"Provide them as a numbered list:\n\n{problem_description}"
+    )
     try:
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "You are an assistant that identifies themes."},
-                {"role": "user", "content": prompt}
+                {"role": "user", "content": prompt},
             ],
             max_tokens=150,
             temperature=0.7,
@@ -33,11 +41,25 @@ def identify_independent_themes(problem_description, num_themes=5, depth=0, max_
         print(f"Error identifying themes: {e}")
         return []
 
-def generate_subcategories(theme, num_subcategories=5):
+def generate_subcategories(theme, num_subcategories=5, focus_on_fim=False):
     """
     Generates subcategories for a given theme using the LLM.
+    If 'focus_on_fim' is True, the prompt asks for fractal-friendly subdivisions.
     """
-    prompt = f"For the theme '{theme}', identify {num_subcategories} subcategories. Provide them as a numbered list:"
+    if focus_on_fim:
+        prefix = (
+            f"You are building a fractal structure of knowledge. "
+            f"Each subcategory must be uniquely distinct yet collectively exhaustive "
+            f"for the theme '{theme}'. "
+        )
+    else:
+        prefix = ""
+
+    prompt = (
+        f"{prefix}For the theme '{theme}', identify {num_subcategories} subcategories. "
+        f"Provide them as a numbered list:"
+    )
+
     try:
         response = openai.ChatCompletion.create(
             model="gpt-4",
@@ -56,15 +78,22 @@ def generate_subcategories(theme, num_subcategories=5):
 
 def parse_themes_from_response(response_text):
     """
-    Parses the themes from the response text into a list.
+    Very simplistic parser that expects lines like:
+    1) ThemeOne
+    2) ThemeTwo
+    ...
+    Return them as a list of strings.
     """
+    lines = response_text.strip().split("\n")
     themes = []
-    for line in response_text.strip().split('\n'):
-        if line.strip():
-            # Remove numbering if present
-            line = line.strip()
-            if '.' in line:
-                line = line.split('.', 1)[1].strip()
+    for line in lines:
+        # Example: "1) Something"
+        # Or just "Something"
+        line = line.strip()
+        if line.startswith(("-", "*", "•", "1)", "2)", "3)")):
+            # remove leading markers
+            line = line[line.find(")") + 1:].strip()
+        if line:
             themes.append(line)
     return themes
 
@@ -175,6 +204,31 @@ def sort_submatrix(matrix, themes, start_index=0):
 
 def generate_timestamp():
     return datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+def estimate_hpc_cost(total_subblocks, accessed_subblocks):
+    """
+    Returns (cost, skip_factor) based on how many sub-blocks are accessed vs total.
+    cost = fraction_of_blocks_accessed, skip_factor = 1 - cost.
+    """
+    if total_subblocks == 0:
+        return 0.0, 1.0
+    cost = accessed_subblocks / total_subblocks
+    skip_factor = 1.0 - cost
+    return cost, skip_factor
+
+def print_matrix_with_labels(matrix, labels):
+    """
+    Simple textual printout of the matrix with row/column labels.
+    """
+    if len(labels) != matrix.shape[0]:
+        print("Label count does not match matrix dimension.")
+        return
+
+    print("Matrix (upper row is labels):")
+    print("       ", "  ".join(lbl[:6] for lbl in labels))
+    for i, row in enumerate(matrix):
+        row_str = "  ".join(f"{val:.2f}" for val in row)
+        print(f"{labels[i][:6]}  {row_str}")
 
 # Example usage:
 timestamp = generate_timestamp()
