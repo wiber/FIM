@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 import random
 import logging
 
-# Set up logging
+# Initialize logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # ------------------------------------------------------------------
@@ -15,6 +15,85 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # ------------------------------------------------------------------
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
+
+# Dictionary to track memory gradient usage
+memory_gradient_usage = {
+    "Immediate": 0,
+    "Working": 0,
+    "Long-Term": 0
+}
+
+# Dictionary to track inferred HPC costs
+hpc_costs = {
+    "Immediate": 0.1,
+    "Working": 0.5,
+    "Long-Term": 1.0
+}
+
+# Counter for LLM calls
+llm_call_counter = 0
+
+def increment_llm_call_counter():
+    """
+    Increments the LLM call counter and logs the call.
+    """
+    global llm_call_counter
+    llm_call_counter += 1
+    logging.info(f"LLM call #{llm_call_counter} made.")
+    print(f"LLM call #{llm_call_counter} made.")
+
+def log_memory_usage(operation, memory_type):
+    if memory_type in memory_gradient_usage:
+        memory_gradient_usage[memory_type] += 1
+        logging.info(f"Operation '{operation}' used {memory_type} memory.")
+    else:
+        logging.warning(f"Unknown memory type: {memory_type}")
+
+def log_hpc_costs():
+    total_cost = 0
+    for memory_type, usage in memory_gradient_usage.items():
+        cost = usage * hpc_costs[memory_type]
+        total_cost += cost
+        logging.info(f"HPC cost for {memory_type} memory: {cost:.2f} (Usage: {usage})")
+    logging.info(f"Total inferred HPC cost: {total_cost:.2f}")
+    return total_cost
+
+def make_llm_call(prompt, memory_type="Immediate"):
+    """
+    Simulates an LLM call and logs the memory usage and HPC cost.
+    """
+    increment_llm_call_counter()
+    log_memory_usage("LLM Call", memory_type)
+    # Simulate LLM call here
+    logging.info(f"LLM call made with {memory_type} memory.")
+    print(f"LLM call made with {memory_type} memory.")
+    total_cost = log_hpc_costs()
+    print(f"Total inferred HPC cost after LLM call: {total_cost:.2f}")
+
+def print_summary():
+    print("\n=== Memory Gradient Usage ===")
+    for memory_type, usage in memory_gradient_usage.items():
+        print(f"{memory_type}: {usage}")
+
+    print("\n=== HPC Costs ===")
+    total_cost = 0
+    for memory_type, usage in memory_gradient_usage.items():
+        cost = usage * hpc_costs[memory_type]
+        total_cost += cost
+        print(f"{memory_type} cost: {cost:.2f}")
+
+    print(f"\nTotal inferred HPC cost: {total_cost:.2f}")
+    return total_cost
+
+def plot_matrix(matrix, labels):
+    plt.figure(figsize=(8, 6))
+    plt.imshow(matrix, cmap='viridis', interpolation='none')
+    plt.colorbar(label='Weight')
+    plt.xticks(ticks=range(len(labels)), labels=labels, rotation=90)
+    plt.yticks(ticks=range(len(labels)), labels=labels)
+    plt.title('Adjacency Matrix')
+    plt.tight_layout()
+    plt.show()
 
 # ------------------------------------------------------------------
 # OpenAI Chat Completion Helper with Enhanced Prompt Seed
@@ -110,6 +189,10 @@ def assign_similarity_weights(label_a, label_b):
         weight = float(response)
         weight = max(0.0, min(1.0, weight))  # Clamp between 0 and 1
         print(f"[LLM] Similarity between '{label_a}' and '{label_b}': {weight}")
+        
+        # Insert the call to track costing
+        make_llm_call(prompt, memory_type="Immediate")
+        
         return weight
     except ValueError:
         print(f"[Warning] Failed to parse similarity weight. Defaulting to random.")
@@ -127,15 +210,19 @@ def assign_similarity_weights_batch(comparisons):
 
     prompt += "Provide only the numerical ratings in the same order, separated by commas."
 
+    # Insert the call to track costing for long-term memory
+    make_llm_call(prompt, memory_type="Long-Term")
+
     response = openai_chat_completion(prompt, max_tokens=50)
     try:
         # Parse the response into a list of weights
-        weights = [float(w.strip()) for w in response.split(',')]
+        weights = [float(w.strip()) for w in response.split(',') if w.strip()]
         # Clamp weights between 0 and 1
         weights = [max(0.0, min(1.0, w)) for w in weights]
         return {pair: weight for pair, weight in zip(comparisons, weights)}
     except Exception as e:
-        print(f"[Error] Failed to parse batch similarity weights: {e}")
+        logging.error(f"[Error] Failed to parse batch similarity weights: {e}")
+        logging.error(f"Response received: {response}")
         # Return random weights if parsing fails
         return {pair: random.uniform(0, 1) for pair in comparisons}
 
@@ -215,6 +302,9 @@ class FractalSymSorter:
             # Assign weight from parent to subcategory
             self.matrix[subcat_idx, parent_idx] = weight
             print(f"[Subcategory Insert] from '{parent_label}' to '{subcat}' at row={subcat_idx} with weight={weight}")
+            
+            # Insert the call to track costing for working memory
+            make_llm_call(f"Subcategory Insert from '{parent_label}' to '{subcat}'", memory_type="Working")
 
         # After inserting all subcategories, assign weights among them
         self.assign_top_interactions(subcats)
@@ -257,6 +347,9 @@ class FractalSymSorter:
             idx_b = self.label_to_idx[b]
             self.matrix[idx_a, idx_b] = weight
             print(f"[Top Interaction] from '{a}' to '{b}' with weight={weight}")
+
+            # Insert the call to track costing for long-term memory
+            make_llm_call(f"Top Interaction from '{a}' to '{b}'", memory_type="Long-Term")
 
     def show_map(self):
         """Prints the current matrix and label mapping."""
@@ -486,7 +579,17 @@ def append_submatrix_notation_to_labels(labels):
         updated_labels.append(f"{notation} {label}".strip())
     return updated_labels
 
+def process_multiple_batches(all_comparisons):
+    """
+    Processes multiple batches of category pairs.
+    """
+    for batch in all_comparisons:
+        weights = assign_similarity_weights_batch(batch)
+        # Do something with the weights
+        print(weights)
+
 def main():
+    print("Starting main function...")  # Debugging print
     # 1. Define the origin category
     origin_description = "Define the origin category for the FractalSymSorter based on HPC interpretability."
     origin_list = get_top_level_categories(origin_description, num_categories=1)
@@ -548,5 +651,43 @@ def main():
     print(f"  Accessed {accessed_blocks} of {total_blocks} blocks.")
     print(f"  skip_factor = {skip_factor:.2f}, HPC cost ≈ {cost:.2f}")
 
+    # Example usage
+    make_llm_call("Example prompt", memory_type="Immediate")
+    total_cost = log_hpc_costs()
+    print(f"Total LLM calls: {llm_call_counter}, Total inferred HPC cost: {total_cost:.2f}")
+
+    make_llm_call("Another prompt", memory_type="Working")
+    total_cost = log_hpc_costs()
+    print(f"Total LLM calls: {llm_call_counter}, Total inferred HPC cost: {total_cost:.2f}")
+
+    make_llm_call("Yet another prompt", memory_type="Long-Term")
+    total_cost = log_hpc_costs()
+    print(f"Total LLM calls: {llm_call_counter}, Total inferred HPC cost: {total_cost:.2f}")
+
+    # Print the summary of costs and memory usage
+    total_cost = print_summary()
+    print(f"Final Total LLM calls: {llm_call_counter}, Final Total inferred HPC cost: {total_cost:.2f}")
+
+    # Log the HPC costs
+    log_hpc_costs()
+
+    # Example matrix and labels for plotting
+    matrix = np.random.rand(5, 5)
+    labels = ["A", "B", "C", "D", "E"]
+    plot_matrix(matrix, labels)
+
+    # Print the total number of LLM calls
+    print(f"Total LLM calls: {llm_call_counter}")
+
+    # Example usage of process_multiple_batches
+    all_comparisons = [
+        [("Category1", "Category2"), ("Category3", "Category4")],
+        [("Category5", "Category6"), ("Category7", "Category8")],
+        # Add more batches as needed
+    ]
+
+    process_multiple_batches(all_comparisons)
+
 if __name__ == "__main__":
+    print("Executing script...")  # Debugging print
     main()
