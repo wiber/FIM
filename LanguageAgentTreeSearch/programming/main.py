@@ -324,6 +324,31 @@ class FractalSymSorter:
 # ------------------------------------------------------------------
 # Visualization Function
 # ------------------------------------------------------------------
+def log_significant_interactions(matrix, labels, submatrix_bounds, threshold=0.5):
+    """
+    Logs the most significant interactions in the matrix.
+    """
+    num_categories = len(labels)
+    for i in range(num_categories):
+        for j in range(num_categories):
+            weight = matrix[i, j]
+            if weight > threshold:  # Only log significant weights
+                # Determine submatrix coordinates
+                submatrix_label = None
+                for label, (start, end) in submatrix_bounds.items():
+                    if start <= i <= end and start <= j <= end:
+                        submatrix_label = label
+                        break
+
+                interaction_info = (
+                    f"Interaction: '{labels[i]}' to '{labels[j]}', "
+                    f"Weight: {weight:.2f}, "
+                    f"Absolute Coordinate: ({i}, {j}), "
+                    f"Submatrix: {submatrix_label}"
+                )
+                logging.info(interaction_info)
+                print(interaction_info)
+
 def visualize_matrix(matrix, labels, block_indices):
     """
     Visualizes the adjacency matrix using matplotlib, with lines to indicate submatrix boundaries.
@@ -391,6 +416,9 @@ def visualize_matrix(matrix, labels, block_indices):
     print("Top-Level Indices:", top_level_indices)
     print("Subcategory Indices:", subcategory_indices)
     print("Submatrix Bounds:", submatrix_bounds)
+
+    # Log significant interactions
+    log_significant_interactions(matrix, labels, submatrix_bounds)
 
     return top_level_indices, subcategory_indices, submatrix_bounds
 
