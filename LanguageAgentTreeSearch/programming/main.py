@@ -340,11 +340,14 @@ def log_significant_interactions(matrix, labels, submatrix_bounds, threshold=0.5
                         submatrix_label = label
                         break
 
+                # Determine if the interaction is at the top level
+                top_level_interaction = (i < num_categories // 2) and (j < num_categories // 2)
+
                 interaction_info = (
                     f"Interaction: '{labels[i]}' to '{labels[j]}', "
                     f"Weight: {weight:.2f}, "
                     f"Absolute Coordinate: ({i}, {j}), "
-                    f"Submatrix: {submatrix_label}"
+                    f"Submatrix: {submatrix_label if not top_level_interaction else 'Top-Level'}"
                 )
                 logging.info(interaction_info)
                 print(interaction_info)
