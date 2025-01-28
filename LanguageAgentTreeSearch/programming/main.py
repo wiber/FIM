@@ -5,6 +5,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from dotenv import load_dotenv
 import random
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # ------------------------------------------------------------------
 # Utility: Load environment variables (like OPENAI_API_KEY) from .env
@@ -340,6 +344,7 @@ def visualize_matrix(matrix, labels, block_indices):
         label_idx = idx % num_top_categories  # Start from the first top-level category
         if label_idx < len(labels):
             plt.text(index - 0.5, index - 0.5, f"{chr(65 + label_idx)} {labels[label_idx + 1]}", color='white', fontsize=8, ha='center', va='center', rotation=0)
+            logging.info(f"Submatrix boundary drawn for label: {labels[label_idx + 1]} at index: {index}")
 
     plt.tight_layout()
     plt.show()
