@@ -407,6 +407,20 @@ def visualize_matrix(matrix, labels, block_indices):
             plt.text(x_coord, y_coord, submatrix_label, color='red', fontsize=10, ha='center', va='center')
             logging.info(f"Placed submatrix label '{submatrix_label}' at adjusted coordinates ({x_coord}, {y_coord})")
 
+    # Place top-level category interaction labels
+    top_level_keys = list(top_level_indices.keys())
+    for i, label_x in enumerate(top_level_keys):
+        for j, label_y in enumerate(top_level_keys):
+            if i != j or i == j:  # Include diagonal for "AA", "BB", etc.
+                # Use the exact coordinates from the top_level_indices
+                x_coord = top_level_indices[label_x] - 1
+                y_coord = top_level_indices[label_y] - 1
+                # Create the top-level interaction label
+                top_level_label = f"{label_x[0]}{label_y[0]}"
+                # Place the label at the adjusted coordinates
+                plt.text(x_coord, y_coord, top_level_label, color='red', fontsize=10, ha='center', va='center')
+                logging.info(f"Placed top-level interaction label '{top_level_label}' at adjusted coordinates ({x_coord}, {y_coord})")
+
     plt.tight_layout()
     plt.show()
 
