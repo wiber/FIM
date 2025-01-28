@@ -310,7 +310,7 @@ class FractalSymSorter:
         for i in range(1, num_top_categories + 1):
             for j in range(1, num_top_categories + 1):
                 if i != j:
-                    # Create a notation for the submatrix
+                    # Create a notation for the submatrix, starting from the first child of origin
                     notation = f"{chr(64 + i)}{chr(64 + j)}"
                     submatrix_map[notation] = (i, j)
                     print(f"Submatrix {notation}: Interaction between '{self.labels[i]}' and '{self.labels[j]}'")
@@ -336,10 +336,10 @@ def visualize_matrix(matrix, labels, block_indices):
     for idx, index in enumerate(block_indices):
         plt.axhline(y=index - 0.5, color='white', linestyle='--', linewidth=0.5)
         plt.axvline(x=index - 0.5, color='white', linestyle='--', linewidth=0.5)
-        # Use the label corresponding to the top-level category, skipping the origin
-        label_idx = (idx + 1) % num_top_categories  # Start from the first top-level category
+        # Use the label corresponding to the top-level category, starting from the first child of origin
+        label_idx = idx % num_top_categories  # Start from the first top-level category
         if label_idx < len(labels):
-            plt.text(index - 0.5, index - 0.5, f"{chr(65 + label_idx)} {labels[label_idx]}", color='white', fontsize=8, ha='center', va='center', rotation=0)
+            plt.text(index - 0.5, index - 0.5, f"{chr(65 + label_idx)} {labels[label_idx + 1]}", color='white', fontsize=8, ha='center', va='center', rotation=0)
 
     plt.tight_layout()
     plt.show()
@@ -347,6 +347,29 @@ def visualize_matrix(matrix, labels, block_indices):
 # ------------------------------------------------------------------
 # Main Function
 # ------------------------------------------------------------------
+def print_weight_info(matrix, labels, submatrix_map):
+    """
+    Prints the weight information with absolute and submatrix coordinates.
+    """
+    num_categories = len(labels)
+    for i in range(num_categories):
+        for j in range(num_categories):
+            weight = matrix[i, j]
+            if weight > 0:  # Only print non-zero weights
+                # Determine submatrix coordinates
+                submatrix_coord = f"{chr(65 + i)}{i+1}{chr(65 + j)}{j+1}"
+                print(f"Weight: {weight:.2f} at Absolute Coordinate: ({i}, {j}), Submatrix Coordinate: {submatrix_coord}")
+
+def append_submatrix_notation_to_labels(labels):
+    """
+    Appends submatrix notation to each label.
+    """
+    updated_labels = []
+    for idx, label in enumerate(labels):
+        notation = f"{chr(65 + idx)}{idx+1}"
+        updated_labels.append(f"{notation} {label}")
+    return updated_labels
+
 def main():
     # 1. Define the origin category
     origin_description = "Define the origin category for the FractalSymSorter based on HPC interpretability."
@@ -387,6 +410,12 @@ def main():
 
     # Create a submatrix map and print the interactions
     submatrix_map = layout.create_submatrix_map()
+
+    # Append submatrix notation to labels
+    layout.labels = append_submatrix_notation_to_labels(layout.labels)
+
+    # Print weight information with coordinates
+    print_weight_info(layout.matrix, layout.labels, submatrix_map)
 
     # Show final layout and visualize with labeled submatrix boundaries
     layout.show_map()
