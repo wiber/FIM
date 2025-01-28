@@ -335,6 +335,10 @@ def visualize_matrix(matrix, labels, block_indices):
     plt.yticks(ticks=range(len(labels)), labels=labels)
     plt.title('FractalSymSorter Adjacency Matrix')
 
+    # Dictionaries to store submatrix indices
+    top_level_indices = {}
+    subcategory_indices = {}
+
     # Draw lines to indicate submatrix boundaries and add labels
     num_top_categories = 4  # Assuming there are 4 top-level categories
     for idx, index in enumerate(block_indices):
@@ -344,10 +348,27 @@ def visualize_matrix(matrix, labels, block_indices):
         label_idx = idx % num_top_categories  # Start from the first top-level category
         if label_idx < len(labels):
             plt.text(index - 0.5, index - 0.5, f"{chr(65 + label_idx)} {labels[label_idx + 1]}", color='white', fontsize=8, ha='center', va='center', rotation=0)
-            logging.info(f"Submatrix boundary drawn for label: {labels[label_idx + 1]} at index: {index}")
+            
+            # Determine if the index is for a top-level category or subcategory
+            if idx < num_top_categories:
+                top_level_indices[labels[label_idx + 1]] = index
+                logging.info(f"Top-Level Submatrix boundary drawn for label: {labels[label_idx + 1]} at index: {index}")
+            else:
+                subcategory_indices[labels[label_idx + 1]] = index
+                logging.info(f"Subcategory Submatrix boundary drawn for label: {labels[label_idx + 1]} at index: {index}")
 
     plt.tight_layout()
     plt.show()
+
+    # Log the dictionaries for later access
+    logging.info(f"Top-Level Indices: {top_level_indices}")
+    logging.info(f"Subcategory Indices: {subcategory_indices}")
+
+    # Print the dictionaries
+    print("Top-Level Indices:", top_level_indices)
+    print("Subcategory Indices:", subcategory_indices)
+
+    return top_level_indices, subcategory_indices
 
 # ------------------------------------------------------------------
 # Main Function
