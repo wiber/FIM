@@ -357,17 +357,17 @@ def visualize_matrix(matrix, labels, block_indices):
                 subcategory_indices[labels[label_idx + 1]] = index
                 logging.info(f"Subcategory Submatrix boundary drawn for label: {labels[label_idx + 1]} at index: {index}")
 
-    # Place submatrix labels (e.g., "AA", "AB", "AC") in the center of submatrix bounds
-    for top_label, top_index in top_level_indices.items():
-        for sub_label, sub_index in subcategory_indices.items():
-            # Calculate the center of the submatrix
-            center_x = (top_index + sub_index) / 2
-            center_y = (top_index + sub_index) / 2
+    # Place submatrix labels (e.g., "AA", "AB", "AC") using the submatrix indices
+    for sub_label_x, x_index in subcategory_indices.items():
+        for sub_label_y, y_index in subcategory_indices.items():
+            # Use the indices from the subcategory dictionary to place the label
+            x_coord = x_index
+            y_coord = y_index
             # Create the submatrix label
-            submatrix_label = f"{top_label[0]}{sub_label[0]}"
-            # Place the label in the center of the submatrix
-            plt.text(center_x, center_y, submatrix_label, color='red', fontsize=10, ha='center', va='center')
-            logging.info(f"Placed submatrix label '{submatrix_label}' at center ({center_x}, {center_y})")
+            submatrix_label = f"{sub_label_x[0]}{sub_label_y[0]}"
+            # Place the label at the calculated coordinates
+            plt.text(x_coord, y_coord, submatrix_label, color='red', fontsize=10, ha='center', va='center')
+            logging.info(f"Placed submatrix label '{submatrix_label}' at coordinates ({x_coord}, {y_coord})")
 
     plt.tight_layout()
     plt.show()
