@@ -278,10 +278,15 @@ def visualize_matrix(matrix, labels, block_indices):
     plt.yticks(ticks=range(len(labels)), labels=labels)
     plt.title('FractalSymSorter Adjacency Matrix')
 
-    # Draw lines to indicate submatrix boundaries
-    for index in block_indices:
+    # Draw lines to indicate submatrix boundaries and add labels
+    num_top_categories = 4  # Assuming there are 4 top-level categories
+    for idx, index in enumerate(block_indices):
         plt.axhline(y=index - 0.5, color='white', linestyle='--', linewidth=0.5)
         plt.axvline(x=index - 0.5, color='white', linestyle='--', linewidth=0.5)
+        # Use the label corresponding to the top-level category, skipping the origin
+        label_idx = (idx + 1) % num_top_categories  # Start from the first top-level category
+        if label_idx < len(labels):
+            plt.text(index - 0.5, index - 0.5, labels[label_idx], color='white', fontsize=8, ha='center', va='center', rotation=0)
 
     plt.tight_layout()
     plt.show()
@@ -324,7 +329,7 @@ def main():
     all_categories = layout.labels  # Consider all categories for inter-category interactions
     layout.assign_top_interactions(all_categories, top_n=20)
 
-    # 7. Show final layout and visualize
+    # 7. Show final layout and visualize with labeled submatrix boundaries
     layout.show_map()
     block_indices = layout.get_block_indices()
     visualize_matrix(layout.matrix, layout.labels, block_indices)
