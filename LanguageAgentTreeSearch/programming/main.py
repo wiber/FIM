@@ -352,22 +352,43 @@ def print_weight_info(matrix, labels, submatrix_map):
     Prints the weight information with absolute and submatrix coordinates.
     """
     num_categories = len(labels)
+    num_top_categories = 3  # Assuming there are 3 top-level categories
     for i in range(num_categories):
         for j in range(num_categories):
             weight = matrix[i, j]
             if weight > 0:  # Only print non-zero weights
                 # Determine submatrix coordinates
-                submatrix_coord = f"{chr(65 + i)}{i+1}{chr(65 + j)}{j+1}"
-                print(f"Weight: {weight:.2f} at Absolute Coordinate: ({i}, {j}), Submatrix Coordinate: {submatrix_coord}")
+                top_cat_i = i // (num_top_categories + 1)
+                subcat_i = i % (num_top_categories + 1)
+                top_cat_j = j // (num_top_categories + 1)
+                subcat_j = j % (num_top_categories + 1)
+                
+                # Use "O" for origin and "A-C" for top-level categories
+                top_label_i = "O" if top_cat_i == 0 else chr(64 + top_cat_i)
+                top_label_j = "O" if top_cat_j == 0 else chr(64 + top_cat_j)
+                
+                submatrix_coord = f"{top_label_i}{subcat_i + 1}{top_label_j}{subcat_j + 1}"
+                interaction_notation = f"{top_label_i}{top_label_j}={weight:.2f}"
+                
+                print(f"Weight: {weight:.2f} at Absolute Coordinate: ({i}, {j}), Submatrix Coordinate: {submatrix_coord}, Interaction: '{labels[i]}' to '{labels[j]}', Notation: {interaction_notation}")
 
 def append_submatrix_notation_to_labels(labels):
     """
     Appends submatrix notation to each label.
     """
     updated_labels = []
+    num_top_categories = 3  # Assuming there are 3 top-level categories
     for idx, label in enumerate(labels):
-        notation = f"{chr(65 + idx)}{idx+1}"
-        updated_labels.append(f"{notation} {label}")
+        if idx == 0:
+            notation = "O"  # Origin
+        elif 1 <= idx <= num_top_categories:
+            notation = chr(64 + idx)  # A, B, C for top-level categories
+        elif idx == num_top_categories + 1:
+            notation = "D"  # Last top-level category
+        else:
+            notation = ""  # No notation for subcategories
+        
+        updated_labels.append(f"{notation} {label}".strip())
     return updated_labels
 
 def main():
