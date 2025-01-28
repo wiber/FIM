@@ -264,6 +264,59 @@ class FractalSymSorter:
     def get_block_indices(self):
         return self.block_indices
 
+    def assign_weights_to_first_submatrix(self):
+        """
+        Assigns weights to the first submatrix on the diagonal using the LLM.
+        """
+        # Determine the range of indices for the first submatrix
+        num_top_categories = 4  # Assuming there are 4 top-level categories
+        submatrix_start = 1  # Start after the origin
+        submatrix_end = submatrix_start + num_top_categories
+
+        # Construct the prompt with the submatrix and labels
+        prompt = (
+            "Given the following submatrix and labels, assign weights to the causal relationships. "
+            "Focus on identifying and highlighting significant interactions that are stronger than average. "
+            "Consider the context of each category and its potential impact on others:\n"
+        )
+        submatrix = self.matrix[submatrix_start:submatrix_end, submatrix_start:submatrix_end]
+        prompt += "Submatrix:\n"
+        prompt += "\n".join(["\t".join(map(str, row)) for row in submatrix]) + "\n"
+        prompt += "Labels:\n"
+        prompt += ", ".join(self.labels[submatrix_start:submatrix_end]) + "\n"
+        prompt += "Please provide the weights for the causal relationships between these categories."
+
+        # Send the prompt to the LLM
+        response = openai_chat_completion(prompt, max_tokens=100)
+
+        try:
+            # Parse the response into a dictionary of weights
+            weights = json.loads(response)
+            for (label_a, label_b), weight in weights.items():
+                idx_a = self.label_to_idx[label_a]
+                idx_b = self.label_to_idx[label_b]
+                self.matrix[idx_a, idx_b] = weight
+                print(f"[LLM Assignment] Weight between '{label_a}' and '{label_b}': {weight}")
+        except json.JSONDecodeError:
+            print(f"[Warning] Failed to parse LLM response for first submatrix weights. Response: {response}")
+
+    def create_submatrix_map(self):
+        """
+        Creates a map of submatrices with a naming convention using coordinates.
+        """
+        num_top_categories = 4  # Assuming there are 4 top-level categories
+        submatrix_map = {}
+
+        for i in range(1, num_top_categories + 1):
+            for j in range(1, num_top_categories + 1):
+                if i != j:
+                    # Create a notation for the submatrix
+                    notation = f"{chr(64 + i)}{chr(64 + j)}"
+                    submatrix_map[notation] = (i, j)
+                    print(f"Submatrix {notation}: Interaction between '{self.labels[i]}' and '{self.labels[j]}'")
+
+        return submatrix_map
+
 # ------------------------------------------------------------------
 # Visualization Function
 # ------------------------------------------------------------------
@@ -286,7 +339,7 @@ def visualize_matrix(matrix, labels, block_indices):
         # Use the label corresponding to the top-level category, skipping the origin
         label_idx = (idx + 1) % num_top_categories  # Start from the first top-level category
         if label_idx < len(labels):
-            plt.text(index - 0.5, index - 0.5, labels[label_idx], color='white', fontsize=8, ha='center', va='center', rotation=0)
+            plt.text(index - 0.5, index - 0.5, f"{chr(65 + label_idx)} {labels[label_idx]}", color='white', fontsize=8, ha='center', va='center', rotation=0)
 
     plt.tight_layout()
     plt.show()
@@ -329,12 +382,18 @@ def main():
     all_categories = layout.labels  # Consider all categories for inter-category interactions
     layout.assign_top_interactions(all_categories, top_n=20)
 
-    # 7. Show final layout and visualize with labeled submatrix boundaries
+    # 7. Assign weights to the first submatrix on the diagonal
+    layout.assign_weights_to_first_submatrix()
+
+    # Create a submatrix map and print the interactions
+    submatrix_map = layout.create_submatrix_map()
+
+    # Show final layout and visualize with labeled submatrix boundaries
     layout.show_map()
     block_indices = layout.get_block_indices()
     visualize_matrix(layout.matrix, layout.labels, block_indices)
 
-    # 8. HPC skip factor example
+    # 9. HPC skip factor example
     total_blocks = len(layout.labels)
     accessed_blocks = max(1, total_blocks // 20)  # Access top 1/20 of the blocks
     skip_factor = 1.0 - (accessed_blocks / total_blocks)
