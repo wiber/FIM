@@ -360,14 +360,14 @@ def visualize_matrix(matrix, labels, block_indices):
     # Place submatrix labels (e.g., "AA", "AB", "AC") using the submatrix indices
     for sub_label_x, x_index in subcategory_indices.items():
         for sub_label_y, y_index in subcategory_indices.items():
-            # Use the indices from the subcategory dictionary to place the label
-            x_coord = x_index
-            y_coord = y_index
+            # Adjust the coordinates by moving one unit up and to the left
+            x_coord = x_index - 1
+            y_coord = y_index - 1
             # Create the submatrix label
             submatrix_label = f"{sub_label_x[0]}{sub_label_y[0]}"
-            # Place the label at the calculated coordinates
+            # Place the label at the adjusted coordinates
             plt.text(x_coord, y_coord, submatrix_label, color='red', fontsize=10, ha='center', va='center')
-            logging.info(f"Placed submatrix label '{submatrix_label}' at coordinates ({x_coord}, {y_coord})")
+            logging.info(f"Placed submatrix label '{submatrix_label}' at adjusted coordinates ({x_coord}, {y_coord})")
 
     plt.tight_layout()
     plt.show()
