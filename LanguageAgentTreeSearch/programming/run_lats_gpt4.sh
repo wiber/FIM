@@ -13,7 +13,7 @@ python main.py \
   --dataset_path "./benchmarks/humaneval-py.jsonl" \
   --strategy "mcts" \
   --language "py" \
-  --model "gpt-4" \
+  --model "gpt-4o-mini" \
   --max_iters 10 \
   --expansion_factor 2 \
   --number_of_tests 2 \
