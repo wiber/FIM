@@ -338,6 +338,7 @@ def visualize_matrix(matrix, labels, block_indices):
     # Dictionaries to store submatrix indices
     top_level_indices = {}
     subcategory_indices = {}
+    submatrix_bounds = {}  # New dictionary to store submatrix bounds
 
     # Draw lines to indicate submatrix boundaries and add labels
     num_top_categories = 4  # Assuming there are 4 top-level categories
@@ -357,6 +358,15 @@ def visualize_matrix(matrix, labels, block_indices):
                 subcategory_indices[labels[label_idx + 1]] = index
                 logging.info(f"Subcategory Submatrix boundary drawn for label: {labels[label_idx + 1]} at index: {index}")
 
+    # Calculate submatrix bounds
+    sorted_sub_indices = sorted(subcategory_indices.values())
+    start_index = max(top_level_indices.values()) + 1  # Start after the last top-level category
+    for i, sub_label in enumerate(sorted(subcategory_indices.keys())):
+        end_index = subcategory_indices[sub_label]
+        submatrix_bounds[sub_label[0]] = (start_index, end_index)
+        start_index = end_index + 1  # Update start for the next submatrix
+        logging.info(f"Submatrix bounds for {sub_label[0]}: start={submatrix_bounds[sub_label[0]][0]}, end={submatrix_bounds[sub_label[0]][1]}")
+
     # Place submatrix labels (e.g., "AA", "AB", "AC") using the submatrix indices
     for sub_label_x, x_index in subcategory_indices.items():
         for sub_label_y, y_index in subcategory_indices.items():
@@ -375,12 +385,14 @@ def visualize_matrix(matrix, labels, block_indices):
     # Log the dictionaries for later access
     logging.info(f"Top-Level Indices: {top_level_indices}")
     logging.info(f"Subcategory Indices: {subcategory_indices}")
+    logging.info(f"Submatrix Bounds: {submatrix_bounds}")
 
     # Print the dictionaries
     print("Top-Level Indices:", top_level_indices)
     print("Subcategory Indices:", subcategory_indices)
+    print("Submatrix Bounds:", submatrix_bounds)
 
-    return top_level_indices, subcategory_indices
+    return top_level_indices, subcategory_indices, submatrix_bounds
 
 # ------------------------------------------------------------------
 # Main Function
