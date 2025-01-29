@@ -22,11 +22,24 @@ This project demonstrates the integration of the Fractal Identity Matrix (FIM) p
 
 ### Running the Script
 
-To run the main script, you can use the provided shell script `run_lats_gpt4.sh`. This script sets up the environment and executes the Python script.
+To run the main script, follow these steps:
 
-```bash
-bash run_lats_gpt4.sh
-```
+1. **Navigate to the LanguageAgentTreeSearch Directory**:
+   ```bash
+   cd LanguageAgentTreeSearch/programming
+   ```
+
+2. **Activate the Bash Environment**:
+   Ensure your terminal is set to use bash. If you're using a different shell, you may need to switch to bash:
+   ```bash
+   bash
+   ```
+
+3. **Execute the Shell Script**:
+   Run the provided shell script `run_lats_gpt4.sh` to set up the environment and execute the Python script:
+   ```bash
+   sh run_lats_gpt4.sh
+   ```
 
 This script will execute the Python script with the necessary environment variables set.
 
