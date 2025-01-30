@@ -6,7 +6,13 @@ source venv/bin/activate
 # Echo the API key (be careful not to share this output)
 echo "OPENAI_API_KEY: ${OPENAI_API_KEY:0:5}...${OPENAI_API_KEY: -5}"
 
-# Run the Python script
+# Check for mock flag
+USE_MOCK=""
+if [[ "$1" == "--mock" ]]; then
+  USE_MOCK="--use_mock"
+fi
+
+# Run the Python script with the mock flag
 python main.py \
   --run_name "test_run" \
   --root_dir "root" \
@@ -19,4 +25,5 @@ python main.py \
   --number_of_tests 2 \
   --verbose \
   --num_agents 5 \
-  --output_path "./output.json"
+  --output_path "./output.json" \
+  $USE_MOCK

@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from dotenv import load_dotenv
 import random
 import logging
+import argparse
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -15,6 +16,24 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # ------------------------------------------------------------------
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
+
+# LLM response cache
+llm_cache = {}
+
+# Function to cache LLM responses
+def cache_llm_response(prompt, response):
+    llm_cache[prompt] = response
+    with open('llm_cache.json', 'w') as cache_file:
+        json.dump(llm_cache, cache_file, indent=4)
+
+# Function to get cached LLM response
+def get_cached_llm_response(prompt):
+    return llm_cache.get(prompt)
+
+# Load existing cache if available
+if os.path.exists('llm_cache.json'):
+    with open('llm_cache.json', 'r') as cache_file:
+        llm_cache = json.load(cache_file)
 
 # Dictionary to track memory gradient usage
 memory_gradient_usage = {
@@ -54,23 +73,25 @@ def log_hpc_costs():
     for memory_type, usage in memory_gradient_usage.items():
         cost = usage * hpc_costs[memory_type]
         total_cost += cost
+        logging.info(f"HPC cost for {memory_type} memory: {cost:.2f} (Usage: {usage})")
+    logging.info(f"Total inferred HPC cost: {total_cost:.2f}")
     return total_cost
 
 def make_llm_call(prompt, memory_type="Immediate"):
-    """
-    Simulates an LLM call and logs the memory usage and HPC cost.
-    """
+    cached_response = get_cached_llm_response(prompt)
+    if cached_response:
+        logging.info(f"Using cached response for prompt: {prompt}")
+        return cached_response
+
     increment_llm_call_counter()
     log_memory_usage("LLM Call", memory_type)
-    # Simulate LLM call here
+    response = openai_chat_completion(prompt)
+    cache_llm_response(prompt, response)
+    logging.info(f"LLM call made with {memory_type} memory.")
+    print(f"LLM call made with {memory_type} memory.")
     total_cost = log_hpc_costs()
-    
-    # Consolidate the print statements into one line
-    print(f"LLM call #{llm_call_counter} made with {memory_type} memory. "
-          f"Immediate: {memory_gradient_usage['Immediate']} (Cost: {hpc_costs['Immediate'] * memory_gradient_usage['Immediate']:.2f}), "
-          f"Working: {memory_gradient_usage['Working']} (Cost: {hpc_costs['Working'] * memory_gradient_usage['Working']:.2f}), "
-          f"Long-Term: {memory_gradient_usage['Long-Term']} (Cost: {hpc_costs['Long-Term'] * memory_gradient_usage['Long-Term']:.2f}), "
-          f"Total inferred HPC cost: {total_cost:.2f}")
+    print(f"Total inferred HPC cost after LLM call: {total_cost:.2f}")
+    return response
 
 def print_summary():
     print("\n=== Memory Gradient Usage ===")
@@ -130,7 +151,7 @@ def openai_chat_completion(prompt, model="gpt-4", temperature=0.3, max_tokens=15
         )
         return response["choices"][0]["message"]["content"].strip()
     except Exception as e:
-        print(f"[Error] LLM API call failed: {e}")
+        logging.error(f"[Error] LLM API call failed: {e}")
         return ""
 
 # ------------------------------------------------------------------
@@ -400,21 +421,37 @@ class FractalSymSorter:
             print(f"[Warning] Failed to parse LLM response for first submatrix weights. Response: {response}")
 
     def create_submatrix_map(self):
-        """
-        Creates a map of submatrices with a naming convention using coordinates.
-        """
-        num_top_categories = 4  # Assuming there are 4 top-level categories
         submatrix_map = {}
-
-        for i in range(1, num_top_categories + 1):
-            for j in range(1, num_top_categories + 1):
-                if i != j:
-                    # Create a notation for the submatrix, starting from the first child of origin
-                    notation = f"{chr(64 + i)}{chr(64 + j)}"
-                    submatrix_map[notation] = (i, j)
-                    print(f"Submatrix {notation}: Interaction between '{self.labels[i]}' and '{self.labels[j]}'")
-
+        step = len(self.labels) // 4  # Example step size for submatrices
+        for i, label in enumerate(self.labels):
+            if i % step == 0:
+                submatrix_map[label] = (i, i + step - 1)
         return submatrix_map
+
+    def visualize_matrix(self):
+        plt.figure(figsize=(12, 10))
+        plt.imshow(self.matrix, cmap='viridis', interpolation='none')
+        plt.colorbar(label='Similarity Weight')
+        plt.xticks(ticks=range(len(self.labels)), labels=self.labels, rotation=90)
+        plt.yticks(ticks=range(len(self.labels)), labels=self.labels)
+        plt.title('FractalSymSorter Adjacency Matrix')
+
+        # Define submatrix boundaries
+        submatrix_bounds = self.create_submatrix_map()
+
+        # Draw lines to indicate submatrix boundaries
+        for label, (start, end) in submatrix_bounds.items():
+            plt.axhline(y=start - 0.5, color='white', linestyle='--', linewidth=0.5)
+            plt.axvline(x=start - 0.5, color='white', linestyle='--', linewidth=0.5)
+            plt.axhline(y=end - 0.5, color='white', linestyle='--', linewidth=0.5)
+            plt.axvline(x=end - 0.5, color='white', linestyle='--', linewidth=0.5)
+
+        # Add red labels for top-left corner of each submatrix
+        for label, (start, end) in submatrix_bounds.items():
+            plt.text(start, start, label, color='red', fontsize=10, ha='center', va='center')
+
+        plt.tight_layout()
+        plt.show()
 
 # ------------------------------------------------------------------
 # Visualization Function
@@ -590,105 +627,127 @@ def process_multiple_batches(all_comparisons):
         # Do something with the weights
         print(weights)
 
+class MockLLM:
+    def __init__(self, schedule_file):
+        if os.path.exists(schedule_file):
+            with open(schedule_file, 'r') as file:
+                self.responses = json.load(file)
+        else:
+            self.responses = {}
+
+    def get_response(self, prompt):
+        return self.responses.get(prompt, "No mock response available.")
+
+def real_llm_call(prompt):
+    # Simulate a real LLM call
+    response = f"Real LLM response for {prompt}"
+    return response
+
+def mock_llm_call(prompt, mock_llm):
+    return mock_llm.get_response(prompt)
+
 def main():
     print("Starting main function...")  # Debugging print
-    # 1. Define the origin category
-    origin_description = "Define the origin category for the FractalSymSorter based on HPC interpretability."
-    origin_list = get_top_level_categories(origin_description, num_categories=1)
-    if not origin_list:
-        print("[Error] Failed to retrieve origin category.")
-        return
+    try:
+        # 1. Define the origin category
+        origin_description = "Define the origin category for the FractalSymSorter based on HPC interpretability."
+        origin_list = get_top_level_categories(origin_description, num_categories=1)
+        if not origin_list:
+            print("[Error] Failed to retrieve origin category.")
+            return
 
-    origin_category = origin_list[0]
-    print(f"Origin Category: {origin_category}")
+        origin_category = origin_list[0]
+        print(f"Origin Category: {origin_category}")
 
-    # 2. Prompt for 4 more top-level categories to add incrementally
-    main_description = (
-        "Now let's define 4 more top-level categories for HPC interpretability, aligned with the Fractal Identity Matrix (FIM) objectives."
-        " Return exactly 4 major categories in a valid JSON array of strings."
-    )
-    more_cats = get_top_level_categories(main_description, num_categories=4)
-    print(f"Top-Level Categories: {more_cats}")
+        # 2. Prompt for 4 more top-level categories to add incrementally
+        main_description = (
+            "Now let's define 4 more top-level categories for HPC interpretability, aligned with the Fractal Identity Matrix (FIM) objectives."
+            " Return exactly 4 major categories in a valid JSON array of strings."
+        )
+        more_cats = get_top_level_categories(main_description, num_categories=4)
+        print(f"Top-Level Categories: {more_cats}")
 
-    # 3. Initialize FractalSymSorter with the origin pivot
-    layout = FractalSymSorter(matrix=[[1.0]], labels=[origin_category], use_llm_weights=True)  # Set use_llm_weights=True to use LLM-based weights
+        # 3. Initialize FractalSymSorter with the origin pivot
+        layout = FractalSymSorter(matrix=[[1.0]], labels=[origin_category], use_llm_weights=True)
 
-    # 4. Insert all top-level categories first
-    for cat in more_cats:
-        layout.insert_top_cat(cat)
+        # 4. Insert all top-level categories first
+        for cat in more_cats:
+            layout.insert_top_cat(cat)
 
-    # 5. Insert subcategories for each top-level category in sorted blocks
-    for cat in more_cats:
-        subcats = get_subcategories(cat, num_subcategories=3)
-        layout.insert_subcats(cat, subcats)
+        # 5. Insert subcategories for each top-level category in sorted blocks
+        for cat in more_cats:
+            subcats = get_subcategories(cat, num_subcategories=3)
+            layout.insert_subcats(cat, subcats)
 
-    # 6. Highlight the top 20 most significant interactions, including inter-category
-    all_categories = layout.labels  # Consider all categories for inter-category interactions
-    layout.assign_top_interactions(all_categories, top_n=20)
+        # 6. Highlight the top 20 most significant interactions, including inter-category
+        all_categories = layout.labels
+        layout.assign_top_interactions(all_categories, top_n=20)
 
-    # 7. Assign weights to the first submatrix on the diagonal
-    layout.assign_weights_to_first_submatrix()
+        # 7. Assign weights to the first submatrix on the diagonal
+        layout.assign_weights_to_first_submatrix()
 
-    # Create a submatrix map and print the interactions
-    submatrix_map = layout.create_submatrix_map()
+        # Create a submatrix map and print the interactions
+        submatrix_map = layout.create_submatrix_map()
 
-    # Append submatrix notation to labels
-    layout.labels = append_submatrix_notation_to_labels(layout.labels)
+        # Append submatrix notation to labels
+        layout.labels = append_submatrix_notation_to_labels(layout.labels)
 
-    # Print weight information with coordinates
-    print_weight_info(layout.matrix, layout.labels, submatrix_map)
+        # Print weight information with coordinates
+        print_weight_info(layout.matrix, layout.labels, submatrix_map)
 
-    # Show final layout and visualize with labeled submatrix boundaries
-    layout.show_map()
-    block_indices = layout.get_block_indices()
-    visualize_matrix(layout.matrix, layout.labels, block_indices)
+        # Show final layout and visualize with labeled submatrix boundaries
+        layout.show_map()
+        block_indices = layout.get_block_indices()
+        visualize_matrix(layout.matrix, layout.labels, block_indices)
 
-    # 9. HPC skip factor example
-    total_blocks = len(layout.labels)
-    accessed_blocks = max(1, total_blocks // 20)  # Access top 1/20 of the blocks
-    skip_factor = 1.0 - (accessed_blocks / total_blocks)
-    cost = 1.0 - skip_factor
+        # 9. HPC skip factor example
+        total_blocks = len(layout.labels)
+        accessed_blocks = max(1, total_blocks // 20)
+        skip_factor = 1.0 - (accessed_blocks / total_blocks)
+        cost = 1.0 - skip_factor
 
-    print(f"\nHPC Skip Factor Simulation:")
-    print(f"  Accessed {accessed_blocks} of {total_blocks} blocks.")
-    print(f"  skip_factor = {skip_factor:.2f}, HPC cost ≈ {cost:.2f}")
+        print(f"\nHPC Skip Factor Simulation:")
+        print(f"  Accessed {accessed_blocks} of {total_blocks} blocks.")
+        print(f"  skip_factor = {skip_factor:.2f}, HPC cost ≈ {cost:.2f}")
 
-    # Example usage
-    make_llm_call("Example prompt", memory_type="Immediate")
-    total_cost = log_hpc_costs()
-    print(f"Total LLM calls: {llm_call_counter}, Total inferred HPC cost: {total_cost:.2f}")
+        # Example usage
+        make_llm_call("Example prompt", memory_type="Immediate")
+        total_cost = log_hpc_costs()
+        print(f"Total LLM calls: {llm_call_counter}, Total inferred HPC cost: {total_cost:.2f}")
 
-    make_llm_call("Another prompt", memory_type="Working")
-    total_cost = log_hpc_costs()
-    print(f"Total LLM calls: {llm_call_counter}, Total inferred HPC cost: {total_cost:.2f}")
+        make_llm_call("Another prompt", memory_type="Working")
+        total_cost = log_hpc_costs()
+        print(f"Total LLM calls: {llm_call_counter}, Total inferred HPC cost: {total_cost:.2f}")
 
-    make_llm_call("Yet another prompt", memory_type="Long-Term")
-    total_cost = log_hpc_costs()
-    print(f"Total LLM calls: {llm_call_counter}, Total inferred HPC cost: {total_cost:.2f}")
+        make_llm_call("Yet another prompt", memory_type="Long-Term")
+        total_cost = log_hpc_costs()
+        print(f"Total LLM calls: {llm_call_counter}, Total inferred HPC cost: {total_cost:.2f}")
 
-    # Print the summary of costs and memory usage
-    total_cost = print_summary()
-    print(f"Final Total LLM calls: {llm_call_counter}, Final Total inferred HPC cost: {total_cost:.2f}")
+        # Print the summary of costs and memory usage
+        total_cost = print_summary()
+        print(f"Final Total LLM calls: {llm_call_counter}, Final Total inferred HPC cost: {total_cost:.2f}")
 
-    # Log the HPC costs
-    log_hpc_costs()
+        # Log the HPC costs
+        log_hpc_costs()
 
-    # Example matrix and labels for plotting
-    matrix = np.random.rand(5, 5)
-    labels = ["A", "B", "C", "D", "E"]
-    plot_matrix(matrix, labels)
+        # Example matrix and labels for plotting
+        matrix = np.random.rand(5, 5)
+        labels = ["A", "B", "C", "D", "E"]
+        plot_matrix(matrix, labels)
 
-    # Print the total number of LLM calls
-    print(f"Total LLM calls: {llm_call_counter}")
+        # Print the total number of LLM calls
+        print(f"Total LLM calls: {llm_call_counter}")
 
-    # Example usage of process_multiple_batches
-    all_comparisons = [
-        [("Category1", "Category2"), ("Category3", "Category4")],
-        [("Category5", "Category6"), ("Category7", "Category8")],
-        # Add more batches as needed
-    ]
+        # Example usage of process_multiple_batches
+        all_comparisons = [
+            [("Category1", "Category2"), ("Category3", "Category4")],
+            [("Category5", "Category6"), ("Category7", "Category8")],
+        ]
 
-    process_multiple_batches(all_comparisons)
+        process_multiple_batches(all_comparisons)
+
+    except Exception as e:
+        logging.error(f"[Error] An error occurred in the main function: {e}")
 
 if __name__ == "__main__":
     print("Executing script...")  # Debugging print
