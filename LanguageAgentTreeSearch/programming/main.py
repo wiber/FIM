@@ -54,8 +54,6 @@ def log_hpc_costs():
     for memory_type, usage in memory_gradient_usage.items():
         cost = usage * hpc_costs[memory_type]
         total_cost += cost
-        logging.info(f"HPC cost for {memory_type} memory: {cost:.2f} (Usage: {usage})")
-    logging.info(f"Total inferred HPC cost: {total_cost:.2f}")
     return total_cost
 
 def make_llm_call(prompt, memory_type="Immediate"):
@@ -65,10 +63,14 @@ def make_llm_call(prompt, memory_type="Immediate"):
     increment_llm_call_counter()
     log_memory_usage("LLM Call", memory_type)
     # Simulate LLM call here
-    logging.info(f"LLM call made with {memory_type} memory.")
-    print(f"LLM call made with {memory_type} memory.")
     total_cost = log_hpc_costs()
-    print(f"Total inferred HPC cost after LLM call: {total_cost:.2f}")
+    
+    # Consolidate the print statements into one line
+    print(f"LLM call #{llm_call_counter} made with {memory_type} memory. "
+          f"Immediate: {memory_gradient_usage['Immediate']} (Cost: {hpc_costs['Immediate'] * memory_gradient_usage['Immediate']:.2f}), "
+          f"Working: {memory_gradient_usage['Working']} (Cost: {hpc_costs['Working'] * memory_gradient_usage['Working']:.2f}), "
+          f"Long-Term: {memory_gradient_usage['Long-Term']} (Cost: {hpc_costs['Long-Term'] * memory_gradient_usage['Long-Term']:.2f}), "
+          f"Total inferred HPC cost: {total_cost:.2f}")
 
 def print_summary():
     print("\n=== Memory Gradient Usage ===")
