@@ -11,15 +11,15 @@ USE_MOCK=""
 if [[ "$1" == "--mock" ]]; then
   USE_MOCK="--use_mock"
 fi
-
 # Run the Python script with the mock flag
+
 python main.py \
   --run_name "test_run" \
   --root_dir "root" \
   --dataset_path "./benchmarks/humaneval-py.jsonl" \
   --strategy "mcts" \
   --language "py" \
-  --model "gpt-4o-mini" \
+  --model "gpt-03-mini-high" \
   --max_iters 10 \
   --expansion_factor 2 \
   --number_of_tests 2 \

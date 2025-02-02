@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 import random
 import logging
 import argparse
+from matplotlib.patches import Rectangle
+import sys
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -59,7 +61,7 @@ def increment_llm_call_counter():
     global llm_call_counter
     llm_call_counter += 1
     logging.info(f"LLM call #{llm_call_counter} made.")
-    print(f"LLM call #{llm_call_counter} made.")
+    print(f"LLM call #{llm_call_counter} made.", flush=True)
 
 def log_memory_usage(operation, memory_type):
     if memory_type in memory_gradient_usage:
@@ -88,33 +90,131 @@ def make_llm_call(prompt, memory_type="Immediate"):
     response = openai_chat_completion(prompt)
     cache_llm_response(prompt, response)
     logging.info(f"LLM call made with {memory_type} memory.")
-    print(f"LLM call made with {memory_type} memory.")
+    print(f"LLM call made with {memory_type} memory.", flush=True)
     total_cost = log_hpc_costs()
-    print(f"Total inferred HPC cost after LLM call: {total_cost:.2f}")
+    print(f"Total inferred HPC cost after LLM call: {total_cost:.2f}", flush=True)
     return response
 
 def print_summary():
-    print("\n=== Memory Gradient Usage ===")
+    print("\n=== Memory Gradient Usage ===", flush=True)
     for memory_type, usage in memory_gradient_usage.items():
-        print(f"{memory_type}: {usage}")
+        print(f"{memory_type}: {usage}", flush=True)
 
-    print("\n=== HPC Costs ===")
+    print("\n=== HPC Costs ===", flush=True)
     total_cost = 0
     for memory_type, usage in memory_gradient_usage.items():
         cost = usage * hpc_costs[memory_type]
         total_cost += cost
-        print(f"{memory_type} cost: {cost:.2f}")
+        print(f"{memory_type} cost: {cost:.2f}", flush=True)
 
-    print(f"\nTotal inferred HPC cost: {total_cost:.2f}")
+    print(f"\nTotal inferred HPC cost: {total_cost:.2f}", flush=True)
     return total_cost
 
 def plot_matrix(matrix, labels):
+    """
+    Plots the adjacency matrix and overlays a bounding box defining the focus area.
+    
+    This function computes a "finability index" for the high-weight region within the 
+    entire matrix. The finability index (FIM Focus) is defined as:
+    
+        FIM Focus = (L_focus / L_total)^2
+
+    where:
+      • L_total: Total dimension (side) of the square matrix.
+      • L_focus: Maximum of the width or height of the bounding box.
+
+    The threshold for high weight is set at 50% of the maximum value.
+    
+    In addition to the overall FIM Focus, this function prints a geometric interpretation
+    of skip factors for several submatrices (e.g., A, B, C, D) defined by their start/end
+    bounds. For a two-dimensional matrix the skip factor is computed as:
+
+         Skip Factor = (submatrix_side / total_side)^2
+                     = (submatrix_side^2) / (total_side^2)
+
+    This demonstration is meant to show—using pure, inarguable geometry—that as a consequence
+    of the Finability Index, a smaller submatrix represents only a fraction of the entire area.
+    """
+    # Create the matrix plot.
     plt.figure(figsize=(8, 6))
     plt.imshow(matrix, cmap='viridis', interpolation='none')
     plt.colorbar(label='Weight')
     plt.xticks(ticks=range(len(labels)), labels=labels, rotation=90)
     plt.yticks(ticks=range(len(labels)), labels=labels)
     plt.title('Adjacency Matrix')
+
+    # --- FIM Bounding Box Logic ---
+    threshold = matrix.max() * 0.5  # 50% of max weight is considered "high weight"
+    indices = np.argwhere(matrix >= threshold)
+    L_total = matrix.shape[0]  # Total dimensions (assumes square matrix)
+
+    if indices.size > 0:
+        # Find bounding indices where matrix values exceed the threshold.
+        row_min, col_min = indices.min(axis=0)
+        row_max, col_max = indices.max(axis=0)
+        
+        # Compute bounding box dimensions.
+        width = col_max - col_min + 1
+        height = row_max - row_min + 1
+        L_focus = max(width, height)
+        finability_index_focus = (L_focus / L_total) ** 2
+
+        # Overlay bounding box on the plot.
+        ax = plt.gca()
+        rect = Rectangle((col_min - 0.5, row_min - 0.5), width, height,
+                         edgecolor='red', facecolor='none', linewidth=2, linestyle='--')
+        ax.add_patch(rect)
+
+        # Annotate the plot with the computed finability index.
+        plt.text(0.95, 0.05, f"FIM Focus: {finability_index_focus:.4f}",
+                 transform=ax.transAxes,
+                 fontsize=12, color="white", horizontalalignment="right",
+                 bbox=dict(facecolor='red', alpha=0.5, edgecolor='none'))
+
+        # Print narrative about the overall bounding box.
+        info_text = (
+            "=== Fractal Identity Matrix (FIM) Plot Annotation ===\n"
+            f"Using threshold at 50% of max weight: {threshold:.2f}\n"
+            f"Bounding Box: rows {row_min} to {row_max}, columns {col_min} to {col_max}\n"
+            f"Width: {width}, Height: {height} -> Focus Range (max dimension): {L_focus}\n"
+            f"Calculated Finability Index (squared focus ratio): {finability_index_focus:.4f}\n"
+            "This represents the fraction of the matrix (squared) that is focused on versus scanning the whole matrix.\n"
+        )
+        print(info_text, flush=True)
+        logging.info(info_text)
+    else:
+        print("No values found above the threshold for bounding box computation.", flush=True)
+        logging.info("No values found above the threshold for bounding box computation.")
+
+    # --- Additional: Geometric Skip Factor for Submatrices ---
+    # These bounds come directly from our logs:
+    #   For example, submatrix D is defined by start=15 and end=17.
+    # The skip factor is computed as (end - start)^2 / (L_total)^2.
+    submatrix_bounds = {
+        "A": (6, 8),
+        "B": (9, 11),
+        "C": (12, 14),
+        "D": (15, 17)
+    }
+    total_area = L_total ** 2  # Total matrix area = total_side^2
+    print("--- Geometric Skip Factors for Submatrices (n=2) ---", flush=True)
+    logging.info("--- Geometric Skip Factors for Submatrices (n=2) ---")
+    for submatrix, (start, end) in submatrix_bounds.items():
+        # Here we use (end - start) as the submatrix's linear side.
+        sub_length = end - start  # For D: 17 - 15 = 2, for example.
+        sub_area = sub_length ** 2    # Area of the submatrix (square of the side).
+        skip_factor = sub_area / total_area  # Geometric skip factor (area ratio).
+        msg = (
+            f"Submatrix {submatrix}: start = {start}, end = {end}\n"
+            f"  Linear length (end - start) = {end} - {start} = {sub_length}; Total dimension = {L_total}\n"
+            f"  Submatrix area = (end - start)^2 = {sub_length}^2 = {sub_area}; Total matrix area = {L_total}^2 = {total_area}\n"
+            f"  Skip factor (area ratio) = (submatrix_side)^2 / (total_side)^2 = {skip_factor:.4f}\n"
+            f"  (This is pure geometry: the fraction of the matrix's area occupied by this submatrix.)\n"
+        )
+        # Print the skip factor immediately in each iteration.
+        print(msg, flush=True)
+        logging.info(msg)
+
     plt.tight_layout()
     plt.show()
 
@@ -211,7 +311,7 @@ def assign_similarity_weights(label_a, label_b):
     try:
         weight = float(response)
         weight = max(0.0, min(1.0, weight))  # Clamp between 0 and 1
-        print(f"[LLM] Similarity between '{label_a}' and '{label_b}': {weight}")
+        print(f"[LLM] Similarity between '{label_a}' and '{label_b}': {weight}", flush=True)
         
         # Insert the call to track costing
         make_llm_call(prompt, memory_type="Immediate")
@@ -290,7 +390,7 @@ class FractalSymSorter:
         self.labels.append(new_label)
         self.label_to_idx[new_label] = old_size
 
-        print(f"[Matrix Update] Added '{new_label}' at index {old_size}")
+        print(f"[Matrix Update] Added '{new_label}' at index {old_size}", flush=True)
 
     def insert_top_cat(self, label):
         """
@@ -305,7 +405,7 @@ class FractalSymSorter:
         origin_idx = self.label_to_idx[self.labels[0]]
         cat_idx = self.label_to_idx[label]
         self.matrix[cat_idx, origin_idx] = weight  # Transpose the assignment
-        print(f"[Top-Level Insert] from '{self.labels[0]}' to '{label}' at row={cat_idx} with weight={weight}")
+        print(f"[Top-Level Insert] from '{self.labels[0]}' to '{label}' at row={cat_idx} with weight={weight}", flush=True)
 
         # Track the index where the new block ends
         self.block_indices.append(cat_idx + 1)
@@ -324,7 +424,7 @@ class FractalSymSorter:
             subcat_idx = self.label_to_idx[subcat]
             # Assign weight from parent to subcategory
             self.matrix[subcat_idx, parent_idx] = weight
-            print(f"[Subcategory Insert] from '{parent_label}' to '{subcat}' at row={subcat_idx} with weight={weight}")
+            print(f"[Subcategory Insert] from '{parent_label}' to '{subcat}' at row={subcat_idx} with weight={weight}", flush=True)
             
             # Insert the call to track costing for working memory
             make_llm_call(f"Subcategory Insert from '{parent_label}' to '{subcat}'", memory_type="Working")
@@ -369,17 +469,17 @@ class FractalSymSorter:
             idx_a = self.label_to_idx[a]
             idx_b = self.label_to_idx[b]
             self.matrix[idx_a, idx_b] = weight
-            print(f"[Top Interaction] from '{a}' to '{b}' with weight={weight}")
+            print(f"[Top Interaction] from '{a}' to '{b}' with weight={weight}", flush=True)
 
             # Insert the call to track costing for long-term memory
             make_llm_call(f"Top Interaction from '{a}' to '{b}'", memory_type="Long-Term")
 
     def show_map(self):
         """Prints the current matrix and label mapping."""
-        print("\n=== Current Matrix & Labels ===")
+        print("\n=== Current Matrix & Labels ===", flush=True)
         for idx, label in enumerate(self.labels):
-            print(f"{idx}: {label}")
-        print(self.matrix)
+            print(f"{idx}: {label}", flush=True)
+        print(self.matrix, flush=True)
 
     def get_block_indices(self):
         return self.block_indices
@@ -416,9 +516,9 @@ class FractalSymSorter:
                 idx_a = self.label_to_idx[label_a]
                 idx_b = self.label_to_idx[label_b]
                 self.matrix[idx_a, idx_b] = weight
-                print(f"[LLM Assignment] Weight between '{label_a}' and '{label_b}': {weight}")
+                print(f"[LLM Assignment] Weight between '{label_a}' and '{label_b}': {weight}", flush=True)
         except json.JSONDecodeError:
-            print(f"[Warning] Failed to parse LLM response for first submatrix weights. Response: {response}")
+            print(f"[Warning] Failed to parse LLM response for first submatrix weights. Response: {response}", flush=True)
 
     def create_submatrix_map(self):
         submatrix_map = {}
@@ -482,7 +582,7 @@ def log_significant_interactions(matrix, labels, submatrix_bounds, threshold=0.5
                     f"Submatrix: {submatrix_label if not top_level_interaction else 'Top-Level'}"
                 )
                 logging.info(interaction_info)
-                print(interaction_info)
+                print(interaction_info, flush=True)
 
 def visualize_matrix(matrix, labels, block_indices):
     """
@@ -520,10 +620,21 @@ def visualize_matrix(matrix, labels, block_indices):
 
     # Calculate submatrix bounds
     sorted_sub_indices = sorted(subcategory_indices.values())
+    total_side = len(labels)  # Total matrix dimension, assumed to be the number of labels
     start_index = max(top_level_indices.values()) + 1  # Start after the last top-level category
     for i, sub_label in enumerate(sorted(subcategory_indices.keys())):
         end_index = subcategory_indices[sub_label]
         submatrix_bounds[sub_label[0]] = (start_index, end_index)
+        
+        # Compute the linear length of this submatrix (using the difference).
+        sub_length = end_index - start_index  
+        # Compute the geometric skip factor as the ratio of areas:
+        skip_factor = (sub_length ** 2) / (total_side ** 2)
+        
+        # Print the skip factor immediately, flushing the output.
+        print(f"Skip factor for submatrix {sub_label[0]}: ({end_index} - {start_index})^2 / ({total_side})^2 = {skip_factor:.4f}", flush=True)
+        logging.info(f"Skip factor for submatrix {sub_label[0]}: ({end_index} - {start_index})^2 / ({total_side})^2 = {skip_factor:.4f}")
+        
         start_index = end_index + 1  # Update start for the next submatrix
         logging.info(f"Submatrix bounds for {sub_label[0]}: start={submatrix_bounds[sub_label[0]][0]}, end={submatrix_bounds[sub_label[0]][1]}")
 
@@ -562,9 +673,9 @@ def visualize_matrix(matrix, labels, block_indices):
     logging.info(f"Submatrix Bounds: {submatrix_bounds}")
 
     # Print the dictionaries
-    print("Top-Level Indices:", top_level_indices)
-    print("Subcategory Indices:", subcategory_indices)
-    print("Submatrix Bounds:", submatrix_bounds)
+    print("Top-Level Indices:", top_level_indices, flush=True)
+    print("Subcategory Indices:", subcategory_indices, flush=True)
+    print("Submatrix Bounds:", submatrix_bounds, flush=True)
 
     # Log significant interactions
     log_significant_interactions(matrix, labels, submatrix_bounds)
@@ -597,7 +708,7 @@ def print_weight_info(matrix, labels, submatrix_map):
                 submatrix_coord = f"{top_label_i}{subcat_i + 1}{top_label_j}{subcat_j + 1}"
                 interaction_notation = f"{top_label_i}{top_label_j}={weight:.2f}"
                 
-                print(f"Weight: {weight:.2f} at Absolute Coordinate: ({i}, {j}), Submatrix Coordinate: {submatrix_coord}, Interaction: '{labels[i]}' to '{labels[j]}', Notation: {interaction_notation}")
+                print(f"Weight: {weight:.2f} at Absolute Coordinate: ({i}, {j}), Submatrix Coordinate: {submatrix_coord}, Interaction: '{labels[i]}' to '{labels[j]}', Notation: {interaction_notation}", flush=True)
 
 def append_submatrix_notation_to_labels(labels):
     """
@@ -625,7 +736,7 @@ def process_multiple_batches(all_comparisons):
     for batch in all_comparisons:
         weights = assign_similarity_weights_batch(batch)
         # Do something with the weights
-        print(weights)
+        print(weights, flush=True)
 
 class MockLLM:
     def __init__(self, schedule_file):
@@ -646,18 +757,165 @@ def real_llm_call(prompt):
 def mock_llm_call(prompt, mock_llm):
     return mock_llm.get_response(prompt)
 
+# ----- New Parallel Track: Dynamic Hierarchy Data Structure & Sorting -----
+
+class CategoryNode:
+    def __init__(self, name, weight=0.0, children=None):
+        """
+        A node representing a category in a hierarchy.
+        
+        Args:
+            name (str): The category name.
+            weight (float): A score used for sorting (e.g., relevance).
+            children (list[CategoryNode]): Subcategories.
+        """
+        self.name = name
+        self.weight = weight
+        self.children = children if children is not None else []
+
+    def add_child(self, child_node):
+        """Add a subcategory."""
+        self.children.append(child_node)
+
+    def sort_children(self):
+        """Sort subcategories based on their weight (descending)."""
+        self.children.sort(key=lambda x: x.weight, reverse=True)
+
+    def __repr__(self):
+        return f"{self.name}({self.weight})"
+
+
+class DynamicHierarchyBuilder:
+    def __init__(self, top_level_nodes):
+        """
+        Build and manage a dynamic hierarchy of categories.
+        
+        This class will compute a one-dimensional, sorted axis order (for both rows and columns),
+        along with block boundaries for each top-level category.
+        
+        Args:
+            top_level_nodes (list[CategoryNode]): The top-level categories.
+        """
+        self.top_level_nodes = top_level_nodes
+        self.axis_order = []     # Flattened list of nodes (top-level + subcategories).
+        self.boundary_map = {}   # Map: top-level category name -> (start_index, end_index)
+
+    def compute_axis_order(self):
+        """
+        Compute a one-dimensional axis ordering from the tree.
+        
+        Sort top-level nodes, have each
+        top-level node precede its sorted children in the flattened list,
+        and record their index boundaries.
+        """
+        # Sort the top-level nodes (e.g., by weight descending)
+        self.top_level_nodes.sort(key=lambda node: node.weight, reverse=True)
+        self.axis_order = []
+        self.boundary_map = {}
+        start_index = 0
+        
+        for top_node in self.top_level_nodes:
+            top_node.sort_children()
+            # The block consists of the top-level node first, then its children.
+            block = [top_node] + top_node.children
+            block_length = len(block)
+            self.axis_order.extend(block)
+            # Record boundaries: (start, end) where end is exclusive.
+            self.boundary_map[top_node.name] = (start_index, start_index + block_length)
+            start_index += block_length
+
+        print("\n[Dynamic Hierarchy] Computed axis order:", flush=True)
+        self.print_axis_order()
+        print("\n[Dynamic Hierarchy] Computed boundary map:", flush=True)
+        self.print_boundary_map()
+
+    def print_axis_order(self):
+        for idx, node in enumerate(self.axis_order):
+            print(f"  Index {idx}: {node}", flush=True)
+
+    def print_boundary_map(self):
+        for top_name, (start, end) in self.boundary_map.items():
+            print(f"  {top_name}: start={start}, end={end}", flush=True)
+
+    def get_axis_labels(self):
+        """Return a list of labels (names) in the computed order."""
+        return [node.name for node in self.axis_order]
+
+    def build_matrix(self):
+        """
+        Build a 2D weight matrix (as a NumPy array) for the current axis order.
+
+        Even though the weight function here can be asymmetric,
+        the axis ordering (i.e., the labels) remains symmetric.
+        """
+        n = len(self.axis_order)
+        matrix = np.zeros((n, n))
+        for i in range(n):
+            for j in range(n):
+                matrix[i, j] = self.compute_weight(self.axis_order[i], self.axis_order[j])
+        return matrix
+
+    def compute_weight(self, node_i, node_j):
+        """
+        Replace this with your own logic (or LLM call) on how to compute the weight between two categories.
+        For demonstration we use a random value.
+        """
+        return random.uniform(0, 1)
+
+
+def run_dynamic_hierarchy_demo():
+    """
+    Demonstrates the new dynamic hierarchical sorting track.
+    Builds a hierarchy of categories, computes the axis ordering and boundaries,
+    then constructs and visualizes the weight matrix.
+    """
+    print("\n==== Running Dynamic Hierarchy Demo ====", flush=True)
+    
+    # Define some top-level nodes and assign subcategories.
+    top1 = CategoryNode("TopCat1", weight=0.9)
+    top1.add_child(CategoryNode("TopCat1_Sub1", weight=0.85))
+    top1.add_child(CategoryNode("TopCat1_Sub2", weight=0.80))
+    
+    top2 = CategoryNode("TopCat2", weight=0.8)
+    top2.add_child(CategoryNode("TopCat2_Sub1", weight=0.75))
+    top2.add_child(CategoryNode("TopCat2_Sub2", weight=0.70))
+    top2.add_child(CategoryNode("TopCat2_Sub3", weight=0.65))
+    
+    top3 = CategoryNode("TopCat3", weight=0.85)
+    top3.add_child(CategoryNode("TopCat3_Sub1", weight=0.80))
+    
+    top_levels = [top1, top2, top3]
+    
+    # Build the dynamic hierarchy.
+    builder = DynamicHierarchyBuilder(top_levels)
+    builder.compute_axis_order()
+    
+    axis_labels = builder.get_axis_labels()
+    matrix_dynamic = builder.build_matrix()
+    
+    print("\n[Dynamic Hierarchy] Axis Labels:", axis_labels, flush=True)
+    print("[Dynamic Hierarchy] Weight Matrix Shape:", matrix_dynamic.shape, flush=True)
+    
+    # Visualize using the already defined visualize_matrix() function.
+    # This will show the matrix and draw white lines at the computed boundaries.
+    visualize_matrix(matrix_dynamic, axis_labels, builder.boundary_map)
+
+
+# ------------------------------------------------------------------
+# Main Function
+# ------------------------------------------------------------------
 def main():
-    print("Starting main function...")  # Debugging print
+    print("Starting main function...", flush=True)  # Debugging print
     try:
         # 1. Define the origin category
         origin_description = "Define the origin category for the FractalSymSorter based on HPC interpretability."
         origin_list = get_top_level_categories(origin_description, num_categories=1)
         if not origin_list:
-            print("[Error] Failed to retrieve origin category.")
+            print("[Error] Failed to retrieve origin category.", flush=True)
             return
 
         origin_category = origin_list[0]
-        print(f"Origin Category: {origin_category}")
+        print(f"Origin Category: {origin_category}", flush=True)
 
         # 2. Prompt for 4 more top-level categories to add incrementally
         main_description = (
@@ -665,7 +923,7 @@ def main():
             " Return exactly 4 major categories in a valid JSON array of strings."
         )
         more_cats = get_top_level_categories(main_description, num_categories=4)
-        print(f"Top-Level Categories: {more_cats}")
+        print(f"Top-Level Categories: {more_cats}", flush=True)
 
         # 3. Initialize FractalSymSorter with the origin pivot
         layout = FractalSymSorter(matrix=[[1.0]], labels=[origin_category], use_llm_weights=True)
@@ -706,26 +964,26 @@ def main():
         skip_factor = 1.0 - (accessed_blocks / total_blocks)
         cost = 1.0 - skip_factor
 
-        print(f"\nHPC Skip Factor Simulation:")
-        print(f"  Accessed {accessed_blocks} of {total_blocks} blocks.")
-        print(f"  skip_factor = {skip_factor:.2f}, HPC cost ≈ {cost:.2f}")
+        print(f"\nHPC Skip Factor Simulation:", flush=True)
+        print(f"  Accessed {accessed_blocks} of {total_blocks} blocks.", flush=True)
+        print(f"  skip_factor = {skip_factor:.2f}, HPC cost ≈ {cost:.2f}", flush=True)
 
         # Example usage
         make_llm_call("Example prompt", memory_type="Immediate")
         total_cost = log_hpc_costs()
-        print(f"Total LLM calls: {llm_call_counter}, Total inferred HPC cost: {total_cost:.2f}")
+        print(f"Total LLM calls: {llm_call_counter}, Total inferred HPC cost: {total_cost:.2f}", flush=True)
 
         make_llm_call("Another prompt", memory_type="Working")
         total_cost = log_hpc_costs()
-        print(f"Total LLM calls: {llm_call_counter}, Total inferred HPC cost: {total_cost:.2f}")
+        print(f"Total LLM calls: {llm_call_counter}, Total inferred HPC cost: {total_cost:.2f}", flush=True)
 
         make_llm_call("Yet another prompt", memory_type="Long-Term")
         total_cost = log_hpc_costs()
-        print(f"Total LLM calls: {llm_call_counter}, Total inferred HPC cost: {total_cost:.2f}")
+        print(f"Total LLM calls: {llm_call_counter}, Total inferred HPC cost: {total_cost:.2f}", flush=True)
 
         # Print the summary of costs and memory usage
         total_cost = print_summary()
-        print(f"Final Total LLM calls: {llm_call_counter}, Final Total inferred HPC cost: {total_cost:.2f}")
+        print(f"Final Total LLM calls: {llm_call_counter}, Final Total inferred HPC cost: {total_cost:.2f}", flush=True)
 
         # Log the HPC costs
         log_hpc_costs()
@@ -736,7 +994,7 @@ def main():
         plot_matrix(matrix, labels)
 
         # Print the total number of LLM calls
-        print(f"Total LLM calls: {llm_call_counter}")
+        print(f"Total LLM calls: {llm_call_counter}", flush=True)
 
         # Example usage of process_multiple_batches
         all_comparisons = [
@@ -746,9 +1004,13 @@ def main():
 
         process_multiple_batches(all_comparisons)
 
+        # At some point (or via a flag) we can call the dynamic demo:
+        run_dynamic_hierarchy_demo()
+
     except Exception as e:
-        logging.error(f"[Error] An error occurred in the main function: {e}")
+        logging.error(f"[Error] An error occurred in the main function: {e}", exc_info=True)
+        print(f"[Error] An error occurred in the main function: {e}", flush=True)
 
 if __name__ == "__main__":
-    print("Executing script...")  # Debugging print
+    print("Executing script...", flush=True)  # Debugging print
     main()
