@@ -618,25 +618,80 @@ def visualize_matrix(matrix, labels, block_indices):
                 subcategory_indices[labels[label_idx + 1]] = index
                 logging.info(f"Subcategory Submatrix boundary drawn for label: {labels[label_idx + 1]} at index: {index}")
 
-    # Calculate submatrix bounds
+    # Calculate submatrix bounds with a passed matrix size state
     sorted_sub_indices = sorted(subcategory_indices.values())
-    total_side = len(labels)  # Total matrix dimension, assumed to be the number of labels
-    start_index = max(top_level_indices.values()) + 1  # Start after the last top-level category
+    matrix_size = len(labels)  # Passed variable for matrix size (e.g., number of labels)
+    total_side = matrix_size  # Total matrix dimension (assumed to be square)
+
+    # Maintain a state object that tracks matrix size, categories, submatrix bounds,
+    # placed interactions, and a prefix dictionary.
+    matrix_state = {
+        "matrix_size": total_side,
+        "categories": labels,
+        "submatrix_bounds": {},       # To be updated with submatrix bounds as {key: (start, end)}
+        "placed_interactions": {},    # To store placed interactions, e.g. {"CD": (3,4)}
+        "prefix_dict": {}             # To store prefix mappings, e.g. {"CB2": "CD"}
+    }
+
+    # Define a function that updates and prints the current matrix state.
+    def update_matrix_size_state(state):
+        info = (
+            f"Matrix Size: {state['matrix_size']}\n"
+            f"Categories: {state['categories']}\n"
+            f"Submatrix Bounds: {state['submatrix_bounds']}\n"
+            f"Placed Interactions: {state['placed_interactions']}\n"
+            f"Prefix Dict: {state['prefix_dict']}"
+        )
+        print(info, flush=True)
+        logging.info(info)
+
+    # Call the state update function initially.
+    update_matrix_size_state(matrix_state)
+    
+    # Save a top-level placed interaction.
+    matrix_state["placed_interactions"]["CD"] = (3, 4)
+    print("Placed top-level interaction label 'CD' at adjusted coordinates (3, 4)", flush=True)
+    logging.info("Placed top-level interaction label 'CD' at adjusted coordinates (3, 4)")
+    
+    # Add a prefix mapping; for example, "CB2" maps to "CD" (token label).
+    matrix_state["prefix_dict"]["CB2"] = "CD"
+    print("Added prefix mapping: CB2 -> CD", flush=True)
+    logging.info("Added prefix mapping: CB2 -> CD")
+    
+    # Re-print state after adding interactions and prefix mapping.
+    update_matrix_size_state(matrix_state)
+    
+    start_index = max(top_level_indices.values()) + 1  # Start index after the last top-level category
     for i, sub_label in enumerate(sorted(subcategory_indices.keys())):
         end_index = subcategory_indices[sub_label]
-        submatrix_bounds[sub_label[0]] = (start_index, end_index)
-        
-        # Compute the linear length of this submatrix (using the difference).
+        key = sub_label[0]
+        # Save submatrix bounds in our state object.
+        matrix_state["submatrix_bounds"][key] = (start_index, end_index)
+
+        # Update state by printing the current matrix state.
+        update_matrix_size_state(matrix_state)
+    
+        # Compute the linear length of this submatrix.
         sub_length = end_index - start_index  
-        # Compute the geometric skip factor as the ratio of areas:
+        # Compute the skip factor as (submatrix_side)^2 / (total_side)^2.
         skip_factor = (sub_length ** 2) / (total_side ** 2)
-        
-        # Print the skip factor immediately, flushing the output.
-        print(f"Skip factor for submatrix {sub_label[0]}: ({end_index} - {start_index})^2 / ({total_side})^2 = {skip_factor:.4f}", flush=True)
-        logging.info(f"Skip factor for submatrix {sub_label[0]}: ({end_index} - {start_index})^2 / ({total_side})^2 = {skip_factor:.4f}")
-        
-        start_index = end_index + 1  # Update start for the next submatrix
-        logging.info(f"Submatrix bounds for {sub_label[0]}: start={submatrix_bounds[sub_label[0]][0]}, end={submatrix_bounds[sub_label[0]][1]}")
+        focus_percent = skip_factor * 100.0  # Percentage of the full matrix that is focused on.
+        skip_percent = 100.0 - focus_percent   # Percentage of the full matrix that is skipped.
+    
+        # Print the geometric comparison.
+        print(f"Focus Area: {focus_percent:.2f}% of full matrix", flush=True)
+        print(f"{skip_percent:.2f}% of data skipped.", flush=True)
+        logging.info(f"Focus Area: {focus_percent:.2f}% of full matrix")
+        logging.info(f"{skip_percent:.2f}% of data skipped.")
+    
+        print(
+            f"Skip factor for submatrix {key}: ({end_index} - {start_index})^2 / ({total_side})^2 = {skip_factor:.4f}",
+            flush=True
+        )
+        logging.info(f"Skip factor for submatrix {key}: ({end_index} - {start_index})^2 / ({total_side})^2 = {skip_factor:.4f}")
+    
+        start_index = end_index + 1  # Update start for the next submatrix.
+        logging.info(f"Submatrix bounds for {key}: start={matrix_state['submatrix_bounds'][key][0]}, end={matrix_state['submatrix_bounds'][key][1]}")
 
     # Place submatrix labels (e.g., "AA", "AB", "AC") using the submatrix indices
     for sub_label_x, x_index in subcategory_indices.items():
