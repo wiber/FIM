@@ -633,7 +633,7 @@ def visualize_matrix(matrix, labels, block_indices):
         "prefix_dict": {}             # To store prefix mappings, e.g. {"CB2": "CD"}
     }
 
-    # Define a function that updates and prints the current matrix state.
+    # Function to update and immediately print (and log) the current state.
     def update_matrix_size_state(state):
         info = (
             f"Matrix Size: {state['matrix_size']}\n"
@@ -645,40 +645,58 @@ def visualize_matrix(matrix, labels, block_indices):
         print(info, flush=True)
         logging.info(info)
 
-    # Call the state update function initially.
+    # Function to add a prefix mapping to the state.
+    def add_prefix_mapping(prefix, token_label):
+        matrix_state["prefix_dict"][prefix] = token_label
+        print(f"Added prefix mapping: {prefix} -> {token_label}", flush=True)
+        logging.info(f"Added prefix mapping: {prefix} -> {token_label}")
+
+    # Function to record a placed interaction.
+    def add_placed_interaction(token_label, coordinates):
+        matrix_state["placed_interactions"][token_label] = coordinates
+        print(f"Placed interaction label '{token_label}' at adjusted coordinates {coordinates}", flush=True)
+        logging.info(f"Placed interaction label '{token_label}' at adjusted coordinates {coordinates}")
+
+    # --- Initial State and Top-Level Placements ---
+    
+    # Print the initial state.
     update_matrix_size_state(matrix_state)
     
-    # Save a top-level placed interaction.
-    matrix_state["placed_interactions"]["CD"] = (3, 4)
-    print("Placed top-level interaction label 'CD' at adjusted coordinates (3, 4)", flush=True)
-    logging.info("Placed top-level interaction label 'CD' at adjusted coordinates (3, 4)")
+    # Example: Place a top-level interaction label. 
+    # For instance, as in the logs we see "Placed top-level interaction label 'CD' at adjusted coordinates (3, 4)".
+    add_placed_interaction("CD", (3, 4))
     
-    # Add a prefix mapping; for example, "CB2" maps to "CD" (token label).
-    matrix_state["prefix_dict"]["CB2"] = "CD"
-    print("Added prefix mapping: CB2 -> CD", flush=True)
-    logging.info("Added prefix mapping: CB2 -> CD")
+    # For top-level interactions, assign a prefix. 
+    # Here we choose a capital letter (e.g., "A" for the first top-level category).
+    add_prefix_mapping("A", "CD")
     
-    # Re-print state after adding interactions and prefix mapping.
+    # Also, suppose a printed comparison produced a composite prefix like "CB2" for an interaction.
+    add_prefix_mapping("CB2", "CD")
+    
+    # Print the state after top-level updates.
     update_matrix_size_state(matrix_state)
     
-    start_index = max(top_level_indices.values()) + 1  # Start index after the last top-level category
+    # --- Processing Submatrix Bounds and Leaf Prefixes ---
+    
+    # Calculate submatrix bounds.
+    sorted_sub_indices = sorted(subcategory_indices.values())
+    start_index = max(top_level_indices.values()) + 1  # Start after the last top-level category
+    
     for i, sub_label in enumerate(sorted(subcategory_indices.keys())):
         end_index = subcategory_indices[sub_label]
         key = sub_label[0]
-        # Save submatrix bounds in our state object.
+        
+        # Save submatrix bounds in the state.
         matrix_state["submatrix_bounds"][key] = (start_index, end_index)
-
-        # Update state by printing the current matrix state.
-        update_matrix_size_state(matrix_state)
+        update_matrix_size_state(matrix_state)  # Update state after each change.
     
-        # Compute the linear length of this submatrix.
+        # Compute the linear length for this submatrix and its skip factor.
         sub_length = end_index - start_index  
-        # Compute the skip factor as (submatrix_side)^2 / (total_side)^2.
         skip_factor = (sub_length ** 2) / (total_side ** 2)
-        focus_percent = skip_factor * 100.0  # Percentage of the full matrix that is focused on.
-        skip_percent = 100.0 - focus_percent   # Percentage of the full matrix that is skipped.
+        focus_percent = skip_factor * 100.0      # Percentage of full matrix that is focused.
+        skip_percent = 100.0 - focus_percent       # Percentage of data skipped.
     
-        # Print the geometric comparison.
+        # Print immediate geometric information.
         print(f"Focus Area: {focus_percent:.2f}% of full matrix", flush=True)
         print(f"{skip_percent:.2f}% of data skipped.", flush=True)
         logging.info(f"Focus Area: {focus_percent:.2f}% of full matrix")
@@ -690,7 +708,13 @@ def visualize_matrix(matrix, labels, block_indices):
         )
         logging.info(f"Skip factor for submatrix {key}: ({end_index} - {start_index})^2 / ({total_side})^2 = {skip_factor:.4f}")
     
-        start_index = end_index + 1  # Update start for the next submatrix.
+        # For leaves (submatrices), assign a composite prefix.
+        # For example, use the key letter plus a 1-based index (e.g., "D1" for the first leaf with key 'D').
+        leaf_prefix = f"{key}{i+1}"
+        add_prefix_mapping(leaf_prefix, f"Submatrix_{key}")
+    
+        # Update the start index for the next submatrix.
+        start_index = end_index + 1  
         logging.info(f"Submatrix bounds for {key}: start={matrix_state['submatrix_bounds'][key][0]}, end={matrix_state['submatrix_bounds'][key][1]}")
 
     # Place submatrix labels (e.g., "AA", "AB", "AC") using the submatrix indices
@@ -1069,3 +1093,61 @@ def main():
 if __name__ == "__main__":
     print("Executing script...", flush=True)  # Debugging print
     main()
+
+# ------------------------------------------------------------------
+# New Functions for Detailed Weight Interaction Coordinates
+# ------------------------------------------------------------------
+def get_interaction_label(abs_index, state):
+    """
+    Given an absolute index and the matrix state (which includes submatrix bounds
+    and prefix mappings), compute and return the dynamic interaction label.
+    
+    For indices within a submatrix bound, the label is constructed as:
+          [key letter from the bound] + (relative_index + 1)
+    e.g., if abs_index falls in a bound for key 'D' with (start, end) = (15, 17),
+          then for abs_index 15, the returned label is "D1", for 16 it's "D2", etc.
+    
+    For indices not falling within any submatrix bound (i.e. top-level categories),
+    a default mapping is applied: index 0 becomes "O" and subsequent indices are mapped
+    to capital letters (A, B, C, …) based on their ordinal value.
+    """
+    for key, (start, end) in state["submatrix_bounds"].items():
+        if abs_index >= start and abs_index <= end:
+            relative_index = abs_index - start
+            return f"{key}{relative_index + 1}"
+    # For top-level indices (outside any submatrix bounds):
+    if abs_index == 0:
+        return "O"
+    else:
+        try:
+            return chr(64 + abs_index)
+        except Exception:
+            return f"T{abs_index}"
+
+def print_detailed_interaction(matrix, labels, state):
+    """
+    Iterates over the matrix and for each non-zero weight interaction, prints:
+     - Absolute coordinates: (i, j)
+     - Dynamically computed submatrix coordinate in the format, e.g., A3D3 or B3C5,
+       based on the prefix mappings and submatrix bounds available in the state.
+     - The interacting labels (from the 'labels' list).
+       
+    This function ensures that every time you compare two leaves (or categories),
+    both the absolute and submatrix coordinates are printed immediately.
+    """
+    num_labels = len(labels)
+    for i in range(num_labels):
+        for j in range(num_labels):
+            weight = matrix[i, j]
+            if weight > 0:
+                row_label = get_interaction_label(i, state)
+                col_label = get_interaction_label(j, state)
+                interaction_label = f"{row_label}{col_label}"
+                print(
+                    f"Weight: {weight:.2f} at Absolute Coordinate: ({i}, {j}), "
+                    f"Submatrix Coordinate: {interaction_label}, "
+                    f"Interaction: '{labels[i]}' to '{labels[j]}'", flush=True)
+                logging.info(
+                    f"Weight: {weight:.2f} at Absolute Coordinate: ({i}, {j}), "
+                    f"Submatrix Coordinate: {interaction_label}, "
+                    f"Interaction: '{labels[i]}' to '{labels[j]}'")
