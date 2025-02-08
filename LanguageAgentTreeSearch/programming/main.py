@@ -1,3 +1,94 @@
+"""
+--------------------------------------------------------------------------------
+PLANNING: Transitioning main.py to a More Dynamic, Functional FIM Design 
+with LLM Call Strategy & HPC Cost Logging
+--------------------------------------------------------------------------------
+
+Below is the plan for incrementally refactoring this file (main.py) toward a 
+dynamic, functionally-driven Fractal Identity Matrix (FIM) architecture. We will 
+retain the current matrix state and plotting outputs while integrating the 
+LLM call strategy, HPC cost tracking, and a Node-based hierarchical design as 
+discussed in the recent chat. The aim is to streamline submatrix indexing, 
+improve dynamic sorting by weight, and maintain interpretable HPC skip factors.
+
+1. **Remove Static Submatrix Dictionaries**  
+   - Eliminate all hard-coded offset indices and dictionaries for submatrix bounds.  
+   - Provide helper functions (e.g. `get_submatrix_bounds(node)`) to compute 
+     each node's (start, end) indices on-the-fly using dynamic weights.
+
+2. **Adopt a Hierarchical Node Structure**  
+   - Store each category (top-level or subcategory) as a Node object containing:
+       - A name (string).
+       - A weight (float).
+       - A parent pointer (or None for the top-level/origin).
+       - A list of children, kept sorted by weight.  
+   - Use these relationships to compute submatrix boundaries by summing child 
+     weights dynamically, removing the need for static dictionaries.
+
+3. **Weight-Driven Sorted Insertions**  
+   - Whenever adding or updating a category/subcategory, assign it an LLM-derived 
+     similarity or relevance weight (tracked in HPC logs).  
+   - Insert it directly into the correct position among siblings (descending by weight).  
+   - This ensures no separate "sort step" is needed afterward, and the adjacency 
+     matrix layout naturally reflects the hierarchy's weight order.
+
+4. **LLM Calls & HPC Logging**  
+   - Preserve existing prompt-based LLM calls for assigning similarity weights 
+     (e.g. `assign_similarity_weights`), and for batch interactions.  
+   - Each call increments our LLM call counter and logs HPC usage (Immediate, 
+     Working, or Long-Term).  
+   - Maintain the HPC skip factor logic and submatrix bounding prints; 
+     unify them with the dynamic node approach so skip calculations use 
+     node-based submatrix dimensions.
+
+5. **Flattening & Matrix Building**  
+   - Provide a function `flatten_hierarchy(root_node)` that yields a 1D list 
+     of nodes in sorted order, skipping the origin if desired.  
+   - Build or update the NxN adjacency matrix from this flattened list. 
+     The matrix row/column i corresponds to `flattened_list[i]`.  
+   - For submatrix bounding lines in the plot, call `get_submatrix_bounds(node, flattened_list)`, 
+     which sums the weights of preceding siblings to find a node's start index 
+     and uses `node.weight` for the size of the block.
+
+6. **Enhanced Plotting**  
+   - Keep the existing matrix plotting code; direct it to these new helper 
+     functions for submatrix bounds.  
+   - Continue color-coding submatrices (and top-level categories) and display 
+     HPC skip factors.  
+   - Maintain HPC cost logs after each relevant LLM operation, printing HPC 
+     usage summaries upon completion.
+
+7. **Incremental Implementation**  
+   - We will apply changes in small steps:
+       1. Introduce the Node class, create a global `origin_node`.
+       2. Convert existing static categories into Node children under `origin_node`.
+       3. Implement `add_category()` and `add_subcategory()` with weight-sorted 
+          insertion and parent weight recalculation.
+       4. Update adjacency-matrix construction to use `flatten_hierarchy()`.
+       5. Switch submatrix boundary logic (and HPC skip factor prints) from static 
+          dictionaries to `get_submatrix_bounds(node)`.
+       6. Validate that existing matrix states and plots remain correct, 
+          simply derived from the new structure.
+
+8. **Testing & Verification**  
+   - After each step, confirm the dynamic insertion and correct LLM-based 
+     weighting.  
+   - Check HPC cost logs for each insertion or batch weight assignment, ensuring 
+     the skip factor logic aligns with the new node-based submatrix boundaries.  
+   - Verify that the final plot with color-coded blocks and bounding lines 
+     matches the original visual expectations, with HPC skip factor outputs 
+     reflecting the newly computed boundaries.
+
+By following these steps methodically, we will transition `main.py` into a 
+more robust, transparent, and maintainable FIM application. The end result 
+will be a fully dynamic solution—capable of inserting new categories, 
+re-sorting by weight on the fly, computing skip factors, and generating HPC 
+cost logs—while preserving all existing matrix visuals and LLM calls.
+--------------------------------------------------------------------------------
+
+"""
+
+
 import os
 import openai
 import json
@@ -838,6 +929,28 @@ def mock_llm_call(prompt, mock_llm):
 
 # ----- New Parallel Track: Dynamic Hierarchy Data Structure & Sorting -----
 
+class Node:
+    def __init__(self, label, weight=1.0):
+        self.label = label
+        self.weight = weight
+        self.children = []
+        self.parent = None
+
+    def add_child(self, child):
+        child.parent = self
+        # Insertion in descending order by weight
+        inserted = False
+        for i, existing in enumerate(self.children):
+            if existing.weight < child.weight:
+                self.children.insert(i, child)
+                inserted = True
+                break
+        if not inserted:
+            self.children.append(child)
+        # Optionally recalc weight, reposition in parent, etc.
+
+origin_node = Node("ORIGIN", weight=0)  # root node
+
 class CategoryNode:
     def __init__(self, name, weight=0.0, children=None):
         """
@@ -1093,49 +1206,54 @@ def main():
 if __name__ == "__main__":
     print("Executing script...", flush=True)  # Debugging print
     main()
-
 # ------------------------------------------------------------------
-# New Functions for Detailed Weight Interaction Coordinates
+# New Functions for Detailed Weight Interaction Coordinates and State Storage
 # ------------------------------------------------------------------
 def get_interaction_label(abs_index, state):
     """
     Given an absolute index and the matrix state (which includes submatrix bounds
     and prefix mappings), compute and return the dynamic interaction label.
     
-    For indices within a submatrix bound, the label is constructed as:
-          [key letter from the bound] + (relative_index + 1)
-    e.g., if abs_index falls in a bound for key 'D' with (start, end) = (15, 17),
-          then for abs_index 15, the returned label is "D1", for 16 it's "D2", etc.
-    
-    For indices not falling within any submatrix bound (i.e. top-level categories),
-    a default mapping is applied: index 0 becomes "O" and subsequent indices are mapped
-    to capital letters (A, B, C, …) based on their ordinal value.
+    For indices within a submatrix bound:
+        Label = key letter + (relative_index + 1)
+    For indices not falling within any bound (i.e. top-level categories):
+        Label = default mapping (e.g., 1 -> A1, 2 -> B1, etc.)
     """
-    for key, (start, end) in state["submatrix_bounds"].items():
+    for key, (start, end) in state.get("submatrix_bounds", {}).items():
         if abs_index >= start and abs_index <= end:
             relative_index = abs_index - start
             return f"{key}{relative_index + 1}"
-    # For top-level indices (outside any submatrix bounds):
+    # For top-level indices if not in any submatrix bound:
     if abs_index == 0:
-        return "O"
+        return "O1"  # using "O1" to represent the origin
     else:
         try:
-            return chr(64 + abs_index)
+            # Map to capital letter, then add a fixed index "1"
+            letter = chr(64 + abs_index)  # e.g., 3 -> C
+            return f"{letter}1"
         except Exception:
             return f"T{abs_index}"
 
 def print_detailed_interaction(matrix, labels, state):
     """
-    Iterates over the matrix and for each non-zero weight interaction, prints:
-     - Absolute coordinates: (i, j)
-     - Dynamically computed submatrix coordinate in the format, e.g., A3D3 or B3C5,
-       based on the prefix mappings and submatrix bounds available in the state.
-     - The interacting labels (from the 'labels' list).
-       
-    This function ensures that every time you compare two leaves (or categories),
-    both the absolute and submatrix coordinates are printed immediately.
+    Iterate over each non-zero weight in the matrix.
+    For every weight, print:
+      - Absolute coordinates (i, j)
+      - Dynamically computed submatrix coordinate (e.g. A3D3 or B3C5) from the state,
+      - and a notation combining the prefixes.
+      
+    Also, store this computed interaction into state['dynamic_interactions']
+    so that, for example, the mapping might look like:
+        {"C1O4": { "absolute": (12, 3),
+                    "weight": 0.80,
+                    "interaction": "Algorithmic Decision-Making Process to C Transparency and Traceability",
+                    "notation": "CO" }
+        }
     """
     num_labels = len(labels)
+    if "dynamic_interactions" not in state:
+        state["dynamic_interactions"] = {}
+
     for i in range(num_labels):
         for j in range(num_labels):
             weight = matrix[i, j]
@@ -1143,11 +1261,106 @@ def print_detailed_interaction(matrix, labels, state):
                 row_label = get_interaction_label(i, state)
                 col_label = get_interaction_label(j, state)
                 interaction_label = f"{row_label}{col_label}"
-                print(
+                # The notation here is built by taking the first character
+                # of row_label and appending the entire col_label.
+                notation = f"{row_label[0]}{col_label}"
+                output_str = (
                     f"Weight: {weight:.2f} at Absolute Coordinate: ({i}, {j}), "
                     f"Submatrix Coordinate: {interaction_label}, "
-                    f"Interaction: '{labels[i]}' to '{labels[j]}'", flush=True)
-                logging.info(
-                    f"Weight: {weight:.2f} at Absolute Coordinate: ({i}, {j}), "
-                    f"Submatrix Coordinate: {interaction_label}, "
-                    f"Interaction: '{labels[i]}' to '{labels[j]}'")
+                    f"Interaction: '{labels[i]}' to '{labels[j]}', Notation: {notation}={weight:.2f}"
+                )
+                print(output_str, flush=True)
+                logging.info(output_str)
+                # Save this interaction into the state object.
+                state["dynamic_interactions"][interaction_label] = {
+                    "absolute": (i, j),
+                    "weight": weight,
+                    "interaction": f"{labels[i]} to {labels[j]}",
+                    "notation": notation
+                }
+
+def get_submatrix_index_bounds(node, flat_list):
+    labels = [x.label for x in flat_list]  # node objects -> labels
+    if node.label not in labels:
+        return None, None
+    start_idx = labels.index(node.label)
+    end_idx = start_idx + int(node.weight) - 1
+    return start_idx, end_idx
+
+def flatten_hierarchy(node, output=None):
+    if output is None:
+        output = []
+    if node is not origin_node:  # skip the root "ORIGIN" if you want
+        output.append(node)
+    for child in node.children:
+        flatten_hierarchy(child, output)
+    return output
+
+def build_label_list():
+    """
+    Returns the sorted list of labels (strings) by flattening the hierarchy.
+    """
+    flattened_nodes = flatten_hierarchy(origin_node)
+    return [n.label for n in flattened_nodes]
+
+def plot_fim(matrix, labels):
+    plt.figure()
+    plt.imshow(matrix, cmap='viridis')
+    plt.colorbar()
+
+    top_cats = origin_node.children  # already sorted by weight
+    flattened_nodes = flatten_hierarchy(origin_node)
+    for cat in top_cats:
+        start, end = get_submatrix_index_bounds(cat, flattened_nodes)
+        if start is not None and end is not None:
+            plt.axhline(y=start-0.5, color='white', linestyle='-', linewidth=2)
+            plt.axhline(y=end+0.5, color='white', linestyle='-', linewidth=2)
+            plt.axvline(x=start-0.5, color='white', linestyle='-', linewidth=2)
+            plt.axvline(x=end+0.5, color='white', linestyle='-', linewidth=2)
+
+    plt.xticks(range(len(labels)), labels, rotation=90)
+    plt.yticks(range(len(labels)), labels)
+    plt.tight_layout()
+    plt.show()
+
+def create_top_level_category(label, weight):
+    new_node = Node(label, weight)
+    add_child(origin_node, new_node)
+    return new_node
+
+def recalc_weight(node):
+    if len(node.children) == 0:
+        # It's a leaf, keep or set weight=1 by default
+        return node.weight
+    # sum children:
+    total = 0
+    for c in node.children:
+        total += recalc_weight(c)
+    node.weight = total
+    return node.weight
+
+def add_child(parent_node, child_node):
+    child_node.parent = parent_node
+    # Insert by weight (descending):
+    inserted = False
+    for i, existing in enumerate(parent_node.children):
+        if existing.weight < child_node.weight:
+            parent_node.children.insert(i, child_node)
+            inserted = True
+            break
+    if not inserted:
+        parent_node.children.append(child_node)
+    recalc_weight(parent_node)
+    # bubble up re-sorting logic if the parent's weight changed
+    if parent_node.parent:
+        reposition_in_parent(parent_node)
+
+def add_and_resort_example():
+    # Suppose we add a new top-level category
+    catZ = create_top_level_category("Zeta", weight=10)
+    # Plot again to see that 'Zeta' is at the top (heaviest) in the visualization
+    flattened_nodes = flatten_hierarchy(origin_node)
+    labels = [n.label for n in flattened_nodes]
+    matrix = build_adjacency_matrix(...)  # adapt to your logic
+    plot_fim(matrix, labels)
+
