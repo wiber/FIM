@@ -1206,140 +1206,41 @@ def main():
 if __name__ == "__main__":
     print("Executing script...", flush=True)  # Debugging print
     main()
-# ------------------------------------------------------------------
-# New Functions for Detailed Weight Interaction Coordinates and State Storage
-# ------------------------------------------------------------------
-def get_interaction_label(abs_index, state):
-    """
-    Given an absolute index and the matrix state (which includes submatrix bounds
-    and prefix mappings), compute and return the dynamic interaction label.
-    
-    For indices within a submatrix bound:
-        Label = key letter + (relative_index + 1)
-    For indices not falling within any bound (i.e. top-level categories):
-        Label = default mapping (e.g., 1 -> A1, 2 -> B1, etc.)
-    """
-    for key, (start, end) in state.get("submatrix_bounds", {}).items():
-        if abs_index >= start and abs_index <= end:
-            relative_index = abs_index - start
-            return f"{key}{relative_index + 1}"
-    # For top-level indices if not in any submatrix bound:
-    if abs_index == 0:
-        return "O1"  # using "O1" to represent the origin
-    else:
-        try:
-            # Map to capital letter, then add a fixed index "1"
-            letter = chr(64 + abs_index)  # e.g., 3 -> C
-            return f"{letter}1"
-        except Exception:
-            return f"T{abs_index}"
 
-def print_detailed_interaction(matrix, labels, state):
-    """
-    Iterate over each non-zero weight in the matrix.
-    For every weight, print:
-      - Absolute coordinates (i, j)
-      - Dynamically computed submatrix coordinate (e.g. A3D3 or B3C5) from the state,
-      - and a notation combining the prefixes.
-      
-    Also, store this computed interaction into state['dynamic_interactions']
-    so that, for example, the mapping might look like:
-        {"C1O4": { "absolute": (12, 3),
-                    "weight": 0.80,
-                    "interaction": "Algorithmic Decision-Making Process to C Transparency and Traceability",
-                    "notation": "CO" }
-        }
-    """
-    num_labels = len(labels)
-    if "dynamic_interactions" not in state:
-        state["dynamic_interactions"] = {}
+################################################################################
+# Incremental Improvements for a More Dynamic & Maintainable Fractal Identity Matrix
+# ------------------------------------------------------------------------------
+# 1) Dynamic Submatrix Bound Inference (no static dict).
+# 2) Weight-driven sorting on insertions at all hierarchy levels.
+# 3) Query functions for submatrix bounds and weight-based navigation.
+# 4) Dynamic 1D-axis mapping to support smooth resorting.
+# 5) Color-coded submatrix bands in the plot for improved clarity.
+################################################################################
 
-    for i in range(num_labels):
-        for j in range(num_labels):
-            weight = matrix[i, j]
-            if weight > 0:
-                row_label = get_interaction_label(i, state)
-                col_label = get_interaction_label(j, state)
-                interaction_label = f"{row_label}{col_label}"
-                # The notation here is built by taking the first character
-                # of row_label and appending the entire col_label.
-                notation = f"{row_label[0]}{col_label}"
-                output_str = (
-                    f"Weight: {weight:.2f} at Absolute Coordinate: ({i}, {j}), "
-                    f"Submatrix Coordinate: {interaction_label}, "
-                    f"Interaction: '{labels[i]}' to '{labels[j]}', Notation: {notation}={weight:.2f}"
-                )
-                print(output_str, flush=True)
-                logging.info(output_str)
-                # Save this interaction into the state object.
-                state["dynamic_interactions"][interaction_label] = {
-                    "absolute": (i, j),
-                    "weight": weight,
-                    "interaction": f"{labels[i]} to {labels[j]}",
-                    "notation": notation
-                }
+###############################################################################
+# (A) - Hierarchical Node & Insertions
+###############################################################################
+class Node:
+    def __init__(self, label, weight=1.0):
+        self.label = label
+        self.weight = weight  # or compute from children if they exist
+        self.parent = None
+        self.children = []
 
-def get_submatrix_index_bounds(node, flat_list):
-    labels = [x.label for x in flat_list]  # node objects -> labels
-    if node.label not in labels:
-        return None, None
-    start_idx = labels.index(node.label)
-    end_idx = start_idx + int(node.weight) - 1
-    return start_idx, end_idx
+    def __repr__(self):
+        return f"Node({self.label}, w={self.weight:.2f}, children={len(self.children)})"
 
-def flatten_hierarchy(node, output=None):
-    if output is None:
-        output = []
-    if node is not origin_node:  # skip the root "ORIGIN" if you want
-        output.append(node)
-    for child in node.children:
-        flatten_hierarchy(child, output)
-    return output
-
-def build_label_list():
-    """
-    Returns the sorted list of labels (strings) by flattening the hierarchy.
-    """
-    flattened_nodes = flatten_hierarchy(origin_node)
-    return [n.label for n in flattened_nodes]
-
-def plot_fim(matrix, labels):
-    plt.figure()
-    plt.imshow(matrix, cmap='viridis')
-    plt.colorbar()
-
-    top_cats = origin_node.children  # already sorted by weight
-    flattened_nodes = flatten_hierarchy(origin_node)
-    for cat in top_cats:
-        start, end = get_submatrix_index_bounds(cat, flattened_nodes)
-        if start is not None and end is not None:
-            plt.axhline(y=start-0.5, color='white', linestyle='-', linewidth=2)
-            plt.axhline(y=end+0.5, color='white', linestyle='-', linewidth=2)
-            plt.axvline(x=start-0.5, color='white', linestyle='-', linewidth=2)
-            plt.axvline(x=end+0.5, color='white', linestyle='-', linewidth=2)
-
-    plt.xticks(range(len(labels)), labels, rotation=90)
-    plt.yticks(range(len(labels)), labels)
-    plt.tight_layout()
-    plt.show()
-
-def create_top_level_category(label, weight):
+def create_top_level_category(label, weight=1.0):
+    """Creates a new top-level Node under origin_node, sorted by weight descending."""
     new_node = Node(label, weight)
     add_child(origin_node, new_node)
     return new_node
 
-def recalc_weight(node):
-    if len(node.children) == 0:
-        # It's a leaf, keep or set weight=1 by default
-        return node.weight
-    # sum children:
-    total = 0
-    for c in node.children:
-        total += recalc_weight(c)
-    node.weight = total
-    return node.weight
-
 def add_child(parent_node, child_node):
+    """
+    Insert a child_node into parent_node.children, sorted by descending child_node.weight,
+    then recalc parent_node's weight so we can bubble up changes if needed.
+    """
     child_node.parent = parent_node
     # Insert by weight (descending):
     inserted = False
@@ -1355,12 +1256,232 @@ def add_child(parent_node, child_node):
     if parent_node.parent:
         reposition_in_parent(parent_node)
 
+def reposition_in_parent(node):
+    """
+    Once a node's weight changes, re-insert it in the parent's children list,
+    ensuring siblings remain sorted by descending weight. Then bubble up if needed.
+    """
+    parent = node.parent
+    if not parent:
+        return
+    siblings = parent.children
+    if node in siblings:
+        siblings.remove(node)
+    # re-insert into parent by descending weight
+    inserted = False
+    for i, existing in enumerate(siblings):
+        if existing.weight < node.weight:
+            siblings.insert(i, node)
+            inserted = True
+            break
+    if not inserted:
+        siblings.append(node)
+    recalc_weight(parent)
+    if parent.parent:
+        reposition_in_parent(parent)
+
+def recalc_weight(node):
+    """If a node has children, weight = sum of children; else keep its own weight."""
+    if node.children:
+        node.weight = sum(ch.weight for ch in node.children)
+
+###############################################################################
+# (B) - Dynamic Flattening, Submatrix Bounds, and 1D Axis Inference
+###############################################################################
+def flatten_hierarchy(node, result=None):
+    """
+    Recursively flatten the tree under 'node' into a list of Node objects
+    in the order they appear (parent > children). We skip the origin—if desired,
+    pass node=origin_node.children individually. Currently, we'll keep origin too
+    for demonstration.
+    """
+    if result is None:
+        result = []
+    result.append(node)
+    for c in node.children:
+        flatten_hierarchy(c, result)
+    return result
+
+def find_node_by_label(label, node=None):
+    """DFS to find a node by label starting from 'node'. If node=None, start from origin_node."""
+    if node is None:
+        node = origin_node
+    if node.label == label:
+        return node
+    for child in node.children:
+        found = find_node_by_label(label, child)
+        if found:
+            return found
+    return None
+
+def dynamic_submatrix_bounds(node, flat_list):
+    """
+    Given a single node, compute the [start, end] index in 'flat_list' that covers
+    its entire subtree. The size of that subtree is node.weight (if children => sum).
+    We find node's index in flat_list, then size = node.weight, so end = start + size -1.
+    """
+    # first, find where 'node' appears in flat_list:
+    idx = None
+    for i, nd in enumerate(flat_list):
+        if nd is node:
+            idx = i
+            break
+    if idx is None:
+        return None, None
+    start = idx
+    end = idx + int(node.weight) - 1
+    return start, end
+
+###############################################################################
+# (C) - For Queries: submatrix from top-level cats, or weight-based
+###############################################################################
+def find_submatrix_bounds_by_label(label, flat_list):
+    """Helper that finds submatrix bounds for the node with 'label' given the flatten list."""
+    node = find_node_by_label(label, origin_node)
+    if not node:
+        return None, None
+    return dynamic_submatrix_bounds(node, flat_list)
+
+def weight_based_search(root, target_weight, tolerance=0.05):
+    """
+    Example function to find a node whose weight is near 'target_weight'
+    within 'tolerance'. This shows how we can navigate by weight. 
+    """
+    candidates = []
+    stack = [root]
+    while stack:
+        n = stack.pop()
+        # if abs(n.weight - target_weight) <= tolerance:
+        if n.weight >= target_weight * (1 - tolerance) and n.weight <= target_weight * (1 + tolerance):
+            candidates.append(n.label)
+        stack.extend(n.children)
+    return candidates
+
+###############################################################################
+# (D) - 1D Axis and Sorting Already Maintained by Weighted Insertions
+###############################################################################
+# Because we always insert in descending weight, once we flatten the tree we get
+# a global order from heaviest to lightest (per branch). If parent's weight changes,
+# we reposition in parent's list, etc.
+
+###############################################################################
+# (E) - Visualizing with Color-coded Submatrix Bands
+###############################################################################
+def plot_fim(matrix, labels, threshold_factor=0.5):
+    """
+    An example function to plot the NxN matrix with color-coded bands for top-level categories.
+    We'll draw bounding boxes around each top-level category's submatrix (including its subtree).
+    """
+    plt.figure(figsize=(9, 7))
+    plt.imshow(matrix, cmap='Spectral', aspect='equal')
+    plt.colorbar(label='Similarity / Weight')
+
+    n = len(labels)
+    plt.xticks(range(n), labels, rotation=90)
+    plt.yticks(range(n), labels)
+
+    # color each top-level node's block:
+    color_pool = ['cyan', 'lime', 'yellow', 'orange', 'magenta', 'red', 'blue', 'brown']
+    top_children = origin_node.children  # sorted top-level
+    flat_list = flatten_hierarchy(origin_node, [])
+    c_idx = 0
+    for top_node in top_children:
+        start_idx, end_idx = dynamic_submatrix_bounds(top_node, flat_list)
+        if start_idx is None:
+            continue
+        color = color_pool[c_idx % len(color_pool)]
+        c_idx += 1
+        # draw bounding rectangle:
+        rect = Rectangle(
+            (start_idx - 0.5, start_idx - 0.5),
+            (end_idx - start_idx + 1),
+            (end_idx - start_idx + 1),
+            fill=False, edgecolor=color, lw=2
+        )
+        plt.gca().add_patch(rect)
+
+        mid = (start_idx + end_idx) / 2.0
+        plt.text(mid, start_idx - 1,
+                 f"{top_node.label}",
+                 color=color, rotation=90,
+                 ha='center', va='bottom', fontsize=9)
+
+        plt.text(start_idx - 1, mid,
+                 f"{top_node.label}",
+                 color=color,
+                 ha='right', va='center', fontsize=9)
+
+    # highlight region above threshold
+    max_val = matrix.max()
+    thr = max_val * threshold_factor
+    idxs = np.argwhere(matrix >= thr)
+    if len(idxs) > 0:
+        row_min, col_min = idxs.min(axis=0)
+        row_max, col_max = idxs.max(axis=0)
+        width = col_max - col_min + 1
+        height = row_max - row_min + 1
+        bigger_side = max(width, height)
+        skip_factor = 1 - (bigger_side / n)**2
+
+        rect_thr = Rectangle((col_min - 0.5, row_min - 0.5),
+                             width, height,
+                             fill=False, edgecolor='red', lw=1.5)
+        plt.gca().add_patch(rect_thr)
+        plt.text(col_min, row_min - 0.5, f"skip={skip_factor:.2f}", color='red',
+                 fontsize=10, va='bottom')
+
+    plt.title("Dynamic FIM Plot with Submatrix Bands")
+    plt.tight_layout()
+    plt.show()
+
+###############################################################################
+# (F) - Example Usage (Add / Resort / Flatten / Plot, etc.)
+###############################################################################
 def add_and_resort_example():
     # Suppose we add a new top-level category
     catZ = create_top_level_category("Zeta", weight=10)
-    # Plot again to see that 'Zeta' is at the top (heaviest) in the visualization
-    flattened_nodes = flatten_hierarchy(origin_node)
+    # Then flatten to see that 'Zeta' is at the top (heaviest)
+    flattened_nodes = flatten_hierarchy(origin_node, [])
     labels = [n.label for n in flattened_nodes]
-    matrix = build_adjacency_matrix(...)  # adapt to your logic
+
+    # Build adjacency matrix: for demonstration, fill random or some logic
+    n = len(flattened_nodes)
+    matrix = np.zeros((n, n))
+    for i in range(n):
+        for j in range(n):
+            matrix[i, j] = 1.0 if i == j else np.random.rand()
+
+    # Visualize with color-coded submatrix tiers
     plot_fim(matrix, labels)
+
+###############################################################################
+# (G) - Global ORIGIN Node
+###############################################################################
+origin_node = Node("ROOT", weight=0.0)  # Initial placeholder
+
+###############################################################################
+# (H) - If old "main()" exists or code below, we keep or adapt it:
+###############################################################################
+def main():
+    # A small usage example:
+    a = create_top_level_category("Alpha", 5)
+    b = create_top_level_category("Beta", 3)
+    add_child(a, Node("A1", weight=2))
+    add_child(a, Node("A2", weight=4))  # triggers re-sort in parent's children
+    add_child(b, Node("B1", weight=1))
+    add_child(b, Node("B2", weight=5))
+
+    # build a matrix and plot
+    flattened = flatten_hierarchy(origin_node, [])
+    labels = [nd.label for nd in flattened]
+    size = len(flattened)
+    mat = np.random.rand(size, size)
+    for i in range(size):
+        mat[i, i] = 1.0  # diagonal of 1
+
+    print("[DEBUG] Flattened hierarchy ->", labels)
+    plot_fim(mat, labels)
+
+if __name__ == "__main__":
+    main()
 
