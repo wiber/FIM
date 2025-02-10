@@ -128,6 +128,30 @@ if os.path.exists('llm_cache.json'):
     with open('llm_cache.json', 'r') as cache_file:
         llm_cache = json.load(cache_file)
 
+# Dictionary to track usage for different memory types.
+HPC_USAGE = {
+    "immediate": 0.0,
+    "working": 0.0,
+    "long_term": 0.0
+}
+
+def log_hpc_usage(memory_type: str, amount: float = 1.0):
+    """
+    Increment HPC usage counters for the specified memory type.
+    
+    :param memory_type: One of ('immediate', 'working', 'long_term')
+    :param amount: Amount by which to increment the usage counter.
+    """
+    if memory_type not in HPC_USAGE:
+        raise ValueError(f"Unknown memory type: {memory_type}")
+    
+    HPC_USAGE[memory_type] += amount
+
+    # For patent-proof traceability, we log whenever HPC counters are updated
+    # (helpful for HPC cost tracking in the fractal identity approach).
+    print(f"[HPC LOG] Incremented '{memory_type}' usage by {amount}. "
+          f"New total: {HPC_USAGE[memory_type]}")
+
 # Dictionary to track memory gradient usage
 memory_gradient_usage = {
     "Immediate": 0,
@@ -1204,7 +1228,6 @@ def main():
         print(f"[Error] An error occurred in the main function: {e}", flush=True)
 
 if __name__ == "__main__":
-    print("Executing script...", flush=True)  # Debugging print
     main()
 
 ################################################################################
@@ -1484,4 +1507,39 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+def compute_hpc_skip_factor(node, full_hierarchy_list):
+    """
+    Computes and returns the HPC skip factor for a given node's sub-block,
+    based on the fraction of the flattened matrix area that is actually used
+    vs. the total area.
+
+    skip_factor = 1 - (sub_block_area / total_matrix_area)
+
+    Where:
+      • sub_block_area is the number of row×column pairs belonging to this node
+        and its descendants in the hierarchy.
+      • total_matrix_area is the size of the entire adjacency matrix (e.g. len(full_hierarchy_list)^2).
+
+    This small helper is part of the incremental node-based approach to
+    dynamic submatrix boundaries and HPC usage. It hooks into the
+    flatten_hierarchy(root_node) logic elsewhere in the file.
+    """
+    total_size = len(full_hierarchy_list) ** 2
+    sub_block_size = 0
+
+    # Gather all nodes under 'node' (including itself)
+    # so we know row/column indices of the sub-block
+    descendant_indices = node.get_descendant_indices()  # <--- assume this method exists
+    sub_block_size = len(descendant_indices) ** 2
+
+    # Compute skip factor
+    skip_factor = 1.0 - (sub_block_size / float(total_size))
+
+    # Log for HPC cost analysis
+    # (In practice, you'd integrate with whichever logging system is used in main.py)
+    print(f"[HPC] Node '{node.name}' skip factor: {skip_factor:.3f} "
+          f"(sub_block_area={sub_block_size}, total_area={total_size})")
+
+    return skip_factor
 

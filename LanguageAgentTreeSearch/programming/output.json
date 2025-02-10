@@ -1,5 +1,10 @@
-{"timestamp": "2024-11-14T00:27:31.248622", "level": "INFO", "message": "Number of agents specified: 5"}
-{"timestamp": "2024-11-14T00:27:31.248914", "level": "DEBUG", "message": "Initializing MAFIM with 5 agents"}
-{"timestamp": "2024-11-14T00:27:31.249169", "level": "DEBUG", "message": "load_ssl_context verify=True cert=None trust_env=True http2=False"}
-{"timestamp": "2024-11-14T00:27:31.249475", "level": "DEBUG", "message": "load_verify_locations cafile='/opt/homebrew/lib/python3.12/site-packages/certifi/cacert.pem'"}
-{"timestamp": "2024-11-14T00:27:31.256064", "level": "INFO", "message": "Dataset loaded with 160 items"}
+{
+  "run_name": "test_run",
+  "strategy": "mcts",
+  "language": "py",
+  "model": "gpt-03-mini-high",
+  "mock_mode_used": false,
+  "hpc_usage_immediate": 0,
+  "hpc_usage_working": 0,
+  "hpc_usage_longterm": 0
+}
