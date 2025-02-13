@@ -590,43 +590,55 @@ class FractalSymSorter:
         # Track the index where the new block ends
         self.block_indices.append(self.label_to_idx[subcats[-1]] + 1)
 
-    def assign_top_interactions(self, categories, top_n=20):
+    def assign_top_interactions(self, categories, top_n=40):
         """
-        Assigns similarity weights to the top N most significant interactions, including both intra-category and inter-category.
+        Assigns similarity weights to the top N most significant interactions.
+        
+        This function now attempts to select twice as many interactions (default = 40)
+        to reduce the sparsity of the matrix. In addition, it writes the weight to both
+        [i, j] and [j, i] in the adjacency matrix to ensure denser population while
+        preserving the ordering for the plot.
+        
+        Parameters:
+            categories (list): The list of category labels.
+            top_n (int): Number of top interactions to select (default increased to 40).
         """
         interactions = []
         num_categories = len(categories)
-
-        # Include all possible pairs for top-level and subcategories
+        
+        # Generate all unique pairs (i, j) where i < j
         for i in range(num_categories):
-            for j in range(i + 1, num_categories):  # Ensure no duplicate pairs and no self-comparison
+            for j in range(i + 1, num_categories):
                 label_a = categories[i]
                 label_b = categories[j]
                 interactions.append((label_a, label_b))
-
-        # Shuffle to avoid any inherent ordering
+        
+        # Shuffle to avoid any ordering bias
         random.shuffle(interactions)
-
-        # Batch assign weights to all interactions
+        
+        # Batch assign similarity weights (using LLM or fallback logic)
         weights = assign_similarity_weights_batch(interactions)
-
-        # Determine the top N based on weights
+        
+        # Sort and select the top N interactions based on the assigned weight
         sorted_interactions = sorted(weights.items(), key=lambda item: item[1], reverse=True)
         top_interactions = sorted_interactions[:top_n]
-
-        # Track block indices
+        
+        # Optionally track block boundaries using a step size
         if top_n < num_categories:
             step = max(1, num_categories // top_n)
             for i in range(step, num_categories, step):
                 self.block_indices.append(i)
-
+        
+        # Write the weights into the matrix (both [i, j] and [j, i] to double entries)
         for ((a, b), weight) in top_interactions:
             idx_a = self.label_to_idx[a]
             idx_b = self.label_to_idx[b]
             self.matrix[idx_a, idx_b] = weight
-            print(f"[Top Interaction] from '{a}' to '{b}' with weight={weight}", flush=True)
-
-            # Insert the call to track costing for long-term memory
+            self.matrix[idx_b, idx_a] = weight  # Symmetric assignment to reduce sparsity
+            
+            print(f"[Top Interaction] {a} <--> {b} assigned weight={weight}", flush=True)
+            
+            # Log the LLM call with Long-Term memory usage for cost tracking
             make_llm_call(f"Top Interaction from '{a}' to '{b}'", memory_type="Long-Term")
 
     def show_map(self):
@@ -2726,6 +2738,83 @@ class FIMObject:
                 # In a pure identity mapping, a node maps 1-to-1 to itself.
                 matrix[i][j] = 1 if i == j else 0
         return matrix
+
+def plot_dynamic_fim():
+    """
+    Plot the adjacency matrix using a dynamic node structure.
+    This function uses flatten_hierarchy() to obtain the 1D ordering,
+    then computes submatrix boundaries dynamically using dynamic_submatrix_bounds().
+    It then overlays the boundaries and labels, ensuring that the complicated
+    plot (with annotations, FIM Focus, and skip factor outputs) is preserved.
+    """
+    # Flatten the node hierarchy (including the origin if desired)
+    flat_hierarchy = flatten_hierarchy(origin_node, [])
+    labels = [node.label for node in flat_hierarchy]
+    matrix_size = len(flat_hierarchy)
+    
+    # For demonstration purposes, build or use the pre-computed adjacency matrix.
+    # In actual use, replace the following with your matrix-building logic.
+    matrix = np.random.rand(matrix_size, matrix_size)
+    np.fill_diagonal(matrix, 1.0)  # ensure diagonal of 1's
+
+    # Create the plot
+    plt.figure(figsize=(10, 8))
+    plt.imshow(matrix, cmap='viridis', interpolation='none')
+    plt.colorbar(label='Similarity Weight')
+    plt.xticks(ticks=range(matrix_size), labels=labels, rotation=90)
+    plt.yticks(ticks=range(matrix_size), labels=labels)
+    plt.title("Dynamic FIM with Node-based Submatrix Boundaries")
+
+    # --- Compute and overlay dynamic boundaries for each top-level node ---
+    # Assume each immediate child of the origin represents a top-level category.
+    top_level_nodes = origin_node.children  # they are inserted/sorted dynamically
+    for node in top_level_nodes:
+        start, end = dynamic_submatrix_bounds(node, flat_hierarchy)
+        if start is not None and end is not None:
+            # Draw the boundary rectangle around the node's submatrix
+            rect = Rectangle(
+                (start - 0.5, start - 0.5),
+                (end - start + 1),  # width
+                (end - start + 1),  # height
+                fill=False, 
+                edgecolor='red', 
+                linewidth=2, 
+                linestyle="--"
+            )
+            plt.gca().add_patch(rect)
+            # Annotate the block (place the label near the top boundary)
+            mid = (start + end) / 2.0
+            plt.text(mid, start - 0.7, f"{node.label}", color="red",
+                     fontsize=10, ha="center", va="bottom")
+
+    # --- (Optional) Overlay FIM Focus bounding box as in the existing code ---
+    threshold = matrix.max() * 0.5  # e.g., 50% of max weight
+    indices = np.argwhere(matrix >= threshold)
+    if indices.size > 0:
+        row_min, col_min = indices.min(axis=0)
+        row_max, col_max = indices.max(axis=0)
+        width = col_max - col_min + 1
+        height = row_max - row_min + 1
+        L_focus = max(width, height)
+        L_total = matrix_size
+        finability_index_focus = (L_focus / L_total) ** 2
+
+        rect_focus = Rectangle(
+            (col_min - 0.5, row_min - 0.5),
+            width, height,
+            edgecolor='yellow', 
+            facecolor='none', 
+            linewidth=2, 
+            linestyle='--'
+        )
+        plt.gca().add_patch(rect_focus)
+        plt.text(0.95, 0.05, f"FIM Focus: {finability_index_focus:.4f}",
+                 transform=plt.gca().transAxes,
+                 fontsize=12, color="yellow", horizontalalignment="right",
+                 bbox=dict(facecolor='black', alpha=0.5, edgecolor='none'))
+    
+    plt.tight_layout()
+    plt.show()
 
 if __name__ == "__main__":
     # --------------------------
