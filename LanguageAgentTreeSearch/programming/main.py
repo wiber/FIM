@@ -210,19 +210,17 @@ def log_hpc_costs():
     return total_cost
 
 def make_llm_call(prompt, memory_type="Immediate"):
-    cached_response = get_cached_llm_response(prompt)
-    if cached_response:
-        logging.info(f"Using cached response for prompt: {prompt}")
-        return cached_response
-
-    increment_llm_call_counter()
-    log_memory_usage("LLM Call", memory_type)
-    response = openai_chat_completion(prompt)
-    cache_llm_response(prompt, response)
-    logging.info(f"LLM call made with {memory_type} memory.")
-    print(f"LLM call made with {memory_type} memory.", flush=True)
-    total_cost = log_hpc_costs()
-    print(f"Total inferred HPC cost after LLM call: {total_cost:.2f}", flush=True)
+    """
+    Makes an LLM call using either the real or mock LLM.
+    If USE_MOCK is False, forces a real LLM call (ignoring any cached responses).
+    Regardless of the mode, the LLM response is written to cache.
+    """
+    if USE_MOCK:
+        # Assuming that mock_llm_instance is initialized earlier
+        response = mock_llm_call(prompt, mock_llm_instance)
+    else:
+        response = real_llm_call(prompt)
+    print(f"[LLM] {memory_type} call, prompt: '{prompt[:50]}...' Response: {response}", flush=True)
     return response
 
 def print_summary():
@@ -931,48 +929,63 @@ def visualize_matrix(matrix, labels, block_indices):
 # ------------------------------------------------------------------
 # Main Function
 # ------------------------------------------------------------------
-def print_weight_info(matrix, labels, submatrix_map):
+def print_weight_info(matrix, labels, submatrix_map, top_n=8):
     """
-    Prints the weight information with absolute and submatrix coordinates.
+    Prints the top 'top_n' interactions with highest weights,
+    including absolute coordinates, submatrix coordinates, and notation.
     """
     num_categories = len(labels)
+    interactions = []
     num_top_categories = 3  # Assuming there are 3 top-level categories
     for i in range(num_categories):
         for j in range(num_categories):
             weight = matrix[i, j]
-            if weight > 0:  # Only print non-zero weights
-                # Determine submatrix coordinates
+            if weight > 0:  # Only consider non-zero weights
+                # Determine submatrix coordinates based on fixed grouping logic.
                 top_cat_i = i // (num_top_categories + 1)
                 subcat_i = i % (num_top_categories + 1)
                 top_cat_j = j // (num_top_categories + 1)
                 subcat_j = j % (num_top_categories + 1)
                 
-                # Use "O" for origin and "A-C" for top-level categories
                 top_label_i = "O" if top_cat_i == 0 else chr(64 + top_cat_i)
                 top_label_j = "O" if top_cat_j == 0 else chr(64 + top_cat_j)
                 
                 submatrix_coord = f"{top_label_i}{subcat_i + 1}{top_label_j}{subcat_j + 1}"
                 interaction_notation = f"{top_label_i}{top_label_j}={weight:.2f}"
-                
-                print(f"Weight: {weight:.2f} at Absolute Coordinate: ({i}, {j}), Submatrix Coordinate: {submatrix_coord}, Interaction: '{labels[i]}' to '{labels[j]}', Notation: {interaction_notation}", flush=True)
+                msg = (f"Weight: {weight:.2f} at Absolute Coordinate: ({i}, {j}), "
+                       f"Submatrix Coordinate: {submatrix_coord}, Interaction: '{labels[i]}' to '{labels[j]}', "
+                       f"Notation: {interaction_notation}")
+                interactions.append((weight, msg))
+    # Sort interactions by weight in descending order and print the top 'top_n'.
+    interactions.sort(key=lambda x: x[0], reverse=True)
+    for weight, msg in interactions[:top_n]:
+        print(msg, flush=True)
 
-def append_submatrix_notation_to_labels(labels):
+def append_submatrix_notation_to_labels(labels, submatrix_map):
     """
     Appends submatrix notation to each label.
     """
-    updated_labels = []
-    num_top_categories = 3  # Assuming there are 3 top-level categories
-    for idx, label in enumerate(labels):
-        if idx == 0:
-            notation = "O"  # Origin
-        elif 1 <= idx <= num_top_categories:
-            notation = chr(64 + idx)  # A, B, C for top-level categories
-        elif idx == num_top_categories + 1:
-            notation = "D"  # Last top-level category
-        else:
-            notation = ""  # No notation for subcategories
-        
-        updated_labels.append(f"{notation} {label}".strip())
+    import random
+    emoji_candidates = ["🔥", "🚀", "🌟", "💎", "⚡", "🎯", "🌈", "💡"]
+    # Generate a random emoji for each top-level category (skip origin "O")
+    category_emojis = {}
+    # Sort top-level categories based on their starting index for deterministic mapping.
+    sorted_categories = sorted(submatrix_map.items(), key=lambda item: item[1][0])
+    for i, (cat, bounds) in enumerate(sorted_categories):
+        if cat.upper() == "O": 
+            continue
+        # Pick a random emoji from candidates
+        category_emojis[cat] = random.choice(emoji_candidates)
+    
+    # Create updated labels by appending the emoji to each label within the top-level's range.
+    updated_labels = labels.copy()
+    for cat, (start, end) in submatrix_map.items():
+        if cat.upper() == "O":
+            continue
+        emoji = category_emojis.get(cat, "")
+        # (Assuming end is exclusive.)
+        for i in range(start, end):
+            updated_labels[i] = f"{updated_labels[i]} {emoji}"
     return updated_labels
 
 def process_multiple_batches(all_comparisons):
@@ -1240,7 +1253,7 @@ def main():
         submatrix_map = layout.create_submatrix_map()
 
         # Append submatrix notation to labels
-        layout.labels = append_submatrix_notation_to_labels(layout.labels)
+        layout.labels = append_submatrix_notation_to_labels(layout.labels, submatrix_map)
 
         # Print weight information with coordinates
         print_weight_info(layout.matrix, layout.labels, submatrix_map)
