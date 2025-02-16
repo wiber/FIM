@@ -13,7 +13,7 @@ if [[ "$1" == "--mock" ]]; then
 fi
 # Run the Python script with the mock flag
 
-python main.py \
+python main.py "$@"\
   --run_name "test_run" \
   --root_dir "root" \
   --dataset_path "./benchmarks/humaneval-py.jsonl" \

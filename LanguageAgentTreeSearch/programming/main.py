@@ -101,6 +101,7 @@ import argparse
 from matplotlib.patches import Rectangle
 import sys
 import matplotlib.font_manager as fm
+import math
 
 
 import os
@@ -204,16 +205,16 @@ def randomize_graph_weights(graph):
 class Node:
     def __init__(self, label, children_weights=None):
         self.label = label                      # Full descriptive label
-        self.prefix = None                      # To be computed dynamically
+        self.prefix = None                      # Dynamically computed hierarchical identifier
         self.index = None                       # Position in the 1D ordering
-        self.metadata = {}                      # Any extra info (e.g., HPC/LLM data)
+        self.metadata = {}                      # Extra info (e.g., HPC/LLM data)
         self.children = children_weights if children_weights is not None else {}
-        self.parent = None                      # Parent pointer (to be set during BFS)
+        self.parent = None                      # Parent pointer (set during BFS)
 
 class Hierarchy:
     def __init__(self, graph, origin):
         """
-        :param graph: dict mapping each node -> { child: weight, ... }
+        :param graph: dict mapping each node -> {child: weight, ...}
         :param origin: string (e.g. "Origin")
         """
         self.graph = graph
@@ -226,8 +227,9 @@ class Hierarchy:
         """
         Creates a 1D ordering using the children link weights stored in each Node.
         This method:
-          1) Builds Node objects (each with its children weights, if any) from the graph.
-          2) Uses a breadth-first search (BFS) starting from the origin, sorting each node's children by weight.
+          1) Builds Node objects from the graph.
+          2) Uses a breadth-first search (BFS) starting from the origin,
+             sorting each node's children by weight.
           3) Returns the final list of labels.
         """
         # Build a set of all labels (parents and children)
@@ -246,22 +248,31 @@ class Hierarchy:
                 node = Node(label)
             nodes_dict[label] = node
 
-        # Perform a BFS starting from the origin, sorting children using stored weights.
+        # Perform a BFS starting from the origin, sorting children by stored weights.
         order = []
         queue = [nodes_dict[self.origin]]
         while queue:
             current = queue.pop(0)
             order.append(current.label)
             if current.children:
+                # Log the original children order before sorting.
+                original_order = list(current.children.items())
+                logging.info(f"Before sort at node '{current.label}': {original_order}")
+                
+                # Sort children in descending order.
                 sorted_children_labels = sorted(
                     current.children.keys(),
                     key=lambda child: current.children[child] if current.children[child] is not None else float('-inf'),
                     reverse=True
                 )
+                sorted_order = [(child, current.children[child]) for child in sorted_children_labels]
+                logging.info(f"After sort at node '{current.label}': {sorted_order}")
+                
                 for child_label in sorted_children_labels:
                     child_node = nodes_dict[child_label]
                     if child_node.parent is None:
                         child_node.parent = current
+                    # Avoid duplicates in the order.
                     if child_label not in order:
                         queue.append(child_node)
                         
@@ -282,11 +293,11 @@ class Hierarchy:
 def assign_prefixes(hierarchy):
     """
     Dynamically assign prefixes based on each node's rank among its siblings.
-    - The origin node gets prefix "O".
-    - For nodes directly under the origin, assign letters (A, B, ...).
-    - For subcategories, assign parent's prefix concatenated with the sibling rank (1-indexed).
+    - The origin gets prefix "O".
+    - For direct children of origin, use letters (A, B, ...).
+    - For all others, use parent's prefix concatenated with the sibling rank (1-indexed).
     """
-    # Assign prefix for the origin.
+    # Assign origin prefix.
     for node in hierarchy.ordered_nodes:
         if node.label == hierarchy.origin:
             node.prefix = "O"
@@ -296,7 +307,6 @@ def assign_prefixes(hierarchy):
     for node in hierarchy.ordered_nodes:
         if node.parent is not None:
             parent = node.parent
-            # Sort the parent's children (by weight in descending order)
             sorted_children = sorted(
                 parent.children.items(),
                 key=lambda x: x[1] if x[1] is not None else float('-inf'),
@@ -309,12 +319,56 @@ def assign_prefixes(hierarchy):
             else:
                 node.prefix = parent.prefix + str(rank + 1)
 
+def randomize_graph_weights(graph):
+    """
+    Returns a new graph with the same structure as 'graph' but with random weights.
+    """
+    new_graph = {}
+    for parent, children in graph.items():
+        new_graph[parent] = {}
+        for child in children:
+            new_graph[parent][child] = random.uniform(0, 1)
+    return new_graph
+
+def compute_entropy(hierarchy):
+    """
+    Compute an entropy measure over the structure.
+    For each node with children, compute the Shannon entropy of the normalized weights, then average.
+    """
+    total_entropy = 0.0
+    count = 0
+    for node in hierarchy.ordered_nodes:
+        if node.children:
+            weights = list(node.children.values())
+            total_weight = sum(weights)
+            if total_weight <= 0:
+                continue
+            normalized = [w / total_weight for w in weights]
+            entropy = -sum(p * math.log2(p) for p in normalized if p > 0)
+            total_entropy += entropy
+            count += 1
+    if count > 0:
+        return total_entropy / count
+    return 0
+
+def simulate_hpc_cost():
+    """
+    Simulate an HPC cost calculation (for demonstration purposes).
+    """
+    return random.uniform(0.1, 5.0)
+
+def simulate_llm_call(old_label, iteration):
+    """
+    Simulate an LLM call that "swaps out" a node's name.
+    """
+    return f"LLM_{iteration}_{old_label}"
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Run the Hierarchy FIM pipeline with LLM caching and HPC logging."
     )
     parser.add_argument("--use_mock", action="store_true", help="Use mock LLM responses.")
-    # Example of additional arguments; adjust as needed.
+    # Additional arguments as needed.
     parser.add_argument("--run_name", type=str, default="test_run", help="Run name for the execution.")
     parser.add_argument("--root_dir", type=str, default="root", help="Root directory.")
     parser.add_argument("--dataset_path", type=str, default="./benchmarks/humaneval-py.jsonl", help="Path to dataset.")
@@ -334,12 +388,12 @@ def main():
     args = parse_args()
     logging.basicConfig(level=logging.INFO)
     
-    # Log the detected flag and other arguments.
+    # Log the detected flag and arguments.
     logging.info(f"USE_MOCK flag detected: {args.use_mock}")
     logging.info(f"Parsed command-line arguments: {args}")
-
-    # Define your graph with 4 top categories.
-    graph = {
+    
+    # Define the original graph structure with 4 top categories.
+    original_graph = {
         "Origin": {"A": 0.9, "B": 0.8, "C": 0.7, "D": 0.65},
         "A": {"A1": 0.85, "A2": 0.8, "A3": 0.75},
         "B": {"B1": 0.78, "B2": 0.76, "B3": 0.74},
@@ -348,19 +402,58 @@ def main():
     }
     origin = "Origin"
 
-    # Create the Hierarchy object.
-    hierarchy = Hierarchy(graph, origin)
-    
-    # Build the 1D ordering.
-    ordered_labels = hierarchy.linearize_one_d()
-    
-    # Dynamically assign prefixes based on parent-child ranking.
-    assign_prefixes(hierarchy)
-    
-    # Print the ordering along with dynamic prefixes.
-    logging.info("Final ordered nodes with dynamic prefixes:")
-    for node in hierarchy.ordered_nodes:
-        logging.info(f"Index {node.index}: {node.label} (Prefix: {node.prefix})")
+    # --- First loop: Three iterations using randomized weights ---
+    counter = 0
+    while counter < 3:
+        logging.info(f"\n=== Iteration {counter + 1} (Randomized Ordering) ===")
+        # Randomize weights each iteration.
+        randomized_graph = randomize_graph_weights(original_graph)
+        hierarchy = Hierarchy(randomized_graph, origin)
+        hierarchy.linearize_one_d()  # This logs before/after sort in each node.
+        assign_prefixes(hierarchy)
+        hierarchy.print_ordering()
+        counter += 1
+
+    # --- Second loop: Higher iteration count for actual calls (LLM, JSON, HPC logging, entropy) ---
+    llm_iterations = 10  # Example higher iteration count.
+    aggregated_hpc = []
+    aggregated_entropy = []
+    counter2 = 0
+    while counter2 < llm_iterations:
+        logging.info(f"\n=== LLM Iteration {counter2 + 1} ===")
+        # Randomize weights.
+        randomized_graph = randomize_graph_weights(original_graph)
+        hierarchy = Hierarchy(randomized_graph, origin)
+        hierarchy.linearize_one_d()
+        assign_prefixes(hierarchy)
+        
+        # Simulate swapping out node names via LLM calls.
+        for node in hierarchy.ordered_nodes:
+            # Update node label with a simulated LLM call.
+            new_label = simulate_llm_call(node.label, counter2 + 1)
+            logging.info(f"Swapping node name from '{node.label}' to '{new_label}'")
+            node.label = new_label
+
+        # Simulate an HPC call and store its cost.
+        hpc_cost = simulate_hpc_cost()
+        aggregated_hpc.append(hpc_cost)
+        logging.info(f"Simulated HPC cost for iteration {counter2 + 1}: {hpc_cost:.3f}")
+        
+        # Compute entropy for the current hierarchy.
+        entropy_value = compute_entropy(hierarchy)
+        aggregated_entropy.append(entropy_value)
+        logging.info(f"Computed structure entropy for iteration {counter2 + 1}: {entropy_value:.3f}")
+        
+        # Print current ordering with dynamic prefixes.
+        hierarchy.print_ordering()
+        counter2 += 1
+
+    # End of LLM iterations: Report aggregated HPC and entropy results.
+    avg_hpc = sum(aggregated_hpc) / len(aggregated_hpc) if aggregated_hpc else 0
+    avg_entropy = sum(aggregated_entropy) / len(aggregated_entropy) if aggregated_entropy else 0
+    logging.info("\n=== Aggregated Results ===")
+    logging.info(f"Average HPC cost over {llm_iterations} iterations: {avg_hpc:.3f}")
+    logging.info(f"Average structure entropy over {llm_iterations} iterations: {avg_entropy:.3f}")
 
 if __name__ == "__main__":
     main()
