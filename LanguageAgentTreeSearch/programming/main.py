@@ -3,6 +3,152 @@
 PLANNING: Transitioning main.py to a More Dynamic, Functional FIM Design 
 with LLM Call Strategy & HPC Cost Logging
 --------------------------------------------------------------------------------
+```
+--------------------------------------------------------------------------------
+PLANNING: Transitioning main.py to a More Dynamic, Functional FIM Design 
+with LLM Call Strategy, HPC Cost Logging, and Skip Formula Integration
+--------------------------------------------------------------------------------
+
+Below is the revised plan for incrementally refactoring this file (main.py) 
+toward a dynamic, functionally-driven Fractal Identity Matrix (FIM) 
+architecture—explicitly incorporating HPC interpretability, cost tracking, 
+and the skip formula:
+
+            Skip Factor = ( c / t )^n
+
+where 
+• c = number of relevant categories (or blocks) we actually process,  
+• t = total categories/blocks overall, and  
+• n = number of dimensions or expansions in the problem space.  
+
+We retain the existing matrix/plot logic while ensuring HPC cost logging 
+and the skip formula appear consistently in the code. The primary goals are 
+to:
+
+1) Eliminate hard-coded submatrix offsets.  
+2) Move to a Node-based, hierarchical design.  
+3) Dynamically compute submatrix bounds and apply skip-factor analysis.  
+4) Maintain the HPC log of LLM calls.  
+5) Reflect how HPC interpretability benefits from focusing on smaller submatrices 
+   (thus saving compute time) per the skip formula.  
+
+Below are the key steps and how each integrates HPC interpretability, 
+the skip factor formula, LLM calls, and dynamic node-based design.  
+
+--------------------------------------------------------------------------------
+1. **Remove Static Submatrix Dictionaries & Hard-coded Bounds**  
+--------------------------------------------------------------------------------
+   - Eliminate all fixed offset indices or dictionaries describing submatrix 
+     boundaries (e.g., `{"A": (6,8), "B": (9,11), ...}`).
+   - Replace them with a function (e.g., `get_submatrix_bounds(node)`) that 
+     computes each node’s sub-block using node.weight or sums of child weights.
+   - The skip formula will be applied to each sub-block boundary so we can 
+     track HPC cost. For instance, if a submatrix is only c out of t possible 
+     blocks in an n-dimensional sense, skip factor = (c/t)^n.  
+
+--------------------------------------------------------------------------------
+2. **Adopt a Hierarchical Node Structure**  
+--------------------------------------------------------------------------------
+   - Each category or subcategory is a `Node` object with:
+       • `name` or `label` (string).  
+       • `weight` (float).  
+       • `parent` pointer (for top-level nodes, it’s `None`).  
+       • a `children` list, sorted descending by weight.  
+   - During insertion or updates, recalculate HPC usage to reflect how 
+     focusing on certain nodes can skip others. If we only “visit” c 
+     out of t total children, HPC skip factor = (c/t)^n.  
+   - Eliminate the need for a separate static dictionary to define 
+     parent→child blocks.  
+
+--------------------------------------------------------------------------------
+3. **Weight-Driven Sorted Insertions**  
+--------------------------------------------------------------------------------
+   - Whenever we add or update a category or subcategory, we derive 
+     a similarity or relevance weight from an LLM prompt (tracked in HPC logs).  
+   - Insert the new Node into its parent's `children` array in descending 
+     order by weight.  
+   - If a node’s weight changes, re-sort it among its siblings.  
+   - This ensures the adjacency matrix can be built in a “naturally” sorted 
+     manner. HPC interpretability is enhanced because we see the heaviest 
+     influences first, consistent with the skip formula (we might skip 
+     lower-weight blocks).  
+
+--------------------------------------------------------------------------------
+4. **LLM Calls & HPC Logging**  
+--------------------------------------------------------------------------------
+   - Preserve existing prompt-based calls (e.g., `assign_similarity_weights`), 
+     but ensure each triggers HPC usage increments:
+       • “Immediate” memory usage for simpler calls.  
+       • “Working” usage for subcategory expansions or heavier calls.  
+       • “Long-Term” usage for large batch interactions.  
+   - Each call increments a global counter (`llm_call_counter`) for clarity, 
+     and logs HPC usage in a dictionary (e.g., `HPC_USAGE`).  
+   - After each step, we can compute how the skip factor might reduce HPC 
+     usage if we only call the LLM on relevant sub-blocks. For instance, 
+     if c = 5 sub-blocks used vs. t = 10 possible, skip = (5/10)^1 = 0.5, 
+     meaning 50% HPC skip.  
+
+--------------------------------------------------------------------------------
+5. **Flattening & Matrix Building**  
+--------------------------------------------------------------------------------
+   - Provide a function `flatten_hierarchy(root_node, result=[])` that 
+     yields a 1D list of nodes in sorted order (heaviest children first).  
+   - Build or update the NxN adjacency matrix from this flattened list.  
+     Row/column i in the matrix corresponds to `flat_list[i]`. The diagonal 
+     can remain 1.0 if we want an identity mapping or can remain 0 if 
+     no self-link is required.  
+   - For HPC interpretability, each row or sub-block can be 
+     “skipped” if the weight is below a threshold—tying directly to 
+     `(c/t)^n` to measure how many blocks we can skip.  
+
+--------------------------------------------------------------------------------
+6. **Enhanced Plotting with HPC Skip Factor**  
+--------------------------------------------------------------------------------
+   - Keep the existing matrix plotting but direct sub-block boundaries 
+     to `get_submatrix_bounds(node, flat_list)`.  
+   - Use color-coded rectangles for top-level categories and subcategories.  
+   - Print HPC skip factor for each sub-block, e.g. “Sub-block (A) skip factor = (2/5)^1 = 0.4.”  
+   - Continue to show bounding boxes and compute the “Finability Index,” 
+     `(L_focus / L_total)^2`, for the bounding region.  
+
+--------------------------------------------------------------------------------
+7. **Incremental Implementation**  
+--------------------------------------------------------------------------------
+   **Order of changes** (each step validated with HPC logs and skip factor prints):
+   1. Introduce the `Node` class plus a global `origin_node` or `root`.  
+   2. Convert existing static categories into Node objects under `origin_node`.  
+   3. Implement `add_category(parent, child_label, child_weight)` to do 
+      weight-sorted insertion. Recompute HPC usage.  
+   4. Build adjacency matrix from `flatten_hierarchy(root_node)`.  
+   5. Replace all submatrix bounding logic with `get_submatrix_bounds(node)`.  
+   6. Incorporate skip-factor prints. For instance, if we skip a submatrix 
+      of size c vs. total t, HPC usage is multiplied by (c/t)^n.  
+
+--------------------------------------------------------------------------------
+8. **Testing & Verification**  
+--------------------------------------------------------------------------------
+   - After each step, confirm the dynamic insertion yields correct 
+     adjacency shape.  
+   - Check HPC logs to ensure each LLM call increments usage. Confirm 
+     skip factor calculations: if we only retrieve c out of t sub-blocks, 
+     HPC cost is proportionally lower.  
+   - Verify the final plot has color-coded blocks and bounding lines 
+     matching the Node-based structure. Check the Finability Index 
+     `(L_focus / L_total)^2` and skip factor `(c/t)^n` match your 
+     HPC interpretability requirements.  
+
+By following these steps methodically—and ensuring HPC cost, interpretability, 
+and skip-factor logic is integrated at every stage—we transition `main.py` 
+into a more robust, transparent FIM. We will be able to:
+
+• Add or remove categories dynamically (by LLM weighting),  
+• Track HPC usage with skip factor optimizations,  
+• Plot sub-blocks with bounding lines & HPC skip factor annotations,  
+• Maintain all prior matrix visuals and LLM interactions, but with 
+  deeper hierarchical meaning and HPC interpretability at each step.
+
+```
+
 
 Below is the plan for incrementally refactoring this file (main.py) toward a 
 dynamic, functionally-driven Fractal Identity Matrix (FIM) architecture. We will 
@@ -114,9 +260,25 @@ try:
 except (FileNotFoundError, json.JSONDecodeError):
     llm_response_cache = {}
 
-def save_llm_cache():
-    with open(LLM_CACHE_FILE, "w") as file:
-        json.dump(llm_response_cache, file, indent=2)
+def save_llm_cache(llm_cache, filename="llm_cache.json"):
+    """Write the LLM cache (dictionary) to a JSON file."""
+    try:
+        with open(filename, "w") as f:
+            json.dump(llm_cache, f, indent=4)
+        logging.info(f"LLM cache saved to {filename}.")
+    except Exception as e:
+        logging.error(f"Error writing llm_cache to {filename}: {e}")
+
+def load_llm_cache(filename="llm_cache.json"):
+    """Read the LLM cache from a JSON file. If not available, return an empty dict."""
+    try:
+        with open(filename, "r") as f:
+            cache = json.load(f)
+        logging.info(f"LLM cache loaded from {filename}.")
+        return cache
+    except Exception as e:
+        logging.warning(f"Could not read {filename}, starting with an empty cache.")
+        return {}
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -207,7 +369,7 @@ class Node:
         self.label = label                      # Full descriptive label
         self.prefix = None                      # Dynamically computed hierarchical identifier
         self.index = None                       # Position in the 1D ordering
-        self.metadata = {}                      # Extra info (e.g., HPC/LLM data)
+        self.metadata = {}                      # Extra info (e.g., HPC/LLM metadata/prompts)
         self.children = children_weights if children_weights is not None else {}
         self.parent = None                      # Parent pointer (set during BFS)
 
@@ -220,26 +382,24 @@ class Hierarchy:
         self.graph = graph
         self.origin = origin
         self.ordered_nodes = []       # List of Node objects in final 1D order
-        self.llm_cache = {}           # For JSON caching (if needed)
+        self.llm_cache = {}           # For storing LLM prompts and responses (as metadata)
         self.hpc_log = []             # Log HPC/LLM cost data
-
+    
     def linearize_one_d(self):
         """
         Creates a 1D ordering using the children link weights stored in each Node.
-        This method:
-          1) Builds Node objects from the graph.
-          2) Uses a breadth-first search (BFS) starting from the origin,
-             sorting each node's children by weight.
-          3) Returns the final list of labels.
+        1) Builds Node objects from the graph.
+        2) Uses a BFS starting from the origin, sorting each node's children by weight.
+        3) Returns the final list of labels.
         """
-        # Build a set of all labels (parents and children)
+        # Build the set of all labels (parents and children)
         all_labels = set()
         for parent, children in self.graph.items():
             all_labels.add(parent)
             for child in children.keys():
                 all_labels.add(child)
                 
-        # Create Node objects for each label.
+        # Create Node objects for every label.
         nodes_dict = {}
         for label in all_labels:
             if label in self.graph:
@@ -248,18 +408,18 @@ class Hierarchy:
                 node = Node(label)
             nodes_dict[label] = node
 
-        # Perform a BFS starting from the origin, sorting children by stored weights.
+        # BFS starting from the origin
         order = []
         queue = [nodes_dict[self.origin]]
         while queue:
             current = queue.pop(0)
             order.append(current.label)
             if current.children:
-                # Log the original children order before sorting.
+                # Log original children weights (unsorted)
                 original_order = list(current.children.items())
                 logging.info(f"Before sort at node '{current.label}': {original_order}")
                 
-                # Sort children in descending order.
+                # Sort children by weight (descending)
                 sorted_children_labels = sorted(
                     current.children.keys(),
                     key=lambda child: current.children[child] if current.children[child] is not None else float('-inf'),
@@ -272,11 +432,11 @@ class Hierarchy:
                     child_node = nodes_dict[child_label]
                     if child_node.parent is None:
                         child_node.parent = current
-                    # Avoid duplicates in the order.
+                    # Avoid duplicates in the ordering.
                     if child_label not in order:
                         queue.append(child_node)
                         
-        # Convert labels into the ordered Node objects and assign indices.
+        # Convert the ordering into Node objects and assign indices.
         self.ordered_nodes = []
         for idx, label in enumerate(order):
             node = nodes_dict[label]
@@ -292,18 +452,18 @@ class Hierarchy:
 
 def assign_prefixes(hierarchy):
     """
-    Dynamically assign prefixes based on each node's rank among its siblings.
-    - The origin gets prefix "O".
-    - For direct children of origin, use letters (A, B, ...).
-    - For all others, use parent's prefix concatenated with the sibling rank (1-indexed).
+    Dynamically assigns prefixes based on a node's rank among its siblings.
+    - The origin receives the fixed prefix "O".
+    - Direct children of the origin receive letters (A, B, ...).
+    - All others receive the parent's prefix concatenated with their sibling rank (1-indexed).
     """
-    # Assign origin prefix.
+    # Set origin prefix
     for node in hierarchy.ordered_nodes:
         if node.label == hierarchy.origin:
             node.prefix = "O"
             break
 
-    # Assign prefixes for nodes with a parent.
+    # Set prefixes for nodes with a parent.
     for node in hierarchy.ordered_nodes:
         if node.parent is not None:
             parent = node.parent
@@ -315,13 +475,13 @@ def assign_prefixes(hierarchy):
             sibling_labels = [child_label for child_label, _ in sorted_children]
             rank = sibling_labels.index(node.label)
             if parent.label == hierarchy.origin:
-                node.prefix = chr(65 + rank)  # 0 -> A, 1 -> B, etc.
+                node.prefix = chr(65 + rank)  # 0 -> 'A', 1 -> 'B', etc.
             else:
                 node.prefix = parent.prefix + str(rank + 1)
 
 def randomize_graph_weights(graph):
     """
-    Returns a new graph with the same structure as 'graph' but with random weights.
+    Returns a new graph with the same structure as 'graph' but randomizes the weights.
     """
     new_graph = {}
     for parent, children in graph.items():
@@ -332,8 +492,7 @@ def randomize_graph_weights(graph):
 
 def compute_entropy(hierarchy):
     """
-    Compute an entropy measure over the structure.
-    For each node with children, compute the Shannon entropy of the normalized weights, then average.
+    Compute an average Shannon entropy over the nodes that have children.
     """
     total_entropy = 0.0
     count = 0
@@ -351,17 +510,86 @@ def compute_entropy(hierarchy):
         return total_entropy / count
     return 0
 
-def simulate_hpc_cost():
+def simulate_hpc_cost(prompts_present=False):
     """
-    Simulate an HPC cost calculation (for demonstration purposes).
+    Simulate an HPC cost calculation.
+    If FIM prompts metadata is present, add an extra cost component.
     """
-    return random.uniform(0.1, 5.0)
+    cost = random.uniform(0.1, 5.0)
+    if prompts_present:
+        cost += 1.0  # additional cost for even more complex prompt processing
+    return cost
 
 def simulate_llm_call(old_label, iteration):
     """
     Simulate an LLM call that "swaps out" a node's name.
     """
     return f"LLM_{iteration}_{old_label}"
+
+def update_fim_prompts(hierarchy, llm_cache, cache_file="llm_cache.json"):
+    """
+    Define and store the set of prompts framing the FIM problem space.
+    These prompts detail:
+      1. Origin & Problem Space (Prompt One)
+      2. Identification of Top-Level Categories (Prompt Two)
+      3. Subcategories per Top-Level Category (Prompt Three)
+      4. Key Cross-Interactions (Prompt Four)
+      
+    The prompts are saved into llm_cache and attached to the origin node's metadata.
+    They are also written to a JSON file.
+    """
+    fim_prompts = {
+        "prompt_1": (
+            "SYSTEM MESSAGE (optional): You are assisting in constructing a Fractal Identity Matrix (FIM) for causal analysis.\n"
+            "USER PROMPT:\n"
+            "Below is the overall FIM problem-space definition:\n"
+            "- The FIM concept: 'Fractal Identity Matrix for HPC interpretability'\n"
+            "- Domain: HPC cost efficiency, energy usage, interpretability\n\n"
+            "Please summarize and clarify the problem space. Provide a concise bullet list or a short JSON structure including:\n"
+            "1. A summary in 1-2 paragraphs\n"
+            "2. Core objectives or success criteria\n"
+            "3. A short set of keywords that define the context\n"
+            "Return the result in JSON or a similarly parseable format."
+        ),
+        "prompt_2": (
+            "USER PROMPT:\n"
+            "Using the problem-space summary from Prompt One (and its metadata), identify the major top-level causal factors (4–6) that most strongly "
+            "influence or define the origin. Return them as a JSON array of objects, each with:\n"
+            " - 'name': string\n"
+            " - 'why_important': short explanation\n"
+            " - 'approx_weight': a guess on the impact (0.0 - 1.0)"
+        ),
+        "prompt_3": (
+            "USER PROMPT:\n"
+            "For each top-level category provided in Prompt Two, provide 3–5 subcategories in the context of both the category and the overall origin. "
+            "For each subcategory, return a JSON object with:\n"
+            " - 'sub_name'\n"
+            " - 'why_important': explanation referencing both the parent's category and the origin\n"
+            " - 'causal_importance_to_parent': a float (0–1) describing the importance of the link from parent to subcategory\n"
+            "Return the result grouped by parent category in JSON format."
+        ),
+        "prompt_4": (
+            "USER PROMPT:\n"
+            "Given the entire hierarchy (origin, categories, subcategories) so far, identify the 10–15 most crucial cross-interactions that impact HPC "
+            "interpretability. For each interaction, return a JSON object with the following keys:\n"
+            " - 'nodeA'\n"
+            " - 'nodeB'\n"
+            " - 'causal_importance': float (0.0–1.0)\n"
+            " - 'brief_rationale': a short explanation of how this link fits into the overall causality\n"
+            "Return the output as a JSON array sorted in descending order of 'causal_importance'."
+        )
+    }
+    # Save prompts into the LLM cache
+    llm_cache["fim_prompts"] = fim_prompts
+
+    # Attach the prompts to the origin node's metadata.
+    for node in hierarchy.ordered_nodes:
+        if node.prefix == "O":  # the origin node
+            node.metadata["fim_prompts"] = fim_prompts.copy()
+            break
+
+    # Save updated LLM cache to JSON file.
+    save_llm_cache(llm_cache, filename=cache_file)
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -387,7 +615,7 @@ def parse_args():
 def main():
     args = parse_args()
     logging.basicConfig(level=logging.INFO)
-    
+
     # Log the detected flag and arguments.
     logging.info(f"USE_MOCK flag detected: {args.use_mock}")
     logging.info(f"Parsed command-line arguments: {args}")
@@ -409,15 +637,17 @@ def main():
         # Randomize weights each iteration.
         randomized_graph = randomize_graph_weights(original_graph)
         hierarchy = Hierarchy(randomized_graph, origin)
-        hierarchy.linearize_one_d()  # This logs before/after sort in each node.
+        hierarchy.linearize_one_d()  # Logs before/after sorting at each node.
         assign_prefixes(hierarchy)
         hierarchy.print_ordering()
         counter += 1
 
-    # --- Second loop: Higher iteration count for actual calls (LLM, JSON, HPC logging, entropy) ---
-    llm_iterations = 10  # Example higher iteration count.
+    # --- Second loop: Higher iteration count for actual LLM/JSON/HPC processing ---
+    llm_iterations = 10  # Example iteration count for detailed processing.
     aggregated_hpc = []
     aggregated_entropy = []
+    # We'll use a global llm_cache (simulate using a local dict for now)
+    llm_cache = {}
     counter2 = 0
     while counter2 < llm_iterations:
         logging.info(f"\n=== LLM Iteration {counter2 + 1} ===")
@@ -426,24 +656,27 @@ def main():
         hierarchy = Hierarchy(randomized_graph, origin)
         hierarchy.linearize_one_d()
         assign_prefixes(hierarchy)
+        # Update the FIM prompts metadata and store them in llm_cache / origin node.
+        update_fim_prompts(hierarchy, llm_cache)
         
         # Simulate swapping out node names via LLM calls.
         for node in hierarchy.ordered_nodes:
-            # Update node label with a simulated LLM call.
             new_label = simulate_llm_call(node.label, counter2 + 1)
             logging.info(f"Swapping node name from '{node.label}' to '{new_label}'")
             node.label = new_label
 
-        # Simulate an HPC call and store its cost.
-        hpc_cost = simulate_hpc_cost()
+        # Check if origin has FIM prompts metadata.
+        origin_has_prompts = any(node.metadata.get("fim_prompts") for node in hierarchy.ordered_nodes if node.prefix == "O")
+        # Simulate HPC call (including extra cost if prompts are present).
+        hpc_cost = simulate_hpc_cost(prompts_present=origin_has_prompts)
         aggregated_hpc.append(hpc_cost)
         logging.info(f"Simulated HPC cost for iteration {counter2 + 1}: {hpc_cost:.3f}")
-        
+
         # Compute entropy for the current hierarchy.
         entropy_value = compute_entropy(hierarchy)
         aggregated_entropy.append(entropy_value)
         logging.info(f"Computed structure entropy for iteration {counter2 + 1}: {entropy_value:.3f}")
-        
+
         # Print current ordering with dynamic prefixes.
         hierarchy.print_ordering()
         counter2 += 1
