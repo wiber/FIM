@@ -338,9 +338,12 @@ def parse_args():
 def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
     args = parse_args()
+    
+    if args.use_mock:
+        print("Mock flag passed: Using mock LLM responses.")
+        
     logging.info(f"Arguments: {args}")
 
-    # Define the original static graph with category D included.
     graph = {
         "Origin": {"A": 0.9, "B": 0.7, "C": 0.6, "D": 0.65},
         "A": {"A1": 0.85, "A2": 0.8, "A3": 0.75},
@@ -350,12 +353,14 @@ def main():
     }
     root_label = "Origin"
 
-    # Process each complete run (trial) as a fully functional pipeline.
     for trial in range(args.runs):
-        logging.info(f"\n===== Trial {trial+1} =====")
+        logging.info(f"===== Trial {trial+1} =====")
+        # Use the helper to create the FIMHierarchy with correctly ordered arguments.
         fim = create_fim_hierarchy(graph, root_label, iterations=args.iterations, dimension=args.dimension)
         fim = log_fim_hierarchy(fim)
         save_hierarchy(fim.root, filename=f"hierarchy_final_trial_{trial+1}.json")
+        # Finally, print the FIMHierarchy instance.
+        print("Final FIMHierarchy object:", fim)
 
 if __name__ == "__main__":
     main()
