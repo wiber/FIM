@@ -19,6 +19,7 @@ import logging
 import argparse
 import math
 import numpy as np
+import pprint
 
 # For completeness in this example, we define a simple Node class here.
 class Node:
@@ -35,6 +36,9 @@ class Node:
     def add_child(self, child):
         self.children.append(child)
         child.parent = self  # Set the child's parent pointer
+
+    def inspect(self):
+        pprint.pprint(self.__dict__)
 
 ###########################################################
 #      TREE/GRAPH BUILDING AND HELPER FUNCTIONS           #
@@ -222,15 +226,8 @@ def save_hierarchy(root_node, filename="final_hierarchy.json"):
 def compute_prefixes_from_parents(linear_order):
     """
     Compute a dictionary mapping each node's abs_index to its prefix.
-    The rules are:
-      - The root (first element in linear_order) gets prefix "root".
-      - For all other nodes:
-          * If a node's parent is the root, then in the order of appearance (sorted by abs_index)
-            the first such node gets prefix "A", the second "B", etc.
-          * For deeper levels, a node's prefix is its parent's prefix followed by a number
-            (starting at 1) denoting its order among that parent's children (sorted by abs_index).
-    This ensures that the node at abs_index 1 will always have prefix "A" regardless
-    of which node ended up there.
+    For the direct children of the root, we use their invariant_label to sort them,
+    ensuring that the original order (e.g., A, B, C, D) is preserved.
     """
     prefixes = {}
     if not linear_order:
@@ -240,10 +237,9 @@ def compute_prefixes_from_parents(linear_order):
     root = linear_order[0]
     prefixes[root.abs_index] = "root"
 
-    # Build mapping for direct children of root.
-    root_children = [node for node in linear_order if node.parent == root]
-    # Sort by abs_index so that the one with lowest index gets "A".
-    root_children.sort(key=lambda n: n.abs_index)
+    # Build mapping for direct children of root sorted by invariant_label.
+    root_children = sorted([node for node in linear_order if node.parent == root],
+                           key=lambda n: n.invariant_label)
     for i, child in enumerate(root_children):
         letter = chr(ord('A') + i)
         prefixes[child.abs_index] = letter
@@ -267,6 +263,70 @@ def assign_children_prefix(parent, parent_prefix, prefixes, linear_order):
 #      NEW: BUILDING THE BIG OBJECT (FIMHierarchy)        #
 ###########################################################
 
+def compute_submatrix_bounds(root):
+    """
+    Functionally compute submatrix bounds for each top-level category (i.e. a 
+    direct child of the root) based on the origin's allocated submatrix.
+    
+    Rule:
+      - Assume the origin (root) already has its submatrix_bounds (e.g., (1, 4)).
+      - The first available index is root.submatrix_bounds[1] + 1.
+      - For each top-level category, assign a submatrix range that spans
+        the number of its direct children (if none, width is 1).
+      - Process the categories in order sorted by their invariant_label to ensure
+        the mapping aligns with the expected A, B, C, D order.
+        
+    Returns:
+      A dictionary mapping each category's label to its submatrix bounds tuple
+      (lower_bound, upper_bound).
+    """
+    bounds = {}
+    if not root.children:
+        return bounds
+    current_offset = root.submatrix_bounds[1] + 1  # Start right after the origin's block.
+    # Sort the children by invariant_label.
+    for cat in sorted(root.children, key=lambda n: n.invariant_label):
+        num_members = len(cat.children) if cat.children else 1  # Width equals number of direct children.
+        bounds[cat.label] = (current_offset, current_offset + num_members - 1)
+        current_offset += num_members  # Advance the offset for the next category.
+    return bounds
+
+def build_index_key_array(linear_order):
+    """
+    Build an index key array mapping each node's absolute index (assigned in the linear order)
+    to its invariant label (i.e. its unique key).
+    
+    Returns:
+      A list where the element at position i is the invariant label of the node whose abs_index == i.
+    """
+    # Ensure the array is of the correct length.
+    index_key_array = [None] * len(linear_order)
+    for node in linear_order:
+        index_key_array[node.abs_index] = node.invariant_label
+    return index_key_array
+
+def build_category_address_map(root, prefixes, submatrix_bounds):
+    """
+    Build a dictionary mapping from top-level category addresses (prefixes) to their 
+    submatrix bounds.
+    
+    Args:
+        root: The root Node (whose children are the top-level categories).
+        prefixes: A dictionary mapping node.abs_index to a prefix (e.g., "A", "B", etc.).
+        submatrix_bounds: A dictionary mapping each top-level category's unique label to its submatrix bounds.
+        
+    Returns:
+        A dictionary mapping category addresses (such as "A", "B", etc.) to their allocated submatrix bounds.
+        The top-level categories are processed in the order of their invariant label, 
+        which ensures that the mapping is consistent with the expected A, B, C, D order.
+    """
+    address_map = {}
+    for cat in sorted(root.children, key=lambda n: n.invariant_label):
+        prefix = prefixes.get(cat.abs_index, cat.label)
+        bounds = submatrix_bounds.get(cat.label, None)
+        address_map[prefix] = bounds
+    return address_map
+
 class FIMHierarchy:
     """
     Aggregates all key fields into one object:
@@ -286,21 +346,78 @@ class FIMHierarchy:
         self.node_dict = build_node_dict(self.root)
         self.linear_order = linearize_one_d(self.rand_graph, self.root.invariant_label, self.node_dict)
         assign_linear_bounds(self.linear_order, self.rand_graph)
-        # Compute prefixes based solely on parent's pointers and abs_index ordering.
+        
+        # Compute submatrix bounds for the top-level categories (keys are the unique labels).
+        self.submatrix_bounds = compute_submatrix_bounds(self.root)
+        
+        # Compute and attach prefixes.
         self.prefixes = compute_prefixes_from_parents(self.linear_order)
+        
+        # Build a mapping from category addresses (prefixes) to submatrix bounds.
+        self.category_address_map = build_category_address_map(self.root, self.prefixes, self.submatrix_bounds)
+    
+    @staticmethod
+    def get_submatrix_bounds_from_graph(graph, root_label):
+        """
+        Build a tree and linear ordering from the raw graph and return the submatrix bounds.
+        This is a functional approach to derive the submatrix bounds directly from the graph.
+        """
+        root = build_tree_from_graph(graph, root_label)
+        node_dict = build_node_dict(root)
+        linear_order = linearize_one_d(graph, root_label, node_dict)
+        assign_linear_bounds(linear_order, graph)
+        return compute_submatrix_bounds(root)
+
+    def __repr__(self):
+        """
+        Custom __repr__ for a concise summary when printing the object.
+        Now includes the mapping from category addresses to submatrix bounds.
+        """
+        return (
+            f"FIMHierarchy(root_label={self.root.label}, num_nodes={len(self.linear_order)}, "
+            f"aggregated_hpc={self.aggregated_hpc}, aggregated_entropy={self.aggregated_entropy}, "
+            f"submatrix_bounds={self.submatrix_bounds}, "
+            f"category_address_map={self.category_address_map})"
+        )
+
+    def inspect(self):
+        """
+        Helper method to pretty-print the object's internal state.
+        """
+        import pprint
+        print("\n=== FIMHierarchy Inspection ===")
+        pprint.pprint(self.__dict__)
 
 ###########################################################
 #         FUNCTIONAL STYLE HELPER FUNCTIONS               #
 ###########################################################
 
+def debug_print(obj, label=""):
+    """
+    Helper to print an object with a label for easier debugging.
+    """
+    print(f"\n=== {label} ===")
+    print(obj)
+
 def create_fim_hierarchy(graph, root_label, iterations, dimension):
     """
-    Create and return a FIMHierarchy object by processing the LLM/HPC iterations.
-    This is our functional "pipeline" entry point.
+    Create and return a FIMHierarchy object by processing the iterations.
+    At key steps, we print out the objects so that you see what is being
+    passed between functions.
     """
-    final_root, aggregated_hpc, aggregated_entropy, final_rand_graph = process_llm_iterations(
-        graph, root_label, iterations=iterations, dimension=dimension)
-    return FIMHierarchy(final_root, final_rand_graph, aggregated_hpc, aggregated_entropy)
+    # process_llm_iterations returns a tuple:
+    # (root, aggregated_hpc, aggregated_entropy, final_rand_graph)
+    root, aggregated_hpc, aggregated_entropy, final_rand_graph = process_llm_iterations(
+        graph, root_label, iterations=iterations, dimension=dimension
+    )
+    debug_print(root, "After process_llm_iterations - Root")
+    debug_print(aggregated_hpc, "After process_llm_iterations - Aggregated HPC")
+    debug_print(aggregated_entropy, "After process_llm_iterations - Aggregated Entropy")
+    debug_print(final_rand_graph, "After process_llm_iterations - Final Rand Graph")
+    
+    fim = FIMHierarchy(root, final_rand_graph, aggregated_hpc, aggregated_entropy)
+    debug_print(fim, "After FIMHierarchy Initialization")
+    return fim
 
 def log_fim_hierarchy(fim):
     """
@@ -346,20 +463,25 @@ def main():
 
     graph = {
         "Origin": {"A": 0.9, "B": 0.7, "C": 0.6, "D": 0.65},
-        "A": {"A1": 0.85, "A2": 0.8, "A3": 0.75},
+        "A": {"A1": 0.85, "A2": 0.8, "A3": 0.75, "New_2526": 0.7013515327158085},
         "B": {"B1": 0.78, "B2": 0.76, "B3": 0.74},
         "C": {"C1": 0.66, "C2": 0.64, "C3": 0.62},
-        "D": {"D1": 0.60, "D2": 0.55, "D3": 0.50}
+        "D": {"D1": 0.6, "D2": 0.55, "D3": 0.5}
     }
     root_label = "Origin"
 
     for trial in range(args.runs):
         logging.info(f"===== Trial {trial+1} =====")
-        # Use the helper to create the FIMHierarchy with correctly ordered arguments.
         fim = create_fim_hierarchy(graph, root_label, iterations=args.iterations, dimension=args.dimension)
         fim = log_fim_hierarchy(fim)
+        fim.inspect()
+        # Print the submatrix bounds stored on the FIMHierarchy object.
+        print("Submatrix bounds from FIMHierarchy object:", fim.submatrix_bounds)
+        # Print the functional submatrix bounds computed directly from the graph.
+        print("Functional submatrix bounds from graph:", FIMHierarchy.get_submatrix_bounds_from_graph(graph, root_label))
+        # Example: Print the prefix for the root.
+        print(f"Root label: {fim.root.label} (Prefix: {fim.prefixes.get(fim.root.abs_index, 'N/A')})")
         save_hierarchy(fim.root, filename=f"hierarchy_final_trial_{trial+1}.json")
-        # Finally, print the FIMHierarchy instance.
         print("Final FIMHierarchy object:", fim)
 
 if __name__ == "__main__":
