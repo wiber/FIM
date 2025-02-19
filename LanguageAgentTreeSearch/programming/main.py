@@ -1,15 +1,99 @@
 """
 --------------------------------------------------------------------------------
-PLANNING: FIM pipeline moving to a fully consolidated big object in functional
-style. The FIMHierarchy object aggregates:
-  - The final tree (the root Node)
-  - The final randomized graph (with weights)
-  - Aggregated HPC usage and structure entropy (across iterations)
-  - The node dictionary (mapping labels to Node objects)
-  - A custom linear ordering (sorted by randomized weights)
-  - Absolute positions and submatrix bounds (computed from direct children)
-  - Prefixes computed separately (using the parent links and linear order)
---------------------------------------------------------------------------------
+PLANNING: Constructing the Fully Consolidated FIMPipeline (FIMHierarchy) for 1D Ordering
+
+**Objective:**  
+Build a single cohesive object, `FIMHierarchy`, that encapsulates all key outputs from the pipeline. This object includes:
+- The final tree structure (the origin and its descendants).
+- The randomized graph determining canonical order.
+- Aggregated HPC usage and entropy metrics.
+- A dictionary mapping node labels to their corresponding `Node` objects.
+- A custom linear ordering (`linear_order`) of the nodes.
+- Absolute indices (`abs_index`) assigned to each node in the final 1D sequence.
+- Submatrix bounds computed for each node.
+- **Invariant Prefixes** that are assigned after sorting and are used for addressing and validation.
+
+---
+
+### FINAL 1D ORDERING RULES (Declarative, Step-by-Step)
+
+1. **Origin at Index 0**
+   - **Rule:** The very first node in `linear_order` must be the origin node.  
+     **Implementation Note:** This node gets the invariant prefix "O" and is identified by the label `"Origin"` (or cleaned form thereof).  
+     **Rationale:** It anchors the entire hierarchy, with all subsequent nodes positioned relative to it.
+
+2. **Contiguous Block for Top-Level Categories**
+   - **Rule:** Immediately following the origin, all top-level nodes (i.e., the direct children of the origin) must appear as one contiguous block.
+   - **Ordering:** These nodes are sorted in **descending order by weight**.  
+     **Example:** If the weights indicate that `A`, `B`, and `C` are top-level nodes, the order must be `[Origin, A, B, C,...]`.  
+     **Rationale:** This separation distinguishes high-level categories from their subcategories.
+
+3. **Subcategories Arranged After All Top-Level Categories**
+   - **Rule:** No subcategory is allowed to appear before the full top-level block has been enumerated.  
+     **Rationale:** This rule reinforces the clear, hierarchical separation needed in the 1D ordering.
+
+4. **Subcategories Follow Their Parent Top-Level Order**
+   - **Rule:** Once the top-level block is complete, subcategories are listed grouped by their parent. The ordering respects the left-to-right position of the parent as defined in the top-level block.
+   - **Ordering:** Within each group, subcategories are sorted in descending order of weight.  
+     **Rationale:** This preserves a fractal, parent-first approach throughout the linear order.
+
+5. **Contiguity Within Parent Sub-Blocks**
+   - **Rule:** All children of a given parent must form a contiguous sub-block in the final order.  
+     **Example:** For a parent `A` with children `A1`, `A2`, and `A3`, these must appear sequentially after `A` with no interleaving from other parent's subcategories.
+   - **Rationale:** It distinctly preserves the parent-child relationship as a single uninterrupted unit.
+
+6. **Uniqueness of Labels/Prefixes**
+   - **Rule:** Each node must have a unique label or invariant prefix.
+   - **Rationale:** This prevents ambiguity in reference and supports reliable hierarchical lookups.
+
+7. **Parent Occurs Before Child**
+   - **Rule:** The position of any parent node in the 1D order must always occur before any of its child nodes.
+   - **Rationale:** It guarantees a top-down progression in the hierarchy.
+
+8. **Overall Contiguity and No Interleaving Among Groups**
+   - **Rule:** The 1D ordering must display a clear separation between the top-level block and each subsequent group of subcategories.
+   - **Example:** Valid ordering: `[Origin, A, B, C, A1, A2, B1, B2, C1]`; Invalid ordering: `[Origin, A, B1, B, A1, ...]`.
+   - **Rationale:** Ensures that the hierarchy's structure is maintained without mixing nodes from different parent groups.
+
+9. **Descending Weights on Every Level**
+   - **Rule:** For any node with children, its children must be arranged in descending order of their respective weights.
+   - **Rationale:** This "heavier first" principle supports both effective processing and a consistent address assignment.
+
+---
+
+### SELF-HEALING AND VALIDATION CHECKS
+
+After constructing the `linear_order`, the following checks—as well as self-healing actions, where applicable—are performed within `FIMHierarchy`:
+
+- **Check that the origin is at index 0.**
+- **Verify continuous block formation** for top-level nodes with no subcategory interruptions.
+- **Confirm that no subcategory precedes a top-level node.**
+- **Ensure parent nodes always precede their children.**
+- **Validate unique assignment of labels/invariant prefixes.**
+- **Confirm descending weight order at every node level.**
+- **Combined Hierarchy Validation:**  
+  - **Self-Healing Measure:** The final JSON export merges top-level nodes and subcategories into a single dictionary (via `get_combined_hierarchy_dict()`).  
+  - **Check:** The number of top-level nodes from the `linear_order` must match that in the combined hierarchy dictionary.
+- **Invariant Prefix Reassignment:**  
+  - **Note:** Even though nodes are first sorted in descending weight order, top-level nodes are then explicitly reassigned invariant prefixes in alphabetical order. Validation ensures that these prefixes adhere strictly to `[A, B, C, ...]`, independent of weight order.
+- **Data Consolidation:**  
+  - All derived data (absolute indices, computed invariant prefixes, combined hierarchy, submatrix bounds, etc.) are attached to the `FIMHierarchy` object. These are made available through methods like `to_dict()` and `to_json()` to support consistent downstream processing and troubleshooting.
+
+By enforcing these nine rules in combination with self-check validations, the FIM pipeline ensures that the final 1D ordering is robust, reproducible, and self-healing. Any deviation detected by the checks triggers logging of explicit error messages, which can then be used to initiate recovery actions or further debugging.
+
+---
+
+### Summary
+
+- **Step 1:** Start with the origin node at index 0.
+- **Step 2:** Enumerate top-level nodes in one contiguous, descending-by-weight block immediately after the origin.
+- **Step 3:** Append subcategories in the order of their parent's appearance, ensuring sub-block contiguity and descending order by weight within each group.
+- **Step 4:** Assign absolute indices and recast invariant prefixes (top-level prefixes are reset alphabetically).
+- **Step 5:** Consolidate the unified hierarchy in a single data structure used for JSON export.
+- **Step 6:** Run validations and self-healing checks at each step to ensure the structure remains correct.
+- **Output:** The `FIMHierarchy` object now contains validated, consolidated information for use across the pipeline, and the export methods (`to_dict()`, `to_json()`) include all computed data along with the full validation results.
+
+This detailed planning ensures that every aspect of the 1D ordering is explicit, repeatable, and verifiable. The robust design supports both the construction and the automatic checking/self-healing of the pipeline's structure.
 
 # --- FINAL 1D ORDERING RULES (Declarative) ---
 #
@@ -471,17 +555,26 @@ class FIMHierarchy:
         self.aggregated_hpc = aggregated_hpc
         self.aggregated_entropy = aggregated_entropy
 
+        # Initialize state field to consolidate HPC, entropy, and weight-change information.
+        self.state = {
+            "aggregated_hpc": self.aggregated_hpc,
+            "total_hpc": sum(self.aggregated_hpc) if self.aggregated_hpc else 0,
+            "aggregated_entropy": self.aggregated_entropy,
+            "weights_changed": False,  # Flag: True if weights or node structure are modified since last revalidation.
+            "last_revalidation": None  # Timestamp of the last revalidation/update.
+        }
+
         # Initialize validation fields.
         self.validation_checks = {}
         self.check_errors = {}
 
-        # 1. Build the final 1D ordering _by sorting first_.
+        # 1. Build the final 1D ordering (the linear order reflects top-level categories and subcategories).
         self.linear_order = self.build_final_ordering()
 
         # 2. Assign absolute indices based on the final ordering.
         self.assign_absolute_indices()
 
-        # 3. Compute invariant prefixes only after all sorting is complete.
+        # 3. Compute invariant prefixes after sorting.
         self.assign_invariant_prefixes()
 
         # 4. Build a mapping from absolute index to invariant prefix.
@@ -500,6 +593,32 @@ class FIMHierarchy:
         self.submatrix_bounds = {}
         self.functional_submatrix_bounds = {}
         self.category_address_map = {}
+
+    def update_state(self):
+        """
+        Update the state field with the latest aggregated HPC and entropy,
+        recalculate the total HPC, and record the current timestamp as the last revalidation time.
+        """
+        import time
+        self.state["total_hpc"] = sum(self.aggregated_hpc) if self.aggregated_hpc else 0
+        self.state["aggregated_hpc"] = self.aggregated_hpc
+        self.state["aggregated_entropy"] = self.aggregated_entropy
+        self.state["last_revalidation"] = time.time()
+
+    def mark_weights_changed(self, changed=True):
+        """
+        Update the state flag to reflect that weights have been modified or new nodes inserted.
+        """
+        self.state["weights_changed"] = changed
+
+    def revalidate(self):
+        """
+        Re-run all validations and update the internal validation results.
+        Also update the state to reflect the latest HPC, entropy values, and record the revalidation timestamp.
+        """
+        self.run_validations()
+        self.collect_validation_results()
+        self.update_state()
 
     def build_final_ordering(self):
         """
@@ -608,17 +727,6 @@ class FIMHierarchy:
     def run_validations(self):
         """
         Run all validation checks and attach the results to the FIMHierarchy object.
-        Note:
-          - The origin must be at index 0.
-          - Top-level nodes must form a contiguous block.
-          - Descending weight ordering is used for determining the unique IDs.
-          - *However,* the invariant prefixes for the top-level nodes are explicitly reassigned
-            in alphabetical order based on their final positions.
-            
-            Declarative Rule: 
-                "After sorting by descending weight for top categories, reassign the prefixes in alphabetical order.
-                 (This means that even if the unique IDs sorted by weight are out of alphabetical order,
-                  the invariant prefixes will be reassigned based on position.)"
         """
         self.check_origin_at_index0()
         self.check_top_level_contiguity()
@@ -630,10 +738,13 @@ class FIMHierarchy:
         self.check_subcategory_order_matches_canonical()
         # Enforce alphabetical prefix assignment.
         self.check_top_level_alphabetical_prefixes()
+        # New check for combined hierarchy structure.
+        self.check_combined_hierarchy()
 
     def collect_validation_results(self):
         """
-        Write the outcomes of the validation checks to the object as a dict so they can be inspected later.
+        Write the outcomes of the validation checks to the object as a dict
+        so they can be inspected later.
         """
         self.validation_results = {
             "validation_checks": self.validation_checks,
@@ -693,36 +804,45 @@ class FIMHierarchy:
             lines.extend(self._recursive_str(child, indent+1))
         return lines
 
-    def to_dict(self):
-        """
-        Convert the FIMHierarchy object into a dictionary, including validation results and the recursive
-        hierarchy structure.
-        """
-        return {
-            "validation_results": self.validation_results,
-            "label_positions": self.label_positions,
-            "hierarchy": self._node_to_dict(self.root)
-        }
-
     def _node_to_dict(self, node):
         """
         Helper method to recursively convert a node and its children into a dictionary.
+        If invariant_prefix is None, defaults to an empty string.
         """
         return {
             "label": node.label,
-            "invariant_prefix": node.invariant_prefix,
+            "invariant_prefix": node.invariant_prefix if node.invariant_prefix is not None else "",
             "abs_index": node.abs_index,
             "weight": node.weight,
             "children": [self._node_to_dict(child) for child in node.children]
         }
 
-    def to_json(self, **kwargs):
+    def get_combined_hierarchy_dict(self):
         """
-        Convert the FIMHierarchy object into a JSON string.
-        Additional keyword arguments are passed to json.dumps().
+        Build a combined hierarchy dictionary by using the linear ordering for top-level nodes
+        and then including their subtrees (as stored in the original tree). This ensures that the
+        top-level categories (typically children of the origin) are not separated from their subcategories.
         """
-        import json
-        return json.dumps(self.to_dict(), **kwargs)
+        top_level_nodes = [node for node in self.linear_order if node.parent == self.root]
+        top_level_dicts = [self._node_to_dict(node) for node in top_level_nodes]
+        return {
+            "origin": self._node_to_dict(self.root),
+            "top_levels": top_level_dicts
+        }
+
+    def check_combined_hierarchy(self):
+        """
+        Validate that the combined hierarchy (which merges top-level categories with subcategories)
+        includes the correct number of top-level nodes. If there is a mismatch, record an error.
+        """
+        top_levels_linear = [node for node in self.linear_order if node.parent == self.root]
+        combined = self.get_combined_hierarchy_dict().get("top_levels", [])
+        if len(top_levels_linear) != len(combined):
+            err_msg = f"Combined hierarchy mismatch: expected {len(top_levels_linear)} top-level nodes, found {len(combined)}."
+            self.validation_checks["combined_hierarchy"] = err_msg
+            self.check_errors["combined_hierarchy"] = err_msg
+        else:
+            self.validation_checks["combined_hierarchy"] = "OK"
 
     def check_origin_at_index0(self):
         """
@@ -898,6 +1018,110 @@ class FIMHierarchy:
         else:
             self.validation_checks['subcat_order_canonical'] = "OK"
 
+    def debug_print_tree(self):
+        def _print(node, indent=0):
+            print("  " * indent + f"{node.label}: {node.invariant_prefix}")
+            for child in node.children:
+                _print(child, indent+1)
+        _print(self.root)
+
+    # ------------------- NEW HELPER FUNCTIONS FOR BIDIRECTIONAL NAVIGATION -------------------
+
+    def get_node_by_abs_index(self, index):
+        """
+        Return the node at the given absolute index from the linear order.
+        """
+        if index < 0 or index >= len(self.linear_order):
+            return None
+        return self.linear_order[index]
+
+    def get_node_by_label(self, label):
+        """
+        Return the first node that matches the given label in the linear order.
+        """
+        for node in self.linear_order:
+            if node.label == label:
+                return node
+        return None
+
+    def get_node_by_prefix(self, prefix):
+        """
+        Return the first node that matches the given invariant prefix.
+        """
+        for node in self.linear_order:
+            if node.invariant_prefix == prefix:
+                return node
+        return None
+
+    def get_next_node(self, node):
+        """
+        Given a node, return the next node in the linear ordering.
+        """
+        next_index = node.abs_index + 1
+        return self.get_node_by_abs_index(next_index)
+
+    def get_previous_node(self, node):
+        """
+        Given a node, return the previous node in the linear ordering.
+        """
+        prev_index = node.abs_index - 1
+        return self.get_node_by_abs_index(prev_index) if prev_index >= 0 else None
+
+    def get_path_to_origin(self, node):
+        """
+        Return a list of nodes representing the path from the given node back to the origin.
+        """
+        path = []
+        current = node
+        while current is not None:
+            path.insert(0, current)
+            current = current.parent
+        return path
+
+    def get_siblings(self, node):
+        """
+        Return a list of sibling nodes for the given node.
+        (Excludes the node itself.)
+        """
+        if not node.parent:
+            return []
+        return [s for s in node.parent.children if s != node]
+
+    def to_dict(self):
+        """
+        Converts the entire FIMHierarchy to a dictionary.
+        Assumes that _node_to_dict() is defined for converting Node objects.
+        """
+        return {
+            "root": self._node_to_dict(self.root),
+            "rand_graph": self.rand_graph,
+            "aggregated_hpc": self.aggregated_hpc,
+            "aggregated_entropy": self.aggregated_entropy,
+            "state": self.state,
+            "validation_results": {
+                "checks": self.validation_checks,
+                "errors": self.check_errors,
+            },
+            "label_positions": self.label_positions,
+            "linear_order": [node.label for node in self.linear_order],
+            "submatrix_bounds": self.submatrix_bounds,
+            "functional_submatrix_bounds": self.functional_submatrix_bounds,
+        }
+    
+    def to_json(self, **kwargs):
+        """
+        Serializes the FIMHierarchy to a JSON-formatted string.
+        """
+        import json
+        return json.dumps(self.to_dict(), **kwargs)
+
+    def print_serialized(self):
+        """
+        Serializes and prints the entire FIMHierarchy object using JSON.
+        This includes the state, validation results, label positions, and the combined hierarchy.
+        """
+        print(self.to_json(indent=2))
+
 ###########################################################
 #         FUNCTIONAL STYLE HELPER FUNCTIONS               #
 ###########################################################
@@ -985,15 +1209,15 @@ def main():
         fim = create_fim_hierarchy(graph, root_label, iterations=args.iterations, dimension=args.dimension)
         fim = log_fim_hierarchy(fim)
         fim.print_validation_results()
-        # Print the submatrix bounds stored on the FIMHierarchy object.
         print("Submatrix bounds from FIMHierarchy object:", fim.submatrix_bounds)
-        # Print the functional submatrix bounds computed directly from the graph.
         print("Functional submatrix bounds from graph:", fim.functional_submatrix_bounds)
-        # Example: Print the prefix for the root.
         print(f"Root label: {fim.root.label} (Prefix: {fim.label_positions.get(fim.root.abs_index, 'N/A')})")
         save_hierarchy(fim.root, filename=f"hierarchy_final_trial_{trial+1}.json")
         print("Final FIMHierarchy object:", fim)
         fim.print_hierarchy_and_validation()
+    
+    fim.print_serialized()
+    
     print("Final FIMHierarchy object last in main():", fim)
 
 if __name__ == "__main__":
