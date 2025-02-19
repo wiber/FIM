@@ -537,25 +537,25 @@ class FIMHierarchy:
     def assign_invariant_prefixes(self):
         """
         With the final ordering fixed, assign an invariant prefix to every node.
-          - The origin always gets the prefix "O".
-          - Top-level nodes (children of origin) get an invariant prefix, here chosen to be their cleaned label.
-          - For subcategories, the prefix is computed as their parent's prefix plus a 1-indexed position among siblings.
-          
-        By assigning prefixes _after_ sorting, we guarantee that the prefix reflects the correct position.
+          - The root always gets the prefix "O".
+          - Top-level nodes (children of the root) are assigned prefixes based on their rank in the
+            descending weight order (i.e., first gets "A", second gets "B", etc.).
+          - For subcategories, the prefix is computed as the parent's prefix plus a 1-indexed position
+            among siblings in the final ordering.
         """
         # Assign prefix for the root.
         self.root.invariant_prefix = "O"
 
-        # Top-level nodes: those with parent == root.
+        # Top-level nodes: those with parent == self.root.
         top_levels = [node for node in self.linear_order if node.parent == self.root]
-        for node in top_levels:
-            # Here we set the prefix to the cleaned label (e.g., "B", "D", etc.).
-            node.invariant_prefix = node.label.replace("LLM_10_", "")
+        # Assign new invariant prefixes based on rank (descending weight order)
+        for i, node in enumerate(top_levels):
+            node.invariant_prefix = chr(ord('A') + i)
 
-        # For subcategories: assign parent's prefix plus the index among siblings (1-indexed).
+        # For subcategories: assign parent's prefix plus the 1-indexed order among siblings.
         for node in self.linear_order:
             if node.parent and node.parent != self.root:
-                # Extract all siblings (children of the same parent) _in the final ordering_.
+                # Grab siblings in the final ordering.
                 siblings = [child for child in self.linear_order if child.parent == node.parent]
                 order_idx = siblings.index(node) + 1  # 1-indexed
                 node.invariant_prefix = node.parent.invariant_prefix + str(order_idx)
@@ -586,6 +586,31 @@ class FIMHierarchy:
                     sorted_siblings = sorted(node.parent.children, key=lambda n: n.weight, reverse=True)
                     node.invariant_position = sorted_siblings.index(node) + 1
 
+    def check_top_level_prefix_order_by_weight(self):
+        """
+        New Check:
+        Verify that the top-level invariant prefixes are assigned based on their rank in
+        the descending weight order. For example, the top-level node with the highest weight
+        should have prefix "A", the second highest "B", etc.
+        Debug messages are printed for expected and actual prefix orders.
+        """
+        top_levels = [node for node in self.linear_order if node.parent == self.root]
+        expected_prefixes = [chr(ord('A') + i) for i in range(len(top_levels))]
+        actual_prefixes = [node.invariant_prefix for node in top_levels]
+
+        # Debug output.
+        print("Debug: Top-level nodes and their assigned invariant prefixes:")
+        for node in top_levels:
+            print(f"    Node {node.label} (Weight: {node.weight:.3f}) -> Prefix: {node.invariant_prefix}")
+
+        if expected_prefixes != actual_prefixes:
+            error_msg = (f"Top-level invariant prefixes do not match the descending weight order. "
+                         f"Expected: {expected_prefixes}, Actual: {actual_prefixes}")
+            self.validation_checks['top_level_prefix_order'] = error_msg
+            self.check_errors.append(error_msg)
+        else:
+            self.validation_checks['top_level_prefix_order'] = "OK"
+
     def run_validations(self):
         """
         Runs all of our validation checks and stores results in self.validation_checks and self.check_errors.
@@ -596,9 +621,10 @@ class FIMHierarchy:
         self.check_parent_before_child()
         self.check_no_duplicates()
         self.check_descending_weights()
-        # New validations for ordering against canonical expectations:
+        self.check_subcategories_descending_order()
         self.check_top_level_order_matches_origin()
         self.check_subcategory_order_matches_canonical()
+        self.check_top_level_prefix_order_by_weight()  # New check to ensure top-level prefixes match rank-by-weight
 
     def check_origin_at_index0(self):
         """
@@ -714,6 +740,30 @@ class FIMHierarchy:
             self.check_errors.extend(weight_violations)
         else:
             self.validation_checks['descending_weights'] = "OK"
+
+    def check_subcategories_descending_order(self):
+        """
+        New Check:
+        For each top-level category (i.e., direct children of the origin), validate that its subcategories
+        (direct children of the category) appear in descending order by weight.
+        """
+        errors = []
+        # Only consider top-level categories.
+        top_levels = [node for node in self.linear_order if node.parent == self.root]
+        for category in top_levels:
+            # Get the subcategories as they appear in the final ordering.
+            subcats = [child for child in self.linear_order if child.parent == category]
+            # Compute the expected order by descending weight.
+            expected_order = sorted(subcats, key=lambda n: n.weight, reverse=True)
+            if subcats != expected_order:
+                errors.append(
+                    f"For category {category.label}, subcategories weights: {[child.weight for child in subcats]} do not match expected descending order: {[child.weight for child in expected_order]}."
+                )
+        if errors:
+            self.validation_checks['subcats_descending'] = errors
+            self.check_errors.extend(errors)
+        else:
+            self.validation_checks['subcats_descending'] = "OK"
 
     def check_top_level_order_matches_origin(self):
         """
