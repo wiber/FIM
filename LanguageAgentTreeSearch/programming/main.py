@@ -502,27 +502,59 @@ class FIMHierarchy:
         """
         Build the final 1D ordering that strictly adheres to the following rules:
           1. The origin is at index 0.
-          2. All top-level categories (direct children of the origin) appear in one contiguous block immediately after the origin,
-             sorted in descending order of weight.
-          3. All subcategories (child nodes of top-level nodes) appear AFTER the top-level block.
-          4. Within each top-level category, its subcategories are sorted in descending order of weight.
+          2. All top-level categories (direct children of the origin) appear in one contiguous block immediately after the origin.
+             Their order is determined by the canonical ordering from rand_graph["Origin"] if available;
+             otherwise, they fall back to descending weight order.
+          3. All subcategories (child nodes of each top-level node) appear AFTER the top-level block.
+             For each parent, if a canonical ordering exists in rand_graph (using the parent's cleaned label),
+             its subcategories are ordered to match that canonical order; otherwise, they are sorted in descending order by weight.
         Note: This implementation currently supports a two-level hierarchy.
         """
         order = []
         # --- Step 1: Add the origin (must be at index 0)
         order.append(self.root)
 
-        # --- Step 2: Assemble top-level categories:
-        # Get children of the origin and sort them in descending order by weight.
-        top_levels = sorted(self.root.children, key=lambda n: n.weight, reverse=True)
+        # --- Step 2: Assemble top-level categories (children of the origin)
+        if self.rand_graph.get("Origin", {}):
+            # Use the canonical ordering from rand_graph["Origin"]
+            canonical_top = list(self.rand_graph["Origin"].keys())
+            top_levels = []
+            # For each key in the canonical order, look for a matching child.
+            for key in canonical_top:
+                found = next((child for child in self.root.children 
+                              if child.label.replace("LLM_10_", "") == key), None)
+                if found:
+                    top_levels.append(found)
+            # (If some children are missing from the canonical order, add them by descending weight.)
+            remaining = [child for child in self.root.children if child not in top_levels]
+            if remaining:
+                top_levels.extend(sorted(remaining, key=lambda n: n.weight, reverse=True))
+        else:
+            # Fallback if no canonical ordering is provided
+            top_levels = sorted(self.root.children, key=lambda n: n.weight, reverse=True)
         order.extend(top_levels)
         # Save boundary index: top-level block must be contiguous from index 1 to this value.
         self.top_level_block_end = len(order) - 1
 
-        # --- Step 3: Now append each top-level node's children (i.e. subcategories):
-        # For each top-level node (in the same sorted order), sort its children descending and add them.
+        # --- Step 3: Append each top-level node's children (the subcategories)
         for node in top_levels:
-            subcats = sorted(node.children, key=lambda n: n.weight, reverse=True)
+            parent_clean = node.label.replace("LLM_10_", "")
+            if self.rand_graph.get(parent_clean, {}):
+                canonical_sub = list(self.rand_graph[parent_clean].keys())
+                subcats = []
+                # In canonical order, find the child whose cleaned label equals the canonical key.
+                for key in canonical_sub:
+                    found = next((child for child in node.children 
+                                  if child.label.replace("LLM_10_", "") == key), None)
+                    if found:
+                        subcats.append(found)
+                # Append any children not captured by the canonical order (fallback by descending weight)
+                remaining = [child for child in node.children if child not in subcats]
+                if remaining:
+                    subcats.extend(sorted(remaining, key=lambda n: n.weight, reverse=True))
+            else:
+                # Fallback if no canonical ordering defined for this parent.
+                subcats = sorted(node.children, key=lambda n: n.weight, reverse=True)
             order.extend(subcats)
         return order
 
