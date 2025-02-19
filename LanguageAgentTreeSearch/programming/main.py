@@ -473,25 +473,28 @@ class FIMHierarchy:
 
         # Initialize validation fields.
         self.validation_checks = {}
-        self.check_errors = []
+        self.check_errors = {}
 
         # 1. Build the final 1D ordering _by sorting first_.
         self.linear_order = self.build_final_ordering()
 
-        # 2. Assign absolute indices to every node based on the new ordering.
+        # 2. Assign absolute indices based on the final ordering.
         self.assign_absolute_indices()
 
-        # 3. Now assign invariant prefixes based on the final ordering.
+        # 3. Compute invariant prefixes only after all sorting is complete.
         self.assign_invariant_prefixes()
 
         # 4. Build a mapping from absolute index to invariant prefix.
         self.label_positions = {node.abs_index: node.invariant_prefix for node in self.linear_order}
 
-        # 5. Compute invariant positions from the canonical ordering (if needed).
+        # 5. (Optional) Compute invariant positions from the canonical ordering.
         self.compute_invariant_positions()
 
         # 6. Run all validation checks.
         self.run_validations()
+
+        # 7. Collect the outcomes of the validations into a dict.
+        self.collect_validation_results()
 
         # Additional fields.
         self.submatrix_bounds = {}
@@ -500,65 +503,57 @@ class FIMHierarchy:
 
     def build_final_ordering(self):
         """
-        Build the final 1D ordering with the following steps:
-          1. Place the origin at index 0.
-          2. Sort all top-level categories (children of the origin) by descending weight.
-          3. For each top-level category, sort its subcategories by descending weight.
-          
-        By performing all sorts first (by weight), we ensure that:
-          - The top-level block is contiguous and sorted descending.
-          - Each subcategory block is also sorted descending relative to its parent.
+        Build the final 1D ordering with these steps:
+          1. The origin (root) is at index 0.
+          2. Top-level nodes (direct children of the origin) are sorted in descending order by weight.
+          3. For each top-level node, append its subcategories (also sorted descending by weight).
         """
         order = []
-        # --- Step 1: Add the origin (always at index 0)
+        # Step 1: Add the origin.
         order.append(self.root)
-
-        # --- Step 2: Build the top-level categories, sorted by descending weight.
+        
+        # Step 2: Top-level nodes, sorted by descending weight.
         top_levels = sorted(self.root.children, key=lambda n: n.weight, reverse=True)
         order.extend(top_levels)
-        # Save the boundary index: top-level block runs from index 1 to self.top_level_block_end.
         self.top_level_block_end = len(order) - 1
 
-        # --- Step 3: For each top-level node, append its children sorted by descending weight.
+        # Step 3: Append each top-level node's children (subcategories), sorted descending.
         for node in top_levels:
-            # Regardless of any canonical ordering from rand_graph, enforce descending weight.
             subcats = sorted(node.children, key=lambda n: n.weight, reverse=True)
             order.extend(subcats)
-
         return order
 
     def assign_absolute_indices(self):
         """
-        Assign an absolute index (the 1D index) to every node in self.linear_order.
+        Assign each node an absolute index corresponding to its position in the final ordering.
         """
         for index, node in enumerate(self.linear_order):
             node.abs_index = index
 
     def assign_invariant_prefixes(self):
         """
-        With the final ordering fixed, assign an invariant prefix to every node.
+        Once sorting is complete, assign invariant prefixes as follows:
           - The root always gets the prefix "O".
-          - Top-level nodes (children of the root) are assigned prefixes based on their rank in the
-            descending weight order (i.e., first gets "A", second gets "B", etc.).
-          - For subcategories, the prefix is computed as the parent's prefix plus a 1-indexed position
-            among siblings in the final ordering.
+          - Top-level nodes (direct children of the origin) are *reassigned* new invariant prefixes in alphabetical order
+            based solely on their final ordering position. (For example, regardless of their cleaned unique ID,
+            the first top-level node gets "A", the second "B", etc.)
+          - For subcategories, compute the invariant prefix as the parent's invariant prefix concatenated with the
+            sibling order (1-indexed) based on the parent's children sorted descending by weight.
         """
-        # Assign prefix for the root.
+        # The root.
         self.root.invariant_prefix = "O"
-
-        # Top-level nodes: those with parent == self.root.
+        
+        # Top-level nodes: override invariant prefixes by final ordering position.
         top_levels = [node for node in self.linear_order if node.parent == self.root]
-        # Assign new invariant prefixes based on rank (descending weight order)
         for i, node in enumerate(top_levels):
             node.invariant_prefix = chr(ord('A') + i)
-
-        # For subcategories: assign parent's prefix plus the 1-indexed order among siblings.
+        
+        # For subcategories: assign parent's invariant prefix + 1-indexed order among the parent's children.
         for node in self.linear_order:
             if node.parent and node.parent != self.root:
-                # Grab siblings in the final ordering.
-                siblings = [child for child in self.linear_order if child.parent == node.parent]
-                order_idx = siblings.index(node) + 1  # 1-indexed
-                node.invariant_prefix = node.parent.invariant_prefix + str(order_idx)
+                sorted_children = sorted(node.parent.children, key=lambda n: n.weight, reverse=True)
+                child_order = sorted_children.index(node) + 1  # 1-indexed.
+                node.invariant_prefix = node.parent.invariant_prefix + str(child_order)
 
     def compute_invariant_positions(self):
         """
@@ -586,34 +581,44 @@ class FIMHierarchy:
                     sorted_siblings = sorted(node.parent.children, key=lambda n: n.weight, reverse=True)
                     node.invariant_position = sorted_siblings.index(node) + 1
 
-    def check_top_level_prefix_order_by_weight(self):
+    def check_top_level_alphabetical_prefixes(self):
         """
-        New Check:
-        Verify that the top-level invariant prefixes are assigned based on their rank in
-        the descending weight order. For example, the top-level node with the highest weight
-        should have prefix "A", the second highest "B", etc.
-        Debug messages are printed for expected and actual prefix orders.
+        Validate that the top-level nodes (direct children of the origin) have invariant prefixes assigned
+        in alphabetical order based on their final ordering position.
+        
+        For example, if there are four top-level nodes, their invariant prefixes must be:
+              ['A', 'B', 'C', 'D']
         """
         top_levels = [node for node in self.linear_order if node.parent == self.root]
         expected_prefixes = [chr(ord('A') + i) for i in range(len(top_levels))]
         actual_prefixes = [node.invariant_prefix for node in top_levels]
-
-        # Debug output.
-        print("Debug: Top-level nodes and their assigned invariant prefixes:")
+        
+        print("Info: Top-level nodes (final ordering) and their assigned alphabetical invariant prefixes:")
         for node in top_levels:
-            print(f"    Node {node.label} (Weight: {node.weight:.3f}) -> Prefix: {node.invariant_prefix}")
-
+            print(f"  Node {node.label} (Weight: {node.weight:.3f}) -> Invariant Prefix: {node.invariant_prefix}")
+        
         if expected_prefixes != actual_prefixes:
-            error_msg = (f"Top-level invariant prefixes do not match the descending weight order. "
-                         f"Expected: {expected_prefixes}, Actual: {actual_prefixes}")
-            self.validation_checks['top_level_prefix_order'] = error_msg
-            self.check_errors.append(error_msg)
+            err_msg = (f"Top-level nodes expected alphabetical invariant prefixes {expected_prefixes} "
+                       f"but found {actual_prefixes}.")
+            self.validation_checks['top_level_alphabetical_prefixes'] = err_msg
+            self.check_errors['top_level_alphabetical_prefixes'] = err_msg
         else:
-            self.validation_checks['top_level_prefix_order'] = "OK"
+            self.validation_checks['top_level_alphabetical_prefixes'] = "OK"
 
     def run_validations(self):
         """
-        Runs all of our validation checks and stores results in self.validation_checks and self.check_errors.
+        Run all validation checks and attach the results to the FIMHierarchy object.
+        Note:
+          - The origin must be at index 0.
+          - Top-level nodes must form a contiguous block.
+          - Descending weight ordering is used for determining the unique IDs.
+          - *However,* the invariant prefixes for the top-level nodes are explicitly reassigned
+            in alphabetical order based on their final positions.
+            
+            Declarative Rule: 
+                "After sorting by descending weight for top categories, reassign the prefixes in alphabetical order.
+                 (This means that even if the unique IDs sorted by weight are out of alphabetical order,
+                  the invariant prefixes will be reassigned based on position.)"
         """
         self.check_origin_at_index0()
         self.check_top_level_contiguity()
@@ -622,9 +627,102 @@ class FIMHierarchy:
         self.check_no_duplicates()
         self.check_descending_weights()
         self.check_subcategories_descending_order()
-        self.check_top_level_order_matches_origin()
         self.check_subcategory_order_matches_canonical()
-        self.check_top_level_prefix_order_by_weight()  # New check to ensure top-level prefixes match rank-by-weight
+        # Enforce alphabetical prefix assignment.
+        self.check_top_level_alphabetical_prefixes()
+
+    def collect_validation_results(self):
+        """
+        Write the outcomes of the validation checks to the object as a dict so they can be inspected later.
+        """
+        self.validation_results = {
+            "validation_checks": self.validation_checks,
+            "validation_errors": self.check_errors
+        }
+
+    def print_validation_results(self):
+        """
+        Print all validation check results stored in the FIMHierarchy, including any errors.
+        """
+        print("Validation Check Results:")
+        for key, result in self.validation_checks.items():
+            print(f"  {key}: {result}")
+        if self.check_errors:
+            print("Validation Errors:")
+            for key, err in self.check_errors.items():
+                print(f"  {key}: {err}")
+        else:
+            print("All checks passed successfully.")
+
+    def print_hierarchy_and_validation(self):
+        """
+        Prints the validation check outputs, then recursively prints the complete FIMHierarchy structure.
+        """
+        self.print_validation_results()
+        print("\nFinal FIMHierarchy Structure:")
+        self._recursive_print(self.root)
+
+    def _recursive_print(self, node, indent=0):
+        """
+        Recursively print a node and its children with indentation for better readability.
+        """
+        print("  " * indent + f"Node {node.label} [Prefix: {node.invariant_prefix}] (Index: {node.abs_index}, Weight: {node.weight:.3f})")
+        for child in node.children:
+            self._recursive_print(child, indent=indent+1)
+
+    def __str__(self):
+        """
+        Custom string representation of the FIMHierarchy object, including:
+          - The dict of validation results.
+          - The recursive hierarchy structure.
+        """
+        output = []
+        output.append("FIMHierarchy Object Representation:")
+        output.append("Validation Results Dict: " + str(self.validation_results))
+        output.append("\nHierarchy Structure:")
+        output.extend(self._recursive_str(self.root))
+        return "\n".join(output)
+
+    def _recursive_str(self, node, indent=0):
+        """
+        Helper method for __str__ to recursively format the hierarchy structure.
+        """
+        lines = []
+        lines.append("  " * indent + f"Node {node.label} [Prefix: {node.invariant_prefix}] (Index: {node.abs_index}, Weight: {node.weight:.3f})")
+        for child in node.children:
+            lines.extend(self._recursive_str(child, indent+1))
+        return lines
+
+    def to_dict(self):
+        """
+        Convert the FIMHierarchy object into a dictionary, including validation results and the recursive
+        hierarchy structure.
+        """
+        return {
+            "validation_results": self.validation_results,
+            "label_positions": self.label_positions,
+            "hierarchy": self._node_to_dict(self.root)
+        }
+
+    def _node_to_dict(self, node):
+        """
+        Helper method to recursively convert a node and its children into a dictionary.
+        """
+        return {
+            "label": node.label,
+            "invariant_prefix": node.invariant_prefix,
+            "abs_index": node.abs_index,
+            "weight": node.weight,
+            "children": [self._node_to_dict(child) for child in node.children]
+        }
+
+    def to_json(self, **kwargs):
+        """
+        Convert the FIMHierarchy object into a JSON string.
+        Additional keyword arguments are passed to json.dumps().
+        """
+        import json
+        return json.dumps(self.to_dict(), **kwargs)
 
     def check_origin_at_index0(self):
         """
@@ -633,7 +731,7 @@ class FIMHierarchy:
         if self.linear_order[0] != self.root:
             msg = f"Origin node is not at index 0. Found {self.linear_order[0].label} instead."
             self.validation_checks['origin'] = msg
-            self.check_errors.append(msg)
+            self.check_errors['origin'] = msg
         else:
             self.validation_checks['origin'] = "OK"
 
@@ -649,7 +747,7 @@ class FIMHierarchy:
         if expected_indices != found_indices:
             msg = f"Top-level nodes are not contiguous: found indices {found_indices}, expected {expected_indices}."
             self.validation_checks['top_level_contiguity'] = msg
-            self.check_errors.append(msg)
+            self.check_errors['top_level_contiguity'] = msg
         else:
             self.validation_checks['top_level_contiguity'] = "OK"
 
@@ -660,7 +758,7 @@ class FIMHierarchy:
         if top_weights != sorted_top_weights:
             msg = f"Top-level categories are not sorted in descending order: weights found {top_weights}."
             self.validation_checks['top_level_descending'] = msg
-            self.check_errors.append(msg)
+            self.check_errors['top_level_descending'] = msg
         else:
             self.validation_checks['top_level_descending'] = "OK"
 
@@ -679,7 +777,7 @@ class FIMHierarchy:
                 )
         if contiguity_errors:
             self.validation_checks['subcategory_blocks_contiguity'] = contiguity_errors
-            self.check_errors.extend(contiguity_errors)
+            self.check_errors['subcategory_blocks_contiguity'] = contiguity_errors
         else:
             self.validation_checks['subcategory_blocks_contiguity'] = "OK"
 
@@ -696,7 +794,7 @@ class FIMHierarchy:
                     )
         if errors:
             self.validation_checks['parent_before_child'] = errors
-            self.check_errors.extend(errors)
+            self.check_errors['parent_before_child'] = errors
         else:
             self.validation_checks['parent_before_child'] = "OK"
 
@@ -714,7 +812,7 @@ class FIMHierarchy:
         if duplicates:
             msg = f"Duplicate invariant_prefix values found: {duplicates}."
             self.validation_checks['duplicates'] = msg
-            self.check_errors.append(msg)
+            self.check_errors['duplicates'] = msg
         else:
             self.validation_checks['duplicates'] = "OK"
 
@@ -737,7 +835,7 @@ class FIMHierarchy:
                     )
         if weight_violations:
             self.validation_checks['descending_weights'] = weight_violations
-            self.check_errors.extend(weight_violations)
+            self.check_errors['descending_weights'] = weight_violations
         else:
             self.validation_checks['descending_weights'] = "OK"
 
@@ -761,38 +859,9 @@ class FIMHierarchy:
                 )
         if errors:
             self.validation_checks['subcats_descending'] = errors
-            self.check_errors.extend(errors)
+            self.check_errors['subcats_descending'] = errors
         else:
             self.validation_checks['subcats_descending'] = "OK"
-
-    def check_top_level_order_matches_origin(self):
-        """
-        New Check:
-        Validate that the order of top-level nodes (children of origin) in the final ordering
-        matches the canonical order from rand_graph['Origin'].
-        """
-        errors = []
-        canonical_order = list(self.rand_graph.get("Origin", {}).keys())
-        # Expected invariant prefixes for top-level nodes are the canonical keys (if matched via cleaning).
-        expected_prefixes = []
-        top_levels = [node for node in self.linear_order if node.parent == self.root]
-        for node in top_levels:
-            cleaned = node.label.replace("LLM_10_", "")
-            if cleaned in canonical_order:
-                expected_prefixes.append(cleaned)
-            else:
-                # Fallback: use the computed invariant_prefix.
-                expected_prefixes.append(node.invariant_prefix)
-        actual_prefixes = [node.invariant_prefix for node in top_levels]
-        if expected_prefixes != actual_prefixes:
-            errors.append(
-                f"Top-level nodes expected invariant prefixes {expected_prefixes} but found {actual_prefixes}."
-            )
-        if errors:
-            self.validation_checks['top_level_order_origin'] = errors
-            self.check_errors.extend(errors)
-        else:
-            self.validation_checks['top_level_order_origin'] = "OK"
 
     def check_subcategory_order_matches_canonical(self):
         """
@@ -825,21 +894,9 @@ class FIMHierarchy:
                     )
         if errors:
             self.validation_checks['subcat_order_canonical'] = errors
-            self.check_errors.extend(errors)
+            self.check_errors['subcat_order_canonical'] = errors
         else:
             self.validation_checks['subcat_order_canonical'] = "OK"
-
-    def print_validation_results(self):
-        """Utility to print all validation check results."""
-        print("Final 1D Ordering Validation Results:")
-        for key, result in self.validation_checks.items():
-            print(f"{key}: {result}")
-        if self.check_errors:
-            print("\nErrors:")
-            for err in self.check_errors:
-                print(f"- {err}")
-        else:
-            print("\nAll checks passed successfully.")
 
 ###########################################################
 #         FUNCTIONAL STYLE HELPER FUNCTIONS               #
@@ -936,6 +993,8 @@ def main():
         print(f"Root label: {fim.root.label} (Prefix: {fim.label_positions.get(fim.root.abs_index, 'N/A')})")
         save_hierarchy(fim.root, filename=f"hierarchy_final_trial_{trial+1}.json")
         print("Final FIMHierarchy object:", fim)
+        fim.print_hierarchy_and_validation()
+    print("Final FIMHierarchy object last in main():", fim)
 
 if __name__ == "__main__":
     main()
