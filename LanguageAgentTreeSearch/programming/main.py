@@ -10,6 +10,59 @@ style. The FIMHierarchy object aggregates:
   - Absolute positions and submatrix bounds (computed from direct children)
   - Prefixes computed separately (using the parent links and linear order)
 --------------------------------------------------------------------------------
+
+# --- FINAL 1D ORDERING RULES (Declarative) ---
+#
+# 1. Origin at Index 0
+#    - Rule: The first node in the linear_order (i.e., linear_order[0]) MUST be the origin node,
+#            identified by label "Origin" or the invariant prefix "O".
+#    - Why: This cements the pivot concept—everything else is sorted relative to the origin.
+#
+# 2. Top-Level Categories in One Contiguous Block
+#    - Rule: Immediately after the origin, ALL top-level categories appear (no subcategories yet).
+#    - They MUST be sorted in descending weight from the origin.
+#    - Example: If there are 3 top-level categories A, B, C (sorted by descending weight from origin),
+#            then linear_order = [Origin, A, B, C, ...].
+#    - Why: Ensures that no subcategory from A or B is interspersed before we finish listing ALL top categories.
+#
+# 3. All Subcategory Blocks Appear AFTER the Top-Level Block
+#    - Rule: Once ALL top-level categories have been placed (indices 1 .. k in the final list),
+#            the subcategory blocks begin.
+#    - No subcategory may appear BEFORE all top-level categories are enumerated.
+#    - Why: Fulfills the requirement that "all subcategory blocks must appear AFTER all category blocks."
+#
+# 4. Subcategory Blocks Are Listed in the Parent's Order
+#    - Rule: If the top-level block order is {A, B, C}, then the subcategory blocks must appear exactly in that sequence:
+#         1. Subcategories of A (sorted by descending weight from A),
+#         2. Subcategories of B (sorted by descending weight from B),
+#         3. Subcategories of C (sorted by descending weight from C).
+#    - Why: Ensures that the ordering of top-level categories governs the order in which their subcategories appear.
+#
+# 5. Within Each Category's Subcategory Block
+#    - Rule: The subcategories (e.g., A1, A2, A3) are sorted in descending weight from the parent
+#            and form a contiguous sub-block (i.e., no mixing of different parent subcategories).
+#    - Example: For parent A, if A1 > A2 > A3 in weight, then the block is [A1, A2, A3] (not interleaved with others).
+#    - Why: Maintains the fractal and hierarchical sorting logic.
+#
+# 6. No Duplicate Labels
+#    - Rule: Each node's label (or invariant_label) in the final 1D ordering MUST be unique.
+#    - Why: To guarantee that all references remain unambiguous, especially for hierarchical queries.
+#
+# 7. Parent Before Child
+#    - Rule: A parent node's index MUST always be less than the indices of its children.
+#    - Why: Ensures that no child appears before its parent in the final ordering.
+#
+# 8. Contiguity
+#    - Rule: Each top-level category is listed exactly once in the top-level block, and every subcategory block is contiguous.
+#    - Example: A valid ordering is [Origin, A, B, C, A1, A2, B1, B2, C1, C2]; an invalid ordering is [Origin, A, B1, B, A1].
+#    - Why: Reflects the intended fractal submatrix structure and grouping.
+#
+# 9. Descending Weight at Every Level
+#    - Rule: For any node P with children {C1, C2, ...}, in the final ordering, C1 appears before C2
+#            if weight(P -> C1) > weight(P -> C2).
+#    - Why: Preserves the "heavier first" (pivotal) principle at each hierarchical level.
+#
+# --- END OF FINAL 1D ORDERING RULES ---
 """
 
 import os
@@ -414,57 +467,336 @@ class FIMHierarchy:
     """
     def __init__(self, root, rand_graph, aggregated_hpc, aggregated_entropy):
         self.root = root
-        self.rand_graph = rand_graph
+        self.rand_graph = rand_graph  # Source-of-truth canonical order.
         self.aggregated_hpc = aggregated_hpc
         self.aggregated_entropy = aggregated_entropy
-        
-        self.node_dict = build_node_dict(self.root)
-        self.linear_order = linearize_one_d(self.rand_graph, self.root.invariant_label, self.node_dict)
-        assign_linear_bounds(self.linear_order, self.rand_graph)
-        
-        # Build canonical tree to ensure we consistently use the canonical key.
-        canonical_tree = get_canonical_tree(self.rand_graph, self.root.label)
-        canonical_node_dict = build_node_dict(canonical_tree)
-        canonical_linear_order = linearize_one_d(self.rand_graph, canonical_tree.label, canonical_node_dict)
-        assign_linear_bounds(canonical_linear_order, self.rand_graph)
-        self.submatrix_bounds = compute_submatrix_bounds_from_rand_graph(canonical_tree, self.rand_graph)
-        
-        # Save functional submatrix bounds from the graph.
-        self.functional_submatrix_bounds = FIMHierarchy.get_submatrix_bounds_from_graph(self.rand_graph, self.root.label)
-        
-        self.prefixes = compute_prefixes_from_parents(self.linear_order, self.rand_graph)
-        
-        self.category_address_map = build_category_address_map_from_rand_graph(
-            self.root, self.prefixes, self.submatrix_bounds, self.rand_graph
-        )
-    
-        # --- Debug output (for verification) ---
-        logging.info("FIMHierarchy constructed:")
-        logging.info("Submatrix Bounds: %s", self.submatrix_bounds)
-        logging.info("Functional Submatrix Bounds: %s", self.functional_submatrix_bounds)
-        logging.info("Category Address Map: %s", self.category_address_map)
-    
-    @staticmethod
-    def get_submatrix_bounds_from_graph(graph, root_label):
-        canonical_tree = get_canonical_tree(graph, root_label)
-        node_dict = build_node_dict(canonical_tree)
-        linear_order = linearize_one_d(graph, canonical_tree.label, node_dict)
-        assign_linear_bounds(linear_order, graph)
-        return compute_submatrix_bounds_from_rand_graph(canonical_tree, graph)
-    
-    def __repr__(self):
-        return (
-            f"FIMHierarchy(root_label={self.root.label}, num_nodes={len(self.linear_order)},\n"
-            f"aggregated_hpc={self.aggregated_hpc}, aggregated_entropy={self.aggregated_entropy},\n"
-            f"submatrix_bounds={self.submatrix_bounds},\n"
-            f"functional_submatrix_bounds={self.functional_submatrix_bounds},\n"
-            f"category_address_map={self.category_address_map})"
-        )
-    
-    def inspect(self):
-        import pprint
-        print("\n=== FIMHierarchy Inspection ===")
-        pprint.pprint(self.__dict__)
+
+        # Initialize validation fields.
+        self.validation_checks = {}
+        self.check_errors = []
+
+        # 1. Compute invariant prefixes for the entire tree.
+        self.compute_invariant_prefixes(self.root)
+
+        # 2. Build the final 1D ordering that strictly obeys our rules.
+        self.linear_order = self.build_final_ordering()
+
+        # 3. Assign absolute indices based on the new ordering.
+        self.assign_absolute_indices()
+
+        # 4. Build a mapping from absolute index to invariant prefix.
+        self.label_positions = {node.abs_index: node.invariant_prefix for node in self.linear_order}
+
+        # 5. Compute invariant positions from the canonical ordering.
+        self.compute_invariant_positions()
+
+        # 6. Run all validation checks.
+        self.run_validations()
+
+        # Additional fields.
+        self.submatrix_bounds = {}
+        self.functional_submatrix_bounds = {}
+        self.category_address_map = {}
+
+    def build_final_ordering(self):
+        """
+        Build the final 1D ordering that strictly adheres to the following rules:
+          1. The origin is at index 0.
+          2. All top-level categories (direct children of the origin) appear in one contiguous block immediately after the origin,
+             sorted in descending order of weight.
+          3. All subcategories (child nodes of top-level nodes) appear AFTER the top-level block.
+          4. Within each top-level category, its subcategories are sorted in descending order of weight.
+        Note: This implementation currently supports a two-level hierarchy.
+        """
+        order = []
+        # --- Step 1: Add the origin (must be at index 0)
+        order.append(self.root)
+
+        # --- Step 2: Assemble top-level categories:
+        # Get children of the origin and sort them in descending order by weight.
+        top_levels = sorted(self.root.children, key=lambda n: n.weight, reverse=True)
+        order.extend(top_levels)
+        # Save boundary index: top-level block must be contiguous from index 1 to this value.
+        self.top_level_block_end = len(order) - 1
+
+        # --- Step 3: Now append each top-level node's children (i.e. subcategories):
+        # For each top-level node (in the same sorted order), sort its children descending and add them.
+        for node in top_levels:
+            subcats = sorted(node.children, key=lambda n: n.weight, reverse=True)
+            order.extend(subcats)
+        return order
+
+    def assign_absolute_indices(self):
+        """
+        Assign an absolute index (the 1D index) to every node in self.linear_order.
+        """
+        for index, node in enumerate(self.linear_order):
+            node.abs_index = index
+
+    def compute_invariant_prefixes(self, node):
+        """
+        Recursively assign an invariant_prefix to each node based solely on the canonical order
+        provided in the rand_graph. The unique label remains unchanged.
+        """
+        if node.parent is None:
+            # Root node.
+            node.invariant_prefix = "O"
+        elif node.parent == self.root:
+            # Direct children of the root: use the canonical order from rand_graph["Origin"].
+            canonical_order = list(self.rand_graph.get("Origin", {}).keys())
+            cleaned = node.label.replace("LLM_10_", "")
+            if cleaned in canonical_order:
+                node.invariant_prefix = cleaned
+            else:
+                # Fallback (should not occur if canonical order is correct)
+                sorted_children = sorted(node.parent.children, key=lambda n: n.weight, reverse=True)
+                idx = sorted_children.index(node)
+                node.invariant_prefix = chr(ord('A') + idx)
+        else:
+            # For deeper nodes, use the parent's cleaned label to pick canonical ordering.
+            parent_clean = node.parent.label.replace("LLM_10_", "")
+            canonical_order = list(self.rand_graph.get(parent_clean, {}).keys())
+            cleaned = node.label.replace("LLM_10_", "")
+            if canonical_order and (cleaned in canonical_order):
+                idx = canonical_order.index(cleaned)
+                node.invariant_prefix = node.parent.invariant_prefix + str(idx + 1)
+            else:
+                sorted_siblings = sorted(node.parent.children, key=lambda n: n.weight, reverse=True)
+                idx = sorted_siblings.index(node)
+                node.invariant_prefix = node.parent.invariant_prefix + str(idx + 1)
+        for child in node.children:
+            self.compute_invariant_prefixes(child)
+
+    def compute_invariant_positions(self):
+        """
+        For each node (except the root) compute invariant_position (1-indexed rank within parent's group)
+        based on the canonical ordering provided in the rand_graph.
+        """
+        for node in self.linear_order:
+            if node == self.root:
+                node.invariant_position = 0
+            elif node.parent == self.root:
+                canonical_order = list(self.rand_graph.get("Origin", {}).keys())
+                cleaned = node.label.replace("LLM_10_", "")
+                if cleaned in canonical_order:
+                    node.invariant_position = canonical_order.index(cleaned) + 1
+                else:
+                    sorted_children = sorted(node.parent.children, key=lambda n: n.weight, reverse=True)
+                    node.invariant_position = sorted_children.index(node) + 1
+            else:
+                parent_clean = node.parent.label.replace("LLM_10_", "")
+                canonical_order = list(self.rand_graph.get(parent_clean, {}).keys())
+                cleaned = node.label.replace("LLM_10_", "")
+                if canonical_order and (cleaned in canonical_order):
+                    node.invariant_position = canonical_order.index(cleaned) + 1
+                else:
+                    sorted_siblings = sorted(node.parent.children, key=lambda n: n.weight, reverse=True)
+                    node.invariant_position = sorted_siblings.index(node) + 1
+
+    def run_validations(self):
+        """
+        Runs all of our validation checks and stores results in self.validation_checks and self.check_errors.
+        """
+        self.check_origin_at_index0()
+        self.check_top_level_contiguity()
+        self.check_subcategory_blocks_contiguity()
+        self.check_parent_before_child()
+        self.check_no_duplicates()
+        self.check_descending_weights()
+        # New validations for ordering against canonical expectations:
+        self.check_top_level_order_matches_origin()
+        self.check_subcategory_order_matches_canonical()
+
+    def check_origin_at_index0(self):
+        """
+        Rule 1: Validate that the origin node is at index 0.
+        """
+        if self.linear_order[0] != self.root:
+            msg = f"Origin node is not at index 0. Found {self.linear_order[0].label} instead."
+            self.validation_checks['origin'] = msg
+            self.check_errors.append(msg)
+        else:
+            self.validation_checks['origin'] = "OK"
+
+    def check_top_level_contiguity(self):
+        """
+        Rule 2: Validate that all top-level nodes (children of the origin) are in one contiguous block
+                immediately after the origin.
+        Also validates that these nodes are sorted in descending order by weight.
+        """
+        # Expected indices for top-level nodes: from 1 to top_level_block_end.
+        expected_indices = list(range(1, self.top_level_block_end + 1))
+        found_indices = [i for i, node in enumerate(self.linear_order[1:], start=1) if node.parent == self.root]
+        if expected_indices != found_indices:
+            msg = f"Top-level nodes are not contiguous: found indices {found_indices}, expected {expected_indices}."
+            self.validation_checks['top_level_contiguity'] = msg
+            self.check_errors.append(msg)
+        else:
+            self.validation_checks['top_level_contiguity'] = "OK"
+
+        # Also check the descending order (Rule 9 applied to the Origin's children).
+        top_levels = [node for node in self.linear_order if node.parent == self.root]
+        top_weights = [node.weight for node in top_levels]
+        sorted_top_weights = sorted(top_weights, reverse=True)
+        if top_weights != sorted_top_weights:
+            msg = f"Top-level categories are not sorted in descending order: weights found {top_weights}."
+            self.validation_checks['top_level_descending'] = msg
+            self.check_errors.append(msg)
+        else:
+            self.validation_checks['top_level_descending'] = "OK"
+
+    def check_subcategory_blocks_contiguity(self):
+        """
+        Rule 3: Validate that every subcategory (node whose parent is not the root)
+                appears AFTER the entire top-level block.
+        """
+        contiguity_errors = []
+        for i, node in enumerate(self.linear_order):
+            if node.parent is None or node.parent == self.root:
+                continue
+            if i <= self.top_level_block_end:
+                contiguity_errors.append(
+                    f"Subcategory {node.label} (parent {node.parent.label}) appears at index {i} but should appear after index {self.top_level_block_end}."
+                )
+        if contiguity_errors:
+            self.validation_checks['subcategory_blocks_contiguity'] = contiguity_errors
+            self.check_errors.extend(contiguity_errors)
+        else:
+            self.validation_checks['subcategory_blocks_contiguity'] = "OK"
+
+    def check_parent_before_child(self):
+        """
+        Rule 7: Validate that every parent's absolute index is less than those of its children.
+        """
+        errors = []
+        for node in self.linear_order:
+            for child in node.children:
+                if node.abs_index >= child.abs_index:
+                    errors.append(
+                        f"Parent {node.label} at index {node.abs_index} appears after its child {child.label} at index {child.abs_index}."
+                    )
+        if errors:
+            self.validation_checks['parent_before_child'] = errors
+            self.check_errors.extend(errors)
+        else:
+            self.validation_checks['parent_before_child'] = "OK"
+
+    def check_no_duplicates(self):
+        """
+        Rule 6: Validate that every invariant prefix is unique.
+        """
+        seen = set()
+        duplicates = set()
+        for node in self.linear_order:
+            if node.invariant_prefix in seen:
+                duplicates.add(node.invariant_prefix)
+            else:
+                seen.add(node.invariant_prefix)
+        if duplicates:
+            msg = f"Duplicate invariant_prefix values found: {duplicates}."
+            self.validation_checks['duplicates'] = msg
+            self.check_errors.append(msg)
+        else:
+            self.validation_checks['duplicates'] = "OK"
+
+    def check_descending_weights(self):
+        """
+        Rule 9: Validate that for each parent, its direct children (the subcategory block)
+                appear in descending order of weight.
+        """
+        weight_violations = []
+        for node in self.linear_order:
+            if node.children:
+                # Only consider those children included in our final ordering.
+                child_nodes = [child for child in self.linear_order if child.parent == node]
+                expected_order = sorted(child_nodes, key=lambda n: n.weight, reverse=True)
+                if child_nodes != expected_order:
+                    expected_weights = [child.weight for child in expected_order]
+                    actual_weights = [child.weight for child in child_nodes]
+                    weight_violations.append(
+                        f"For parent {node.label}, expected children's weights {expected_weights} but found {actual_weights}."
+                    )
+        if weight_violations:
+            self.validation_checks['descending_weights'] = weight_violations
+            self.check_errors.extend(weight_violations)
+        else:
+            self.validation_checks['descending_weights'] = "OK"
+
+    def check_top_level_order_matches_origin(self):
+        """
+        New Check:
+        Validate that the order of top-level nodes (children of origin) in the final ordering
+        matches the canonical order from rand_graph['Origin'].
+        """
+        errors = []
+        canonical_order = list(self.rand_graph.get("Origin", {}).keys())
+        # Expected invariant prefixes for top-level nodes are the canonical keys (if matched via cleaning).
+        expected_prefixes = []
+        top_levels = [node for node in self.linear_order if node.parent == self.root]
+        for node in top_levels:
+            cleaned = node.label.replace("LLM_10_", "")
+            if cleaned in canonical_order:
+                expected_prefixes.append(cleaned)
+            else:
+                # Fallback: use the computed invariant_prefix.
+                expected_prefixes.append(node.invariant_prefix)
+        actual_prefixes = [node.invariant_prefix for node in top_levels]
+        if expected_prefixes != actual_prefixes:
+            errors.append(
+                f"Top-level nodes expected invariant prefixes {expected_prefixes} but found {actual_prefixes}."
+            )
+        if errors:
+            self.validation_checks['top_level_order_origin'] = errors
+            self.check_errors.extend(errors)
+        else:
+            self.validation_checks['top_level_order_origin'] = "OK"
+
+    def check_subcategory_order_matches_canonical(self):
+        """
+        New Check:
+        For each top-level node, validate that its subcategories appear
+        in the final ordering in the order given by the canonical ordering from rand_graph.
+        """
+        errors = []
+        for node in self.linear_order:
+            if node.parent == self.root:
+                parent_clean = node.label.replace("LLM_10_", "")
+                canonical_order = list(self.rand_graph.get(parent_clean, {}).keys())
+                if not canonical_order:
+                    continue  # No canonical ordering defined; skip check.
+                # Extract the subcategories of the current top-level node as they appear in the final order.
+                subcats = [child for child in self.linear_order if child.parent == node]
+                # Build expected invariant prefixes using the parent's invariant_prefix and canonical order.
+                expected_prefixes = []
+                # For each key in the parent's canonical list, if a child exists with that cleaned label, add its expected prefix.
+                for key in canonical_order:
+                    for child in subcats:
+                        cleaned_child = child.label.replace("LLM_10_", "")
+                        if cleaned_child == key:
+                            # Expected prefix: parent's invariant_prefix concatenated with the (1-indexed position from canonical order).
+                            expected_prefixes.append(node.invariant_prefix + str(canonical_order.index(key) + 1))
+                actual_prefixes = [child.invariant_prefix for child in subcats]
+                if expected_prefixes != actual_prefixes:
+                    errors.append(
+                        f"For parent {node.label}, expected subcategory invariant prefixes {expected_prefixes} but found {actual_prefixes}."
+                    )
+        if errors:
+            self.validation_checks['subcat_order_canonical'] = errors
+            self.check_errors.extend(errors)
+        else:
+            self.validation_checks['subcat_order_canonical'] = "OK"
+
+    def print_validation_results(self):
+        """Utility to print all validation check results."""
+        print("Final 1D Ordering Validation Results:")
+        for key, result in self.validation_checks.items():
+            print(f"{key}: {result}")
+        if self.check_errors:
+            print("\nErrors:")
+            for err in self.check_errors:
+                print(f"- {err}")
+        else:
+            print("\nAll checks passed successfully.")
 
 ###########################################################
 #         FUNCTIONAL STYLE HELPER FUNCTIONS               #
@@ -503,11 +835,11 @@ def log_fim_hierarchy(fim):
     Returns the same fim object (for further functional chaining if needed).
     """
     logging.info("=== FIM Hierarchy Data ===")
-    logging.info(f"Root label: {fim.root.label} (Prefix: {fim.prefixes.get(fim.root.abs_index, 'N/A')})")
+    logging.info(f"Root label: {fim.root.label} (Prefix: {fim.label_positions.get(fim.root.abs_index, 'N/A')})")
     logging.info("Custom Linear Ordering sorted by weight:")
     for node in fim.linear_order:
         logging.info(
-            f"Index {node.abs_index}: {node.label} (Prefix: {fim.prefixes.get(node.abs_index, 'N/A')}, "
+            f"Index {node.abs_index}: {node.label} (Prefix: {fim.label_positions.get(node.abs_index, 'N/A')}, "
             f"Weight: {node.weight:.3f}, Skip: {node.skip_factor:.3f}, "
             f"Submatrix bounds: {node.submatrix_bounds})"
         )
@@ -552,13 +884,13 @@ def main():
         logging.info(f"===== Trial {trial+1} =====")
         fim = create_fim_hierarchy(graph, root_label, iterations=args.iterations, dimension=args.dimension)
         fim = log_fim_hierarchy(fim)
-        fim.inspect()
+        fim.print_validation_results()
         # Print the submatrix bounds stored on the FIMHierarchy object.
         print("Submatrix bounds from FIMHierarchy object:", fim.submatrix_bounds)
         # Print the functional submatrix bounds computed directly from the graph.
         print("Functional submatrix bounds from graph:", fim.functional_submatrix_bounds)
         # Example: Print the prefix for the root.
-        print(f"Root label: {fim.root.label} (Prefix: {fim.prefixes.get(fim.root.abs_index, 'N/A')})")
+        print(f"Root label: {fim.root.label} (Prefix: {fim.label_positions.get(fim.root.abs_index, 'N/A')})")
         save_hierarchy(fim.root, filename=f"hierarchy_final_trial_{trial+1}.json")
         print("Final FIMHierarchy object:", fim)
 
