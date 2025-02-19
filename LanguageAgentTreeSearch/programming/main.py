@@ -740,6 +740,8 @@ class FIMHierarchy:
         self.check_top_level_alphabetical_prefixes()
         # New check for combined hierarchy structure.
         self.check_combined_hierarchy()
+        # NEW: Validate that no dynamic changes (like added nodes) have left the linear ordering stale.
+        self.check_linear_order_staleness()
 
     def collect_validation_results(self):
         """
@@ -775,11 +777,12 @@ class FIMHierarchy:
 
     def _recursive_print(self, node, indent=0):
         """
-        Recursively print a node and its children with indentation for better readability.
+        Recursively print a node and its children with a fallback default for invariant_prefix.
         """
-        print("  " * indent + f"Node {node.label} [Prefix: {node.invariant_prefix}] (Index: {node.abs_index}, Weight: {node.weight:.3f})")
+        prefix = getattr(node, 'invariant_prefix', 'NA')
+        print("  " * indent + f"Node {node.label}: {prefix}")
         for child in node.children:
-            self._recursive_print(child, indent=indent+1)
+            self._recursive_print(child, indent+1)
 
     def __str__(self):
         """
@@ -797,9 +800,11 @@ class FIMHierarchy:
     def _recursive_str(self, node, indent=0):
         """
         Helper method for __str__ to recursively format the hierarchy structure.
+        Uses a default for invariant_prefix if missing.
         """
         lines = []
-        lines.append("  " * indent + f"Node {node.label} [Prefix: {node.invariant_prefix}] (Index: {node.abs_index}, Weight: {node.weight:.3f})")
+        prefix = getattr(node, 'invariant_prefix', 'NA')
+        lines.append("  " * indent + f"Node {node.label} [Prefix: {prefix}] (Index: {node.abs_index}, Weight: {node.weight:.3f})")
         for child in node.children:
             lines.extend(self._recursive_str(child, indent+1))
         return lines
@@ -807,11 +812,11 @@ class FIMHierarchy:
     def _node_to_dict(self, node):
         """
         Helper method to recursively convert a node and its children into a dictionary.
-        If invariant_prefix is None, defaults to an empty string.
+        If invariant_prefix is missing or None, defaults to an empty string.
         """
         return {
             "label": node.label,
-            "invariant_prefix": node.invariant_prefix if node.invariant_prefix is not None else "",
+            "invariant_prefix": getattr(node, 'invariant_prefix', ""),
             "abs_index": node.abs_index,
             "weight": node.weight,
             "children": [self._node_to_dict(child) for child in node.children]
@@ -908,7 +913,12 @@ class FIMHierarchy:
         errors = []
         for node in self.linear_order:
             for child in node.children:
-                if node.abs_index >= child.abs_index:
+                # If a child doesn't have an assigned abs_index, it means it's not in the linear ordering.
+                if child.abs_index is None:
+                    errors.append(
+                        f"Child {child.label} of parent {node.label} does not have an absolute index assigned (stale linear ordering)."
+                    )
+                elif node.abs_index is None or node.abs_index >= child.abs_index:
                     errors.append(
                         f"Parent {node.label} at index {node.abs_index} appears after its child {child.label} at index {child.abs_index}."
                     )
@@ -1018,6 +1028,27 @@ class FIMHierarchy:
         else:
             self.validation_checks['subcat_order_canonical'] = "OK"
 
+    def check_linear_order_staleness(self):
+        """
+        Check if there are any new nodes added that are not present in the final linear order.
+        If found, it indicates that the ordering is out-of-date and the weights have changed.
+        """
+        errors = []
+        # Create a set using the node object identity from the existing linear order.
+        linear_order_set = set(self.linear_order)
+        for node in self.linear_order:
+            for child in node.children:
+                if child not in linear_order_set:
+                    errors.append(
+                        f"New child {child.label} (of {node.label}) is not in the linear ordering. "
+                        "Re-sorting is required."
+                    )
+        if errors:
+            self.validation_checks["linear_order_staleness"] = errors
+            self.check_errors["linear_order_staleness"] = errors
+        else:
+            self.validation_checks["linear_order_staleness"] = "OK"
+
     def debug_print_tree(self):
         def _print(node, indent=0):
             print("  " * indent + f"{node.label}: {node.invariant_prefix}")
@@ -1122,6 +1153,15 @@ class FIMHierarchy:
         """
         print(self.to_json(indent=2))
 
+    def get_node_by_invariant_label(self, label):
+        """
+        Return the first node that matches the given invariant_label in the linear order.
+        """
+        for node in self.linear_order:
+            if node.invariant_label == label:
+                return node
+        return None
+
 ###########################################################
 #         FUNCTIONAL STYLE HELPER FUNCTIONS               #
 ###########################################################
@@ -1209,13 +1249,28 @@ def main():
         fim = create_fim_hierarchy(graph, root_label, iterations=args.iterations, dimension=args.dimension)
         fim = log_fim_hierarchy(fim)
         fim.print_validation_results()
+
+        # --- Minimal change to simulate a dynamic update ---
+        # Retrieve node "B" using its invariant label and add a new child.
+        node_B = fim.get_node_by_invariant_label("B")
+        if node_B:
+            new_child = Node("B_New", weight=0.95)
+            node_B.add_child(new_child)
+            # Mark that weights have changed due to the addition.
+            fim.mark_weights_changed(True)
+            logging.info("Added new child 'B_New' to node 'B' (via invariant label lookup) and set weights_changed flag to True.")
+            
+            # Re-run validations to capture the impact of the change.
+            fim.revalidate()
+            fim.print_validation_results()
+
         print("Submatrix bounds from FIMHierarchy object:", fim.submatrix_bounds)
         print("Functional submatrix bounds from graph:", fim.functional_submatrix_bounds)
         print(f"Root label: {fim.root.label} (Prefix: {fim.label_positions.get(fim.root.abs_index, 'N/A')})")
         save_hierarchy(fim.root, filename=f"hierarchy_final_trial_{trial+1}.json")
         print("Final FIMHierarchy object:", fim)
         fim.print_hierarchy_and_validation()
-    
+
     fim.print_serialized()
     
     print("Final FIMHierarchy object last in main():", fim)
