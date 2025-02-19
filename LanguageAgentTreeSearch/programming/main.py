@@ -475,19 +475,19 @@ class FIMHierarchy:
         self.validation_checks = {}
         self.check_errors = []
 
-        # 1. Compute invariant prefixes for the entire tree.
-        self.compute_invariant_prefixes(self.root)
-
-        # 2. Build the final 1D ordering that strictly obeys our rules.
+        # 1. Build the final 1D ordering _by sorting first_.
         self.linear_order = self.build_final_ordering()
 
-        # 3. Assign absolute indices based on the new ordering.
+        # 2. Assign absolute indices to every node based on the new ordering.
         self.assign_absolute_indices()
+
+        # 3. Now assign invariant prefixes based on the final ordering.
+        self.assign_invariant_prefixes()
 
         # 4. Build a mapping from absolute index to invariant prefix.
         self.label_positions = {node.abs_index: node.invariant_prefix for node in self.linear_order}
 
-        # 5. Compute invariant positions from the canonical ordering.
+        # 5. Compute invariant positions from the canonical ordering (if needed).
         self.compute_invariant_positions()
 
         # 6. Run all validation checks.
@@ -500,62 +500,31 @@ class FIMHierarchy:
 
     def build_final_ordering(self):
         """
-        Build the final 1D ordering that strictly adheres to the following rules:
-          1. The origin is at index 0.
-          2. All top-level categories (direct children of the origin) appear in one contiguous block immediately after the origin.
-             Their order is determined by the canonical ordering from rand_graph["Origin"] if available;
-             otherwise, they fall back to descending weight order.
-          3. All subcategories (child nodes of each top-level node) appear AFTER the top-level block.
-             For each parent, if a canonical ordering exists in rand_graph (using the parent's cleaned label),
-             its subcategories are ordered to match that canonical order; otherwise, they are sorted in descending order by weight.
-        Note: This implementation currently supports a two-level hierarchy.
+        Build the final 1D ordering with the following steps:
+          1. Place the origin at index 0.
+          2. Sort all top-level categories (children of the origin) by descending weight.
+          3. For each top-level category, sort its subcategories by descending weight.
+          
+        By performing all sorts first (by weight), we ensure that:
+          - The top-level block is contiguous and sorted descending.
+          - Each subcategory block is also sorted descending relative to its parent.
         """
         order = []
-        # --- Step 1: Add the origin (must be at index 0)
+        # --- Step 1: Add the origin (always at index 0)
         order.append(self.root)
 
-        # --- Step 2: Assemble top-level categories (children of the origin)
-        if self.rand_graph.get("Origin", {}):
-            # Use the canonical ordering from rand_graph["Origin"]
-            canonical_top = list(self.rand_graph["Origin"].keys())
-            top_levels = []
-            # For each key in the canonical order, look for a matching child.
-            for key in canonical_top:
-                found = next((child for child in self.root.children 
-                              if child.label.replace("LLM_10_", "") == key), None)
-                if found:
-                    top_levels.append(found)
-            # (If some children are missing from the canonical order, add them by descending weight.)
-            remaining = [child for child in self.root.children if child not in top_levels]
-            if remaining:
-                top_levels.extend(sorted(remaining, key=lambda n: n.weight, reverse=True))
-        else:
-            # Fallback if no canonical ordering is provided
-            top_levels = sorted(self.root.children, key=lambda n: n.weight, reverse=True)
+        # --- Step 2: Build the top-level categories, sorted by descending weight.
+        top_levels = sorted(self.root.children, key=lambda n: n.weight, reverse=True)
         order.extend(top_levels)
-        # Save boundary index: top-level block must be contiguous from index 1 to this value.
+        # Save the boundary index: top-level block runs from index 1 to self.top_level_block_end.
         self.top_level_block_end = len(order) - 1
 
-        # --- Step 3: Append each top-level node's children (the subcategories)
+        # --- Step 3: For each top-level node, append its children sorted by descending weight.
         for node in top_levels:
-            parent_clean = node.label.replace("LLM_10_", "")
-            if self.rand_graph.get(parent_clean, {}):
-                canonical_sub = list(self.rand_graph[parent_clean].keys())
-                subcats = []
-                # In canonical order, find the child whose cleaned label equals the canonical key.
-                for key in canonical_sub:
-                    found = next((child for child in node.children 
-                                  if child.label.replace("LLM_10_", "") == key), None)
-                    if found:
-                        subcats.append(found)
-                # Append any children not captured by the canonical order (fallback by descending weight)
-                remaining = [child for child in node.children if child not in subcats]
-                if remaining:
-                    subcats.extend(sorted(remaining, key=lambda n: n.weight, reverse=True))
-            else:
-                # Fallback if no canonical ordering defined for this parent.
-                subcats = sorted(node.children, key=lambda n: n.weight, reverse=True)
+            # Regardless of any canonical ordering from rand_graph, enforce descending weight.
+            subcats = sorted(node.children, key=lambda n: n.weight, reverse=True)
             order.extend(subcats)
+
         return order
 
     def assign_absolute_indices(self):
@@ -565,39 +534,31 @@ class FIMHierarchy:
         for index, node in enumerate(self.linear_order):
             node.abs_index = index
 
-    def compute_invariant_prefixes(self, node):
+    def assign_invariant_prefixes(self):
         """
-        Recursively assign an invariant_prefix to each node based solely on the canonical order
-        provided in the rand_graph. The unique label remains unchanged.
+        With the final ordering fixed, assign an invariant prefix to every node.
+          - The origin always gets the prefix "O".
+          - Top-level nodes (children of origin) get an invariant prefix, here chosen to be their cleaned label.
+          - For subcategories, the prefix is computed as their parent's prefix plus a 1-indexed position among siblings.
+          
+        By assigning prefixes _after_ sorting, we guarantee that the prefix reflects the correct position.
         """
-        if node.parent is None:
-            # Root node.
-            node.invariant_prefix = "O"
-        elif node.parent == self.root:
-            # Direct children of the root: use the canonical order from rand_graph["Origin"].
-            canonical_order = list(self.rand_graph.get("Origin", {}).keys())
-            cleaned = node.label.replace("LLM_10_", "")
-            if cleaned in canonical_order:
-                node.invariant_prefix = cleaned
-            else:
-                # Fallback (should not occur if canonical order is correct)
-                sorted_children = sorted(node.parent.children, key=lambda n: n.weight, reverse=True)
-                idx = sorted_children.index(node)
-                node.invariant_prefix = chr(ord('A') + idx)
-        else:
-            # For deeper nodes, use the parent's cleaned label to pick canonical ordering.
-            parent_clean = node.parent.label.replace("LLM_10_", "")
-            canonical_order = list(self.rand_graph.get(parent_clean, {}).keys())
-            cleaned = node.label.replace("LLM_10_", "")
-            if canonical_order and (cleaned in canonical_order):
-                idx = canonical_order.index(cleaned)
-                node.invariant_prefix = node.parent.invariant_prefix + str(idx + 1)
-            else:
-                sorted_siblings = sorted(node.parent.children, key=lambda n: n.weight, reverse=True)
-                idx = sorted_siblings.index(node)
-                node.invariant_prefix = node.parent.invariant_prefix + str(idx + 1)
-        for child in node.children:
-            self.compute_invariant_prefixes(child)
+        # Assign prefix for the root.
+        self.root.invariant_prefix = "O"
+
+        # Top-level nodes: those with parent == root.
+        top_levels = [node for node in self.linear_order if node.parent == self.root]
+        for node in top_levels:
+            # Here we set the prefix to the cleaned label (e.g., "B", "D", etc.).
+            node.invariant_prefix = node.label.replace("LLM_10_", "")
+
+        # For subcategories: assign parent's prefix plus the index among siblings (1-indexed).
+        for node in self.linear_order:
+            if node.parent and node.parent != self.root:
+                # Extract all siblings (children of the same parent) _in the final ordering_.
+                siblings = [child for child in self.linear_order if child.parent == node.parent]
+                order_idx = siblings.index(node) + 1  # 1-indexed
+                node.invariant_prefix = node.parent.invariant_prefix + str(order_idx)
 
     def compute_invariant_positions(self):
         """
