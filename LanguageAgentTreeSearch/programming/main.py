@@ -157,6 +157,10 @@ import argparse
 import math
 import numpy as np
 import pprint
+from string import ascii_uppercase
+
+# Ensure logger is defined at the global scope.
+logger = logging.getLogger(__name__)
 
 # For completeness in this example, we define a simple Node class here.
 class Node:
@@ -995,29 +999,32 @@ class FIMHierarchy:
 
     def check_subcategory_order_matches_canonical(self):
         """
-        New Check:
-        For each top-level node, validate that its subcategories appear
-        in the final ordering in the order given by the canonical ordering from rand_graph.
+        For each top-level node, validate that its subcategories which are part of the canonical ordering
+        have invariant prefixes that match the expected order.
+        Extra (noncanonical) children are ignored.
         """
         errors = []
         for node in self.linear_order:
             if node.parent == self.root:
+                # Clean parent's label to lookup canonical ordering.
                 parent_clean = node.label.replace("LLM_10_", "")
-                canonical_order = list(self.rand_graph.get(parent_clean, {}).keys())
+                canonical_dict = self.rand_graph.get(parent_clean, {})
+                canonical_order = list(canonical_dict.keys())
                 if not canonical_order:
-                    continue  # No canonical ordering defined; skip check.
-                # Extract the subcategories of the current top-level node as they appear in the final order.
+                    continue
+
+                # Get the subcategories from the final ordering.
                 subcats = [child for child in self.linear_order if child.parent == node]
-                # Build expected invariant prefixes using the parent's invariant_prefix and canonical order.
-                expected_prefixes = []
-                # For each key in the parent's canonical list, if a child exists with that cleaned label, add its expected prefix.
-                for key in canonical_order:
-                    for child in subcats:
-                        cleaned_child = child.label.replace("LLM_10_", "")
-                        if cleaned_child == key:
-                            # Expected prefix: parent's invariant_prefix concatenated with the (1-indexed position from canonical order).
-                            expected_prefixes.append(node.invariant_prefix + str(canonical_order.index(key) + 1))
-                actual_prefixes = [child.invariant_prefix for child in subcats]
+                # Filter to only include children that are in the canonical ordering.
+                filtered_subcats = [
+                    child for child in subcats 
+                    if child.label.replace("LLM_10_", "") in canonical_order
+                ]
+                # Sort the filtered subcategories by descending weight.
+                filtered_subcats_sorted = sorted(filtered_subcats, key=lambda n: n.weight, reverse=True)
+                # Expected invariant prefixes follow parent's prefix + a sequential number.
+                expected_prefixes = [node.invariant_prefix + str(i + 1) for i in range(len(filtered_subcats_sorted))]
+                actual_prefixes = [child.invariant_prefix for child in filtered_subcats_sorted]
                 if expected_prefixes != actual_prefixes:
                     errors.append(
                         f"For parent {node.label}, expected subcategory invariant prefixes {expected_prefixes} but found {actual_prefixes}."
@@ -1162,6 +1169,52 @@ class FIMHierarchy:
                 return node
         return None
 
+    def update_ordering(self):
+        """
+        Updates the linear ordering by rebuilding it from the current tree structure.
+        
+        This method reassigns absolute indices, invariant prefixes, and label positions.
+        It first sorts the top-level nodes alphabetically (via helper functions) and then 
+        rebuilds the linear ordering. If validations still report errors afterward, we 
+        re-run the whole sorting (and updating) process until no errors remain (or a maximum 
+        number of attempts is reached). Finally, if the validations pass, the new ordering 
+        overwrites the previous one.
+        """
+        MAX_REORDER_ATTEMPTS = 5
+        attempts = 0
+        while attempts < MAX_REORDER_ATTEMPTS:
+            # --- Begin Ordering Update ---
+            # First, sort the top-level nodes into alphabetical order based on their cleaned label.
+            update_top_level_invariant_prefixes(self)
+            update_subcategory_invariant_prefixes(self)
+            
+            # Now rebuild the linear ordering, which should reflect the new ordering of the tree.
+            self.linear_order = self.build_final_ordering()
+            self.assign_absolute_indices()
+            self.assign_invariant_prefixes()  # Perform a baseline assignment.
+            
+            # Rebuild the label_positions mapping using the newly computed invariant prefixes.
+            self.label_positions = {
+                node.abs_index: node.invariant_prefix for node in self.linear_order if node.abs_index is not None
+            }
+            
+            # Clear previous validation errors/results and re-run validations.
+            self.check_errors = {}
+            self.validation_checks = {}
+            self.run_validations()
+            self.collect_validation_results()
+            # --- End Ordering Update ---
+            
+            if not self.check_errors:
+                # No errors were detected so we accept this ordering.
+                break
+            else:
+                logger.info("Reordering attempt #%d failed with errors: %s. Rerunning ordering...", attempts+1, self.check_errors)
+                attempts += 1
+
+        if self.check_errors:
+             logger.error("Final validations still show errors after reordering retries: %s", self.check_errors)
+
 ###########################################################
 #         FUNCTIONAL STYLE HELPER FUNCTIONS               #
 ###########################################################
@@ -1251,18 +1304,44 @@ def main():
         fim.print_validation_results()
 
         # --- Minimal change to simulate a dynamic update ---
-        # Retrieve node "B" using its invariant label and add a new child.
         node_B = fim.get_node_by_invariant_label("B")
         if node_B:
             new_child = Node("B_New", weight=0.95)
             node_B.add_child(new_child)
-            # Mark that weights have changed due to the addition.
             fim.mark_weights_changed(True)
-            logging.info("Added new child 'B_New' to node 'B' (via invariant label lookup) and set weights_changed flag to True.")
+            logging.info("Added new child 'B_New' to node 'B' and set weights_changed flag to True.")
             
-            # Re-run validations to capture the impact of the change.
+            # After dynamic update:
+            parent_label = node_B.label.replace("LLM_10_", "")
+            # Suppose rand_graph[parent_label] is a dict,
+            # then add the new node's cleaned label to the dictionary.
+            node_clean = new_child.label.replace("LLM_10_", "")
+            fim.rand_graph.setdefault(parent_label, {})[node_clean] = new_child.weight
+            
             fim.revalidate()
             fim.print_validation_results()
+            
+            if "linear_order_staleness" in fim.check_errors or "parent_before_child" in fim.check_errors:
+                logging.info("Immediate reordering detected. Updating ordering and revalidating...")
+                fim.update_ordering()
+                fim.revalidate()
+                fim.print_validation_results()
+
+        # Final reordering loop.
+        fim.revalidate()
+        max_retries = 5
+        retries = 0
+        while fim.check_errors and retries < max_retries:
+            logging.info(f"Validation errors still exist: {fim.check_errors}. Reordering attempt {retries+1}...")
+            fim.update_ordering()
+            fim.revalidate()
+            fim.print_validation_results()
+            retries += 1
+
+        if fim.check_errors:
+            logging.error("Final validations still show errors after reordering retries: " + str(fim.check_errors))
+        else:
+            logging.info("All validations passed successfully in final ordering.")
 
         print("Submatrix bounds from FIMHierarchy object:", fim.submatrix_bounds)
         print("Functional submatrix bounds from graph:", fim.functional_submatrix_bounds)
@@ -1272,8 +1351,95 @@ def main():
         fim.print_hierarchy_and_validation()
 
     fim.print_serialized()
-    
     print("Final FIMHierarchy object last in main():", fim)
+
+def update_top_level_invariant_prefixes(hierarchy):
+    """
+    Recompute the invariant prefixes for the top-level nodes.
+    Here we sort them alphabetically by their cleaned label so that the expected order
+    (['A', 'B', 'C', 'D'] when assigned sequentially) is obtained.
+    """
+    # Sort top-level nodes alphabetically based on their label (after cleaning out "LLM_10_")
+    top_level_nodes = sorted(hierarchy.root.children, key=lambda n: n.label.replace("LLM_10_", ""))
+    # Assign the sorted list back to the root's children 
+    hierarchy.root.children = top_level_nodes
+
+    for i, node in enumerate(top_level_nodes):
+        try:
+            node.invariant_prefix = ascii_uppercase[i]
+        except IndexError:
+            node.invariant_prefix = f"X{i}"
+    logger.info("Top-level invariant prefixes updated to: %s", 
+                [node.invariant_prefix for node in top_level_nodes])
+
+
+def update_subcategory_invariant_prefixes(hierarchy):
+    """
+    Recompute invariant prefixes for subcategories using the canonical ordering.
+    
+    For each top-level node:
+      - Canonical children (those whose cleaned label is in the canonical ordering from rand_graph) 
+        are updated to have parent's invariant prefix followed by a sequential number (e.g., A1, A2, ...).
+      - Noncanonical children (those not in the canonical ordering) are updated with a unique prefix,
+        here we choose to use parent's prefix plus an underscore and a cleaned snippet of their label.
+    """
+    top_level_nodes = hierarchy.root.children
+    for node in top_level_nodes:
+        # Clean the parent's label to lookup canonical order in rand_graph
+        parent_clean = node.label.replace("LLM_10_", "")
+        canonical_order = list(hierarchy.rand_graph.get(parent_clean, {}).keys())
+        if not canonical_order:
+            continue
+            
+        # Get canonical children (by checking cleaned labels against canonical_order)
+        canonical_children = [child for child in node.children if child.label.replace("LLM_10_", "") in canonical_order]
+        # Sort canonical children by descending weight
+        canonical_children.sort(key=lambda n: n.weight, reverse=True)
+        for idx, child in enumerate(canonical_children):
+            new_prefix = f"{node.invariant_prefix}{idx+1}"
+            child.invariant_prefix = new_prefix
+        
+        # For noncanonical children, assign a unique prefix so they don't conflict.
+        # (You may adjust this strategy as needed.)
+        noncanonical_children = [child for child in node.children if child not in canonical_children]
+        for child in noncanonical_children:
+            cleaned = child.label.replace("LLM_10_", "")
+            new_prefix = f"{node.invariant_prefix}_{cleaned}"
+            child.invariant_prefix = new_prefix
+
+    logger.info("Subcategory invariant prefixes updated.")
+
+
+def reorder_hierarchy_until_valid(hierarchy):
+    """
+    Reorders the hierarchy and, after each ordering pass, recomputes both top-level and subcategory invariant prefixes.
+    Then, revalidates the hierarchy until there are no errors or a maximum number of retries is reached.
+    """
+    MAX_REORDER_ATTEMPTS = 5
+    attempt = 0
+    while attempt < MAX_REORDER_ATTEMPTS:
+        # Use your existing logic to reorder the top-level nodes.
+        hierarchy.reorder_top_level_nodes()
+        
+        # Update invariant prefixes at top-level.
+        update_top_level_invariant_prefixes(hierarchy)
+        # Update invariant prefixes for each top-level node's subcategories.
+        update_subcategory_invariant_prefixes(hierarchy)
+        
+        # Re-run validations.
+        hierarchy.revalidate()
+        validation_results = hierarchy.validate()  # Assume validate() returns a dict with potential errors.
+        if not validation_results.get("validation_errors"):
+            break
+        
+        attempt += 1
+        logger.info("Reordering attempt %d failed with errors: %s", attempt, validation_results.get("validation_errors"))
+    
+    if attempt == MAX_REORDER_ATTEMPTS and validation_results.get("validation_errors"):
+        logger.error("Final validations still show errors after reordering retries: %s", validation_results.get("validation_errors"))
+    else:
+        logger.info("Hierarchy successfully reordered after %d attempts.", attempt)
+
 
 if __name__ == "__main__":
     main()
