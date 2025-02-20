@@ -1123,6 +1123,7 @@ class FIMHierarchy:
     def to_dict(self):
         """
         Return a dict representation of the complete FIMHierarchy object.
+        This now includes the previous linear order, ordering diff, and other fields.
         """
         return {
             "root": self._node_to_dict(self.root),
@@ -1133,6 +1134,8 @@ class FIMHierarchy:
             "validation_results": self.validation_results,
             "label_positions": self.label_positions,
             "linear_order": [getattr(n, 'unique_id', n.label) for n in self.linear_order],
+            "previous_linear_order": self.previous_linear_order,
+            "ordering_diff": self.ordering_diff,
             "submatrix_bounds": self.submatrix_bounds,
             "functional_submatrix_bounds": self.functional_submatrix_bounds,
         }
