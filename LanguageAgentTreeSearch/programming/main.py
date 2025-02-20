@@ -174,6 +174,8 @@ class Node:
         self.submatrix_bounds = None            # Bounds computed from direct children
         self.parent = None                      # Parent pointer (added)
         self.invariant_prefix = None            # Define invariant_prefix initially as None
+        # New: Initialize an empty dictionary for causal metadata
+        self.causal_metadata = {}
 
     def add_child(self, child):
         self.children.append(child)
@@ -493,7 +495,7 @@ def compute_submatrix_bounds_from_rand_graph(root, rand_graph):
     desired_order = list(rand_graph.get("Origin", {}).keys())
     for i, label in enumerate(desired_order):
         if label in child_bounds:
-            prefix = chr(ord('A') + i)  # 'A', 'B', 'C', etc.
+            prefix = chr(ord('A') + i)
             bounds[prefix] = child_bounds[label]
     return bounds
 
@@ -575,7 +577,10 @@ class FIMHierarchy:
         # 5. (Optional) Compute invariant positions from the canonical ordering.
         self.compute_invariant_positions()
 
-        # 6. Run all validation checks.
+        # --- New: Apply the causal metadata update ---
+        self.apply_causal_metadata()
+
+        # 6. Run all validations (including causal metadata checks).
         self.run_validations()
 
         # 7. Collect the outcomes of the validations into a dict.
@@ -723,7 +728,7 @@ class FIMHierarchy:
 
     def run_validations(self):
         """
-        Run all validation checks and attach the results to the FIMHierarchy object.
+        Run existing validations plus causal metadata validation.
         """
         self.check_origin_at_index0()
         self.check_top_level_contiguity()
@@ -733,12 +738,16 @@ class FIMHierarchy:
         self.check_descending_weights()
         self.check_subcategories_descending_order()
         self.check_subcategory_order_matches_canonical()
-        # Enforce alphabetical prefix assignment.
         self.check_top_level_alphabetical_prefixes()
-        # New check for combined hierarchy structure.
         self.check_combined_hierarchy()
-        # NEW: Validate that no dynamic changes (like added nodes) have left the linear ordering stale.
         self.check_linear_order_staleness()
+        # New: Validate causal metadata.
+        causal_errors = self.validate_causal_metadata()
+        if causal_errors:
+            self.validation_checks['causal_metadata'] = causal_errors
+            self.check_errors['causal_metadata'] = causal_errors
+        else:
+            self.validation_checks['causal_metadata'] = "OK"
 
     def collect_validation_results(self):
         """
@@ -1120,10 +1129,23 @@ class FIMHierarchy:
             return []
         return [s for s in node.parent.children if s != node]
 
+    def get_causal_metadata_dict(self):
+        """
+        Build and return a dictionary mapping each node's unique id to its causal metadata.
+        The unique id is taken from node.unique_id if set; otherwise, node.label is used as a fallback.
+        This ensures the metadata remains attached to the unique node rather than its position.
+        """
+        metadata_map = {}
+        for node in self.linear_order:
+            # Use unique_id if it exists; fallback to node.label.
+            node_unique_id = getattr(node, 'unique_id', node.label)
+            metadata_map[node_unique_id] = node.causal_metadata
+        return metadata_map
+
     def to_dict(self):
         """
         Return a dict representation of the complete FIMHierarchy object.
-        This now includes the previous linear order, ordering diff, and other fields.
+        This now includes the metadata map showing unique_id: metadata mappings.
         """
         return {
             "root": self._node_to_dict(self.root),
@@ -1138,6 +1160,7 @@ class FIMHierarchy:
             "ordering_diff": self.ordering_diff,
             "submatrix_bounds": self.submatrix_bounds,
             "functional_submatrix_bounds": self.functional_submatrix_bounds,
+            "causal_metadata_map": self.get_causal_metadata_dict()  # New mapping: unique id -> metadata
         }
     
     def to_json(self, **kwargs):
@@ -1186,7 +1209,7 @@ class FIMHierarchy:
     def update_ordering(self):
         """
         Updates the linear ordering of nodes and computes the diff against the previous order.
-        Stores the previous order as a list of unique ids (using node.unique_id if available; otherwise, node.label).
+        Reorders the hierarchy while ensuring updated causal metadata.
         """
         import copy
         # Save the previous linear order as a list of unique ids.
@@ -1207,6 +1230,9 @@ class FIMHierarchy:
                 node.abs_index: node.invariant_prefix for node in self.linear_order if node.abs_index is not None
             }
             
+            # New: Apply causal metadata after reordering, so new structure is enriched.
+            self.apply_causal_metadata()
+            
             self.check_errors = {}
             self.validation_checks = {}
             self.run_validations()
@@ -1215,17 +1241,44 @@ class FIMHierarchy:
             if not self.check_errors:
                 break
             else:
-                logger.info("Reordering attempt #%d failed with errors: %s. Rerunning ordering...", attempts+1, self.check_errors)
+                logger.info("Reordering attempt #%d failed with errors: %s.", attempts+1, self.check_errors)
                 attempts += 1
 
         if self.check_errors:
              logger.error("Final validations still show errors after %d reordering retries: %s", attempts, self.check_errors)
         
-        # Compute the ordering diff using unique ids.
         self.compute_ordering_diff()
         logger.info("Previous linear order (unique ids): %s", self.previous_linear_order)
         logger.info("New linear order (unique ids): %s", [getattr(node, 'unique_id', node.label) for node in self.linear_order])
         logger.info("Ordering diff: %s", self.ordering_diff)
+
+    def apply_causal_metadata(self):
+        """
+        Iterate through the linear ordering and update each node's causal metadata.
+        For the origin node, simulate its metadata independently.
+        For every other node, simulate the parent→child link metadata.
+        """
+        iteration = len(self.aggregated_hpc)
+        for node in self.linear_order:
+            if node.parent is None:
+                # For the origin node, set its metadata using the origin helper.
+                node.causal_metadata = simulate_origin_metadata(node, iteration)
+            else:
+                # For non-origin nodes, simulate the causal link metadata.
+                node.causal_metadata = simulate_llm_causal_reasoning(node.parent, node, iteration)
+
+    def validate_causal_metadata(self):
+        """
+        Validate that every node (except the origin) has structured causal metadata.
+        Checks that the metadata is a dict and that a non-empty 'justification' is present.
+        """
+        errors = []
+        for node in self.linear_order:
+            if node.parent is not None:
+                meta = node.causal_metadata
+                if not isinstance(meta, dict) or not meta.get("justification"):
+                    errors.append(f"Node {node.label} (Index {node.abs_index}) is missing structured causal metadata.")
+        return errors
 
 ###########################################################
 #         FUNCTIONAL STYLE HELPER FUNCTIONS               #
@@ -1445,6 +1498,47 @@ def reorder_hierarchy_until_valid(hierarchy):
     else:
         logger.info("Hierarchy successfully reordered after %d attempts.", attempt)
 
+def simulate_origin_metadata(origin, iteration):
+    """
+    Simulate metadata for the origin node.
+    Returns a structured dictionary for the origin node.
+    """
+    return {
+        "justification": f"Origin node: {origin.label} initialized at iteration {iteration}.",
+        "payload": {
+            "origin_id": origin.invariant_label,
+            "abs_index": origin.abs_index,
+            "weight": origin.weight,
+            "iteration": iteration
+        }
+    }
+
+def simulate_llm_causal_reasoning(parent, child, iteration):
+    """
+    Simulate an LLM call to generate structured metadata for a parent→child link.
+    Combines parent's and child's information into a payload.
+    """
+    import json
+    metadata_payload = {
+        "parent_id": parent.invariant_label,
+        "parent_abs_index": parent.abs_index,
+        "parent_weight": parent.weight,
+        "parent_causal": parent.causal_metadata,  # Chain with parent's metadata
+        "child_id": child.invariant_label,
+        "child_abs_index": child.abs_index,
+        "child_weight": child.weight,
+        "hpc_usage": child.skip_factor,
+        "iteration": iteration
+    }
+    justification = (
+        f"Iteration {iteration}: Link from {parent.label} (weight: {parent.weight:.2f}) "
+        f"to {child.label} (weight: {child.weight:.2f}). HPC value: {child.skip_factor:.2f}. "
+        f"Payload: {json.dumps(metadata_payload)}"
+    )
+    return {
+        "justification": justification,
+        "payload": metadata_payload
+    }
 
 if __name__ == "__main__":
     main()
