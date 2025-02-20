@@ -164,18 +164,18 @@ logger = logging.getLogger(__name__)
 
 # For completeness in this example, we define a simple Node class here.
 class Node:
-    def __init__(self, label, weight=1.0):
-        self.label = label                      # Label updated by simulated LLM calls
-        self.invariant_label = label            # Original ID (can be removed later)
-        self.weight = weight                    # Weight is set from the randomized graph
-        self.skip_factor = 1.0                  # Computed later based on children
-        self.children = []                      # List of Node objects
-        self.abs_index = None                   # Absolute position in the linear order
-        self.submatrix_bounds = None            # Bounds computed from direct children
-        self.parent = None                      # Parent pointer (added)
-        self.invariant_prefix = None            # Define invariant_prefix initially as None
-        # New: Initialize an empty dictionary for causal metadata
-        self.causal_metadata = {}
+    def __init__(self, label, weight=1.0, name=None):
+        self.label = label                       # Internal identifier
+        self.invariant_label = label             # Original ID (immutable)
+        self.name = name if name is not None else label  # New: display name for the node
+        self.weight = weight                     # Weight is set from the randomized graph
+        self.skip_factor = 1.0                   # Computed later based on children
+        self.children = []                       # List of Node objects
+        self.abs_index = None                    # Absolute position in the linear order
+        self.submatrix_bounds = None             # Bounds computed from direct children
+        self.parent = None                       # Parent pointer
+        self.invariant_prefix = None             # Invariant prefix assigned during ordering
+        self.causal_metadata = {}                # New: Stores causal metadata for the node
 
     def add_child(self, child):
         self.children.append(child)
@@ -491,7 +491,7 @@ def compute_submatrix_bounds_from_rand_graph(root, rand_graph):
     start_index = root.submatrix_bounds[1] + 1
     child_bounds, _ = compute_submatrix_bounds_for_children(root, start_index)
     
-    # Map children to a canonical prefix. We use the order defined by the keys in rand_graph["Origin"]
+    # Map children to a canonical prefix. We use the order defined by keys in rand_graph["Origin"]
     desired_order = list(rand_graph.get("Origin", {}).keys())
     for i, label in enumerate(desired_order):
         if label in child_bounds:
@@ -1501,43 +1501,76 @@ def reorder_hierarchy_until_valid(hierarchy):
 def simulate_origin_metadata(origin, iteration):
     """
     Simulate metadata for the origin node.
-    Returns a structured dictionary for the origin node.
+    Returns a structured dictionary including the origin's name and other attributes.
     """
     return {
-        "justification": f"Origin node: {origin.label} initialized at iteration {iteration}.",
+        "justification": (
+            f"Origin node '{origin.name}' (Prefix {origin.invariant_prefix}, "
+            f"Index {origin.abs_index}, Weight {origin.weight:.2f}) is the foundation of the hierarchy."
+        ),
         "payload": {
-            "origin_id": origin.invariant_label,
-            "abs_index": origin.abs_index,
-            "weight": origin.weight,
-            "iteration": iteration
+            "origin_name": origin.name,
+            "origin_invariant_prefix": origin.invariant_prefix,
+            "origin_abs_index": origin.abs_index,
+            "origin_weight": origin.weight
         }
     }
 
 def simulate_llm_causal_reasoning(parent, child, iteration):
     """
-    Simulate an LLM call to generate structured metadata for a parent→child link.
-    Combines parent's and child's information into a payload.
+    Simulate an LLM call to generate structured metadata for a parent→child link,
+    explicitly including the full chain: the origin, the category (parent), and the subcategory/leaf.
     """
-    import json
+    # Determine the origin node.
+    # For top-level nodes (child.parent is origin), the origin is child.parent;
+    # For subcategories, we assume child.parent is the category and its parent is the origin.
+    if child.parent.parent is None:
+        origin = child.parent
+    else:
+        origin = child.parent.parent
+
+    # Build the payload with complete chain information.
     metadata_payload = {
-        "parent_id": parent.invariant_label,
-        "parent_abs_index": parent.abs_index,
-        "parent_weight": parent.weight,
-        "parent_causal": parent.causal_metadata,  # Chain with parent's metadata
-        "child_id": child.invariant_label,
-        "child_abs_index": child.abs_index,
-        "child_weight": child.weight,
-        "hpc_usage": child.skip_factor,
-        "iteration": iteration
+         "origin_name": origin.name,
+         "origin_invariant_prefix": origin.invariant_prefix,
+         "origin_abs_index": origin.abs_index,
+         "origin_weight": origin.weight,
+         "parent_name": parent.name,
+         "parent_invariant_prefix": parent.invariant_prefix,
+         "parent_abs_index": parent.abs_index,
+         "parent_weight": parent.weight,
+         "parent_causal": parent.causal_metadata,  # Propagated parent's metadata
+         "child_name": child.name,
+         "child_invariant_prefix": child.invariant_prefix,
+         "child_abs_index": child.abs_index,
+         "child_weight": child.weight
     }
-    justification = (
-        f"Iteration {iteration}: Link from {parent.label} (weight: {parent.weight:.2f}) "
-        f"to {child.label} (weight: {child.weight:.2f}). HPC value: {child.skip_factor:.2f}. "
-        f"Payload: {json.dumps(metadata_payload)}"
-    )
+
+    # Construct the justification sentence with full chain details.
+    if not child.children:
+        # Leaf node: Describe how the origin's definition (via category) defines the leaf's weight.
+        role_description = "as a leaf node, propagating the causal definition of its weight from its parent."
+        sentence = (
+            f"Given origin's definition from '{origin.name}' (Prefix {origin.invariant_prefix}, "
+            f"Weight {origin.weight:.2f}, Index {origin.abs_index}) and its subsequent definition from "
+            f"category '{parent.name}' (Prefix {parent.invariant_prefix}, Weight {parent.weight:.2f}, Index {parent.abs_index}), "
+            f"how should the connection to leaf node '{child.name}' (Prefix {child.invariant_prefix}, "
+            f"Weight {child.weight:.2f}, Index {child.abs_index}) be interpreted? {role_description}"
+        )
+    else:
+        # Category node: Define the causal relevance from origin to this category.
+        role_description = "as a category node, establishing the causal relevance of the origin to its role."
+        sentence = (
+            f"Given origin's definition from '{origin.name}' (Prefix {origin.invariant_prefix}, "
+            f"Weight {origin.weight:.2f}, Index {origin.abs_index}) and its subsequent definition from "
+            f"category '{parent.name}' (Prefix {parent.invariant_prefix}, Weight {parent.weight:.2f}, Index {parent.abs_index}), "
+            f"how does the connection to category '{child.name}' (Prefix {child.invariant_prefix}, "
+            f"Weight {child.weight:.2f}, Index {child.abs_index}) define its role? {role_description}"
+        )
+
     return {
-        "justification": justification,
-        "payload": metadata_payload
+         "justification": sentence,
+         "payload": metadata_payload
     }
 
 if __name__ == "__main__":
