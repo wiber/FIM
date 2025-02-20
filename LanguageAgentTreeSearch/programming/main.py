@@ -173,6 +173,7 @@ class Node:
         self.abs_index = None                   # Absolute position in the linear order
         self.submatrix_bounds = None            # Bounds computed from direct children
         self.parent = None                      # Parent pointer (added)
+        self.invariant_prefix = None            # Define invariant_prefix initially as None
 
     def add_child(self, child):
         self.children.append(child)
@@ -342,23 +343,10 @@ def process_llm_iterations(graph, root_label, iterations=3, dimension=1):
         aggregated_entropy.append(random.uniform(0, 1))
     return root, aggregated_hpc, aggregated_entropy, final_rand_graph
 
-def save_hierarchy(root_node, filename="final_hierarchy.json"):
-    """
-    Save the node-based hierarchy to a JSON file.
-    """
-    def node_to_dict(node):
-        return {
-            "prefix": None,  # Prefixes are now stored separately in the FIMHierarchy object.
-            "label": node.label,
-            "abs_index": node.abs_index,
-            "weight": node.weight,
-            "skip_factor": node.skip_factor,
-            "submatrix_bounds": node.submatrix_bounds,
-            "children": [node_to_dict(child) for child in node.children]
-        }
-    with open(filename, "w") as f:
-        json.dump(node_to_dict(root_node), f, indent=4)
-    logging.info(f"Hierarchy saved to {filename}")
+def save_hierarchy(him, filename):
+    with open(filename, 'w') as f:
+        # Dump the entire FIMHierarchy object
+        json.dump(him.to_dict(), f, indent=4)
 
 ###########################################################
 #  NEW: COMPUTE PREFIXES FROM PARENT LINKS AND ABS_INDEX   #
@@ -598,6 +586,11 @@ class FIMHierarchy:
         self.functional_submatrix_bounds = {}
         self.category_address_map = {}
 
+        # New field for previous linear order
+        self.previous_linear_order = [
+            getattr(node, 'unique_id', node.label) for node in self.linear_order
+        ] if hasattr(self, 'linear_order') else []
+
     def update_state(self):
         """
         Update the state field with the latest aggregated HPC and entropy,
@@ -815,14 +808,16 @@ class FIMHierarchy:
 
     def _node_to_dict(self, node):
         """
-        Helper method to recursively convert a node and its children into a dictionary.
-        If invariant_prefix is missing or None, defaults to an empty string.
+        Convert a Node to a dict suitable for JSON serialization.
+        Use 'invariant_prefix' to capture the updated prefix rather than a legacy 'prefix' field.
         """
         return {
             "label": node.label,
-            "invariant_prefix": getattr(node, 'invariant_prefix', ""),
+            "invariant_prefix": getattr(node, 'invariant_prefix', None),
             "abs_index": node.abs_index,
             "weight": node.weight,
+            "skip_factor": getattr(node, 'skip_factor', None),
+            "submatrix_bounds": node.submatrix_bounds,
             "children": [self._node_to_dict(child) for child in node.children]
         }
 
@@ -1127,8 +1122,7 @@ class FIMHierarchy:
 
     def to_dict(self):
         """
-        Converts the entire FIMHierarchy to a dictionary.
-        Assumes that _node_to_dict() is defined for converting Node objects.
+        Return a dict representation of the complete FIMHierarchy object.
         """
         return {
             "root": self._node_to_dict(self.root),
@@ -1136,12 +1130,9 @@ class FIMHierarchy:
             "aggregated_hpc": self.aggregated_hpc,
             "aggregated_entropy": self.aggregated_entropy,
             "state": self.state,
-            "validation_results": {
-                "checks": self.validation_checks,
-                "errors": self.check_errors,
-            },
+            "validation_results": self.validation_results,
             "label_positions": self.label_positions,
-            "linear_order": [node.label for node in self.linear_order],
+            "linear_order": [getattr(n, 'unique_id', n.label) for n in self.linear_order],
             "submatrix_bounds": self.submatrix_bounds,
             "functional_submatrix_bounds": self.functional_submatrix_bounds,
         }
@@ -1169,51 +1160,69 @@ class FIMHierarchy:
                 return node
         return None
 
+    def compute_ordering_diff(self):
+        """
+        Compute the difference between the previous and current linear orders.
+        Assumes self.previous_linear_order and self.linear_order are lists of unique node ids.
+        Stores the mapping in self.ordering_diff, where each key is the node unique id and the value is a dict
+        with keys 'old_index' and 'new_index'. Uses node.unique_id if it exists; otherwise, falls back to node.label.
+        """
+        diff = {}
+        # Create a mapping of node id to its index in the previous ordering.
+        prev_index_map = {node_id: idx for idx, node_id in enumerate(self.previous_linear_order)}
+        
+        # For each node in the new linear order, record its new index and any corresponding old index.
+        for new_idx, node in enumerate(self.linear_order):
+            node_id = getattr(node, 'unique_id', node.label)
+            old_idx = prev_index_map.get(node_id)
+            diff[node_id] = {"old_index": old_idx, "new_index": new_idx}
+        
+        self.ordering_diff = diff
+        return diff
+
     def update_ordering(self):
         """
-        Updates the linear ordering by rebuilding it from the current tree structure.
-        
-        This method reassigns absolute indices, invariant prefixes, and label positions.
-        It first sorts the top-level nodes alphabetically (via helper functions) and then 
-        rebuilds the linear ordering. If validations still report errors afterward, we 
-        re-run the whole sorting (and updating) process until no errors remain (or a maximum 
-        number of attempts is reached). Finally, if the validations pass, the new ordering 
-        overwrites the previous one.
+        Updates the linear ordering of nodes and computes the diff against the previous order.
+        Stores the previous order as a list of unique ids (using node.unique_id if available; otherwise, node.label).
         """
+        import copy
+        # Save the previous linear order as a list of unique ids.
+        self.previous_linear_order = [
+            getattr(node, 'unique_id', node.label) for node in self.linear_order
+        ] if hasattr(self, 'linear_order') else []
+        
         MAX_REORDER_ATTEMPTS = 5
         attempts = 0
         while attempts < MAX_REORDER_ATTEMPTS:
-            # --- Begin Ordering Update ---
-            # First, sort the top-level nodes into alphabetical order based on their cleaned label.
             update_top_level_invariant_prefixes(self)
             update_subcategory_invariant_prefixes(self)
-            
-            # Now rebuild the linear ordering, which should reflect the new ordering of the tree.
             self.linear_order = self.build_final_ordering()
             self.assign_absolute_indices()
-            self.assign_invariant_prefixes()  # Perform a baseline assignment.
+            self.assign_invariant_prefixes()  # Baseline assignment
             
-            # Rebuild the label_positions mapping using the newly computed invariant prefixes.
             self.label_positions = {
                 node.abs_index: node.invariant_prefix for node in self.linear_order if node.abs_index is not None
             }
             
-            # Clear previous validation errors/results and re-run validations.
             self.check_errors = {}
             self.validation_checks = {}
             self.run_validations()
             self.collect_validation_results()
-            # --- End Ordering Update ---
             
             if not self.check_errors:
-                # No errors were detected so we accept this ordering.
                 break
             else:
                 logger.info("Reordering attempt #%d failed with errors: %s. Rerunning ordering...", attempts+1, self.check_errors)
                 attempts += 1
 
         if self.check_errors:
-             logger.error("Final validations still show errors after reordering retries: %s", self.check_errors)
+             logger.error("Final validations still show errors after %d reordering retries: %s", attempts, self.check_errors)
+        
+        # Compute the ordering diff using unique ids.
+        self.compute_ordering_diff()
+        logger.info("Previous linear order (unique ids): %s", self.previous_linear_order)
+        logger.info("New linear order (unique ids): %s", [getattr(node, 'unique_id', node.label) for node in self.linear_order])
+        logger.info("Ordering diff: %s", self.ordering_diff)
 
 ###########################################################
 #         FUNCTIONAL STYLE HELPER FUNCTIONS               #
@@ -1346,7 +1355,7 @@ def main():
         print("Submatrix bounds from FIMHierarchy object:", fim.submatrix_bounds)
         print("Functional submatrix bounds from graph:", fim.functional_submatrix_bounds)
         print(f"Root label: {fim.root.label} (Prefix: {fim.label_positions.get(fim.root.abs_index, 'N/A')})")
-        save_hierarchy(fim.root, filename=f"hierarchy_final_trial_{trial+1}.json")
+        save_hierarchy(fim, filename=f"hierarchy_final_trial_{trial+1}.json")
         print("Final FIMHierarchy object:", fim)
         fim.print_hierarchy_and_validation()
 
@@ -1355,58 +1364,51 @@ def main():
 
 def update_top_level_invariant_prefixes(hierarchy):
     """
-    Recompute the invariant prefixes for the top-level nodes.
-    Here we sort them alphabetically by their cleaned label so that the expected order
-    (['A', 'B', 'C', 'D'] when assigned sequentially) is obtained.
+    Recompute the invariant prefixes for the top-level nodes,
+    sorting them alphabetically by their cleaned label.
+    If no nodes exist, do nothing.
     """
-    # Sort top-level nodes alphabetically based on their label (after cleaning out "LLM_10_")
+    # Sort top-level nodes alphabetically.
     top_level_nodes = sorted(hierarchy.root.children, key=lambda n: n.label.replace("LLM_10_", ""))
-    # Assign the sorted list back to the root's children 
     hierarchy.root.children = top_level_nodes
 
     for i, node in enumerate(top_level_nodes):
         try:
+            # Assign from ascii_uppercase; fallback if out-of-range.
             node.invariant_prefix = ascii_uppercase[i]
         except IndexError:
             node.invariant_prefix = f"X{i}"
-    logger.info("Top-level invariant prefixes updated to: %s", 
-                [node.invariant_prefix for node in top_level_nodes])
+    logger.info("Top-level invariant prefixes updated to: %s", [node.invariant_prefix for node in top_level_nodes])
 
 
 def update_subcategory_invariant_prefixes(hierarchy):
     """
-    Recompute invariant prefixes for subcategories using the canonical ordering.
-    
-    For each top-level node:
-      - Canonical children (those whose cleaned label is in the canonical ordering from rand_graph) 
-        are updated to have parent's invariant prefix followed by a sequential number (e.g., A1, A2, ...).
-      - Noncanonical children (those not in the canonical ordering) are updated with a unique prefix,
-        here we choose to use parent's prefix plus an underscore and a cleaned snippet of their label.
+    Recompute invariant prefixes for subcategories, using canonical ordering if available.
+    For canonical children, assign sequential numbers.
+    For noncanonical children, assign a default unique suffix.
     """
     top_level_nodes = hierarchy.root.children
     for node in top_level_nodes:
-        # Clean the parent's label to lookup canonical order in rand_graph
+        # Clean parent's label.
         parent_clean = node.label.replace("LLM_10_", "")
         canonical_order = list(hierarchy.rand_graph.get(parent_clean, {}).keys())
+        # If no canonical ordering defined, leave children unchanged.
         if not canonical_order:
+            logger.info("No canonical ordering for parent %s; leaving subcategories with existing prefixes.", node.label)
             continue
             
-        # Get canonical children (by checking cleaned labels against canonical_order)
+        # Filter canonical children.
         canonical_children = [child for child in node.children if child.label.replace("LLM_10_", "") in canonical_order]
-        # Sort canonical children by descending weight
-        canonical_children.sort(key=lambda n: n.weight, reverse=True)
+        # Default: treat missing weight as zero.
+        canonical_children.sort(key=lambda n: getattr(n, 'weight', 0), reverse=True)
         for idx, child in enumerate(canonical_children):
-            new_prefix = f"{node.invariant_prefix}{idx+1}"
-            child.invariant_prefix = new_prefix
+            child.invariant_prefix = f"{node.invariant_prefix}{idx+1}"
         
-        # For noncanonical children, assign a unique prefix so they don't conflict.
-        # (You may adjust this strategy as needed.)
+        # For noncanonical children, ensure uniqueness by appending an underscore + cleaned label.
         noncanonical_children = [child for child in node.children if child not in canonical_children]
         for child in noncanonical_children:
-            cleaned = child.label.replace("LLM_10_", "")
-            new_prefix = f"{node.invariant_prefix}_{cleaned}"
-            child.invariant_prefix = new_prefix
-
+            cleaned_label = child.label.replace("LLM_10_", "")
+            child.invariant_prefix = f"{node.invariant_prefix}_{cleaned_label}"
     logger.info("Subcategory invariant prefixes updated.")
 
 

@@ -1,0 +1,322 @@
+{
+    "root": {
+        "label": "LLM_10_Origin",
+        "invariant_prefix": "O",
+        "abs_index": 0,
+        "weight": 1.0,
+        "skip_factor": 0.5,
+        "submatrix_bounds": null,
+        "children": [
+            {
+                "label": "LLM_10_A",
+                "invariant_prefix": "D",
+                "abs_index": 4,
+                "weight": 0.24390810670529883,
+                "skip_factor": 0.5,
+                "submatrix_bounds": null,
+                "children": [
+                    {
+                        "label": "LLM_10_A1",
+                        "invariant_prefix": "D1",
+                        "abs_index": 15,
+                        "weight": 0.6665190261571361,
+                        "skip_factor": 1.0,
+                        "submatrix_bounds": null,
+                        "children": []
+                    },
+                    {
+                        "label": "LLM_10_A2",
+                        "invariant_prefix": "D4",
+                        "abs_index": 18,
+                        "weight": 0.1424003137188189,
+                        "skip_factor": 1.0,
+                        "submatrix_bounds": null,
+                        "children": []
+                    },
+                    {
+                        "label": "LLM_10_A3",
+                        "invariant_prefix": "D2",
+                        "abs_index": 16,
+                        "weight": 0.5577153891406936,
+                        "skip_factor": 1.0,
+                        "submatrix_bounds": null,
+                        "children": []
+                    },
+                    {
+                        "label": "LLM_10_New_2526",
+                        "invariant_prefix": "D3",
+                        "abs_index": 17,
+                        "weight": 0.28348060392954677,
+                        "skip_factor": 1.0,
+                        "submatrix_bounds": null,
+                        "children": []
+                    }
+                ]
+            },
+            {
+                "label": "LLM_10_B",
+                "invariant_prefix": "B",
+                "abs_index": 2,
+                "weight": 0.6970610018122281,
+                "skip_factor": 0.0,
+                "submatrix_bounds": null,
+                "children": [
+                    {
+                        "label": "LLM_10_B1",
+                        "invariant_prefix": "B2",
+                        "abs_index": 9,
+                        "weight": 0.49515886949981314,
+                        "skip_factor": 1.0,
+                        "submatrix_bounds": null,
+                        "children": []
+                    },
+                    {
+                        "label": "LLM_10_B2",
+                        "invariant_prefix": "B3",
+                        "abs_index": 10,
+                        "weight": 0.20141032133084558,
+                        "skip_factor": 1.0,
+                        "submatrix_bounds": null,
+                        "children": []
+                    },
+                    {
+                        "label": "LLM_10_B3",
+                        "invariant_prefix": "B4",
+                        "abs_index": 11,
+                        "weight": 0.19042162019151432,
+                        "skip_factor": 1.0,
+                        "submatrix_bounds": null,
+                        "children": []
+                    },
+                    {
+                        "label": "B_New",
+                        "invariant_prefix": "B1",
+                        "abs_index": 8,
+                        "weight": 0.95,
+                        "skip_factor": 1.0,
+                        "submatrix_bounds": null,
+                        "children": []
+                    }
+                ]
+            },
+            {
+                "label": "LLM_10_C",
+                "invariant_prefix": "C",
+                "abs_index": 3,
+                "weight": 0.4440738077873265,
+                "skip_factor": 0.0,
+                "submatrix_bounds": null,
+                "children": [
+                    {
+                        "label": "LLM_10_C1",
+                        "invariant_prefix": "C3",
+                        "abs_index": 14,
+                        "weight": 0.18097007781438101,
+                        "skip_factor": 1.0,
+                        "submatrix_bounds": null,
+                        "children": []
+                    },
+                    {
+                        "label": "LLM_10_C2",
+                        "invariant_prefix": "C2",
+                        "abs_index": 13,
+                        "weight": 0.18440503235593397,
+                        "skip_factor": 1.0,
+                        "submatrix_bounds": null,
+                        "children": []
+                    },
+                    {
+                        "label": "LLM_10_C3",
+                        "invariant_prefix": "C1",
+                        "abs_index": 12,
+                        "weight": 0.2988531445851117,
+                        "skip_factor": 1.0,
+                        "submatrix_bounds": null,
+                        "children": []
+                    }
+                ]
+            },
+            {
+                "label": "LLM_10_D",
+                "invariant_prefix": "A",
+                "abs_index": 1,
+                "weight": 0.95821969743332,
+                "skip_factor": 0.3333333333333333,
+                "submatrix_bounds": null,
+                "children": [
+                    {
+                        "label": "LLM_10_D1",
+                        "invariant_prefix": "A1",
+                        "abs_index": 5,
+                        "weight": 0.591894155155069,
+                        "skip_factor": 1.0,
+                        "submatrix_bounds": null,
+                        "children": []
+                    },
+                    {
+                        "label": "LLM_10_D2",
+                        "invariant_prefix": "A2",
+                        "abs_index": 6,
+                        "weight": 0.4575583904961794,
+                        "skip_factor": 1.0,
+                        "submatrix_bounds": null,
+                        "children": []
+                    },
+                    {
+                        "label": "LLM_10_D3",
+                        "invariant_prefix": "A3",
+                        "abs_index": 7,
+                        "weight": 0.3521491231817915,
+                        "skip_factor": 1.0,
+                        "submatrix_bounds": null,
+                        "children": []
+                    }
+                ]
+            }
+        ]
+    },
+    "rand_graph": {
+        "Origin": {
+            "A": 0.24390810670529883,
+            "B": 0.6970610018122281,
+            "C": 0.4440738077873265,
+            "D": 0.95821969743332
+        },
+        "A": {
+            "A1": 0.6665190261571361,
+            "A2": 0.1424003137188189,
+            "A3": 0.5577153891406936,
+            "New_2526": 0.28348060392954677
+        },
+        "B": {
+            "B1": 0.49515886949981314,
+            "B2": 0.20141032133084558,
+            "B3": 0.19042162019151432,
+            "B_New": 0.95
+        },
+        "C": {
+            "C1": 0.18097007781438101,
+            "C2": 0.18440503235593397,
+            "C3": 0.2988531445851117
+        },
+        "D": {
+            "D1": 0.591894155155069,
+            "D2": 0.4575583904961794,
+            "D3": 0.3521491231817915
+        }
+    },
+    "aggregated_hpc": [
+        3.258144162818452,
+        0.6711721451006271,
+        1.766346565153408,
+        3.888370620755214,
+        3.8115796258941876,
+        1.6209905320854223,
+        0.7229543617555625,
+        2.695548166264527,
+        2.403083409162337,
+        4.336742273537456
+    ],
+    "aggregated_entropy": [
+        0.4465824044764647,
+        0.4652407110182485,
+        0.7401442315643275,
+        0.8205646444722161,
+        0.6026625851114848,
+        0.5369820353076044,
+        0.34067295434857847,
+        0.8166696279182438,
+        0.7457630321792457,
+        0.9733927095842528
+    ],
+    "state": {
+        "aggregated_hpc": [
+            3.258144162818452,
+            0.6711721451006271,
+            1.766346565153408,
+            3.888370620755214,
+            3.8115796258941876,
+            1.6209905320854223,
+            0.7229543617555625,
+            2.695548166264527,
+            2.403083409162337,
+            4.336742273537456
+        ],
+        "total_hpc": 25.174931862527195,
+        "aggregated_entropy": [
+            0.4465824044764647,
+            0.4652407110182485,
+            0.7401442315643275,
+            0.8205646444722161,
+            0.6026625851114848,
+            0.5369820353076044,
+            0.34067295434857847,
+            0.8166696279182438,
+            0.7457630321792457,
+            0.9733927095842528
+        ],
+        "weights_changed": true,
+        "last_revalidation": 1740014055.011914
+    },
+    "validation_results": {
+        "validation_checks": {
+            "origin": "OK",
+            "top_level_contiguity": "OK",
+            "top_level_descending": "OK",
+            "subcategory_blocks_contiguity": "OK",
+            "parent_before_child": "OK",
+            "duplicates": "OK",
+            "descending_weights": "OK",
+            "subcats_descending": "OK",
+            "subcat_order_canonical": "OK",
+            "top_level_alphabetical_prefixes": "OK",
+            "combined_hierarchy": "OK",
+            "linear_order_staleness": "OK"
+        },
+        "validation_errors": {}
+    },
+    "label_positions": {
+        "0": "O",
+        "1": "A",
+        "2": "B",
+        "3": "C",
+        "4": "D",
+        "5": "A1",
+        "6": "A2",
+        "7": "A3",
+        "8": "B1",
+        "9": "B2",
+        "10": "B3",
+        "11": "B4",
+        "12": "C1",
+        "13": "C2",
+        "14": "C3",
+        "15": "D1",
+        "16": "D2",
+        "17": "D3",
+        "18": "D4"
+    },
+    "linear_order": [
+        "LLM_10_Origin",
+        "LLM_10_D",
+        "LLM_10_B",
+        "LLM_10_C",
+        "LLM_10_A",
+        "LLM_10_D1",
+        "LLM_10_D2",
+        "LLM_10_D3",
+        "B_New",
+        "LLM_10_B1",
+        "LLM_10_B2",
+        "LLM_10_B3",
+        "LLM_10_C3",
+        "LLM_10_C2",
+        "LLM_10_C1",
+        "LLM_10_A1",
+        "LLM_10_A3",
+        "LLM_10_New_2526",
+        "LLM_10_A2"
+    ],
+    "submatrix_bounds": {},
+    "functional_submatrix_bounds": {}
+}
