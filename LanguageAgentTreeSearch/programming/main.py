@@ -59,6 +59,38 @@ Build a single cohesive object, `FIMHierarchy`, that encapsulates all key output
    - **Rule:** For any node with children, its children must be arranged in descending order of their respective weights.
    - **Rationale:** This "heavier first" principle supports both effective processing and a consistent address assignment.
 
+
+PLANNING: SUBMATRIX BOUNDS (Rule 10)
+
+10. Submatrix Bounds:
+
+    a. Direct Children Evaluation:
+       - For any node in the hierarchy, if the node has direct children (i.e., immediate children with assigned abs_index values),
+         compute the submatrix bounds as:
+             • start_index = minimum of the abs_index values among the direct children.
+             • end_index   = maximum of the abs_index values among the direct children.
+       - These computed bounds must be stored on the node using a setter (set_submatrix_bounds(prefix, start_index, end_index))
+         and retrieved via a getter (get_submatrix_bounds(prefix)).
+       - After storage, the bounds are checked against the computed values. If any errors exist (i.e., mismatches),
+         then the update step is repeated until all nodes’ submatrix bounds are correct.
+
+    b. Leaf Nodes:
+       - For a node with no direct children (a leaf), the submatrix bounds are inherited from its parent.
+       - This means that for a leaf node, you call the parent's getter using the category’s invariant prefix to retrieve the 
+         bounds, which must include the leaf’s own abs_index.
+       - The leaf’s bounds are then set accordingly, ensuring consistency of the hierarchy.
+
+    c. Validation & Enforcement:
+       - A dedicated validation routine traverses the hierarchy and confirms that every node’s stored submatrix bounds exactly
+         match the expected values based solely on its direct children (or, for leaves, the parent's bounds).
+       - If validation errors are detected, an enforcement loop (e.g., enforce_submatrix_bounds_rule) will redo the update
+         and validation step repeatedly (up to a maximum number of attempts) until every node is compliant.
+         
+This rule guarantees that:
+    - Each node’s submatrix bounds accurately represent the range of the abs_index values of its direct children.
+    - Leaf nodes rely on their parent’s bounds to determine their placement.
+    - All bounds are stored directly on the corresponding node and revalidated iteratively until the hierarchy is internally consistent.
+
 ---
 
 ### SELF-HEALING AND VALIDATION CHECKS

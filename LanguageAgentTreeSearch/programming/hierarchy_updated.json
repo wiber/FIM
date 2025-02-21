@@ -1,0 +1,221 @@
+{
+    "prefix": null,
+    "label": "Origin",
+    "abs_index": 0,
+    "weight": 1.0,
+    "skip_factor": 0.23529411764705882,
+    "submatrix_bounds": [
+        0,
+        0
+    ],
+    "children": [
+        {
+            "prefix": null,
+            "label": "A",
+            "abs_index": 1,
+            "weight": 0.9,
+            "skip_factor": 0.17647058823529413,
+            "submatrix_bounds": [
+                1,
+                1
+            ],
+            "children": [
+                {
+                    "prefix": null,
+                    "label": "A1",
+                    "abs_index": 5,
+                    "weight": 0.85,
+                    "skip_factor": 0.058823529411764705,
+                    "submatrix_bounds": [
+                        5,
+                        5
+                    ],
+                    "children": []
+                },
+                {
+                    "prefix": null,
+                    "label": "A2",
+                    "abs_index": 6,
+                    "weight": 0.8,
+                    "skip_factor": 0.058823529411764705,
+                    "submatrix_bounds": [
+                        6,
+                        6
+                    ],
+                    "children": []
+                },
+                {
+                    "prefix": null,
+                    "label": "A3",
+                    "abs_index": 7,
+                    "weight": 0.75,
+                    "skip_factor": 0.058823529411764705,
+                    "submatrix_bounds": [
+                        7,
+                        7
+                    ],
+                    "children": []
+                },
+                {
+                    "prefix": null,
+                    "label": "New_2526",
+                    "abs_index": 8,
+                    "weight": 0.7013515327158085,
+                    "skip_factor": 1.0,
+                    "submatrix_bounds": [
+                        8,
+                        8
+                    ],
+                    "children": []
+                }
+            ]
+        },
+        {
+            "prefix": null,
+            "label": "B",
+            "abs_index": 2,
+            "weight": 0.7,
+            "skip_factor": 0.17647058823529413,
+            "submatrix_bounds": [
+                2,
+                2
+            ],
+            "children": [
+                {
+                    "prefix": null,
+                    "label": "B1",
+                    "abs_index": 9,
+                    "weight": 0.78,
+                    "skip_factor": 0.058823529411764705,
+                    "submatrix_bounds": [
+                        9,
+                        9
+                    ],
+                    "children": []
+                },
+                {
+                    "prefix": null,
+                    "label": "B2",
+                    "abs_index": 10,
+                    "weight": 0.76,
+                    "skip_factor": 0.058823529411764705,
+                    "submatrix_bounds": [
+                        10,
+                        10
+                    ],
+                    "children": []
+                },
+                {
+                    "prefix": null,
+                    "label": "B3",
+                    "abs_index": 11,
+                    "weight": 0.74,
+                    "skip_factor": 0.058823529411764705,
+                    "submatrix_bounds": [
+                        11,
+                        11
+                    ],
+                    "children": []
+                }
+            ]
+        },
+        {
+            "prefix": null,
+            "label": "C",
+            "abs_index": 3,
+            "weight": 0.6,
+            "skip_factor": 0.17647058823529413,
+            "submatrix_bounds": [
+                3,
+                3
+            ],
+            "children": [
+                {
+                    "prefix": null,
+                    "label": "C1",
+                    "abs_index": 12,
+                    "weight": 0.66,
+                    "skip_factor": 0.058823529411764705,
+                    "submatrix_bounds": [
+                        12,
+                        12
+                    ],
+                    "children": []
+                },
+                {
+                    "prefix": null,
+                    "label": "C2",
+                    "abs_index": 13,
+                    "weight": 0.64,
+                    "skip_factor": 0.058823529411764705,
+                    "submatrix_bounds": [
+                        13,
+                        13
+                    ],
+                    "children": []
+                },
+                {
+                    "prefix": null,
+                    "label": "C3",
+                    "abs_index": 14,
+                    "weight": 0.62,
+                    "skip_factor": 0.058823529411764705,
+                    "submatrix_bounds": [
+                        14,
+                        14
+                    ],
+                    "children": []
+                }
+            ]
+        },
+        {
+            "prefix": null,
+            "label": "D",
+            "abs_index": 4,
+            "weight": 0.65,
+            "skip_factor": 0.17647058823529413,
+            "submatrix_bounds": [
+                4,
+                4
+            ],
+            "children": [
+                {
+                    "prefix": null,
+                    "label": "D1",
+                    "abs_index": 15,
+                    "weight": 0.6,
+                    "skip_factor": 0.058823529411764705,
+                    "submatrix_bounds": [
+                        15,
+                        15
+                    ],
+                    "children": []
+                },
+                {
+                    "prefix": null,
+                    "label": "D2",
+                    "abs_index": 16,
+                    "weight": 0.55,
+                    "skip_factor": 0.058823529411764705,
+                    "submatrix_bounds": [
+                        16,
+                        16
+                    ],
+                    "children": []
+                },
+                {
+                    "prefix": null,
+                    "label": "D3",
+                    "abs_index": 17,
+                    "weight": 0.5,
+                    "skip_factor": 0.058823529411764705,
+                    "submatrix_bounds": [
+                        17,
+                        17
+                    ],
+                    "children": []
+                }
+            ]
+        }
+    ]
+}
