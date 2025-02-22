@@ -197,45 +197,38 @@ logger = logging.getLogger(__name__)
 # For completeness in this example, we define a simple Node class here.
 class Node:
     def __init__(self, label, weight=1.0, name=None):
-        self.label = label                       # Internal identifier
-        self.invariant_label = label             # Original ID (immutable)
-        self.name = name if name is not None else label  # Display name
-        self.weight = weight                     # Weight is set from the randomized graph
-        self.skip_factor = 1.0                   # Computed later based on children
-        self.children = []                       # List of Node objects
-        self.abs_index = None                    # Absolute position in the linear order
-        self.submatrix_bounds = None             # Bounds computed from direct children
-        self.parent = None                       # Reference to the parent node
-        self.invariant_prefix = None             # Prefix assigned during ordering
-        self.causal_metadata = {}                # Causal metadata storage
+        """
+        Initializes a Node in the hierarchy.
+
+        Parameters:
+            label (str): The label for the node.
+            weight (float): The weight assigned to the node.
+            name (str, optional): A unique identifier for the node (defaults to label).
+        """
+        self.label = label
+        self.invariant_label = label    # Added to preserve original immutable ID
+        self.weight = weight
+        self.name = name if name is not None else label
+        self.invariant_prefix = ""
+        self.children = []
+        self.parent = None
+        self.abs_index = None
+        self.submatrix_bounds = {"start_index": None, "end_index": None}
 
     def add_child(self, child):
         self.children.append(child)
         child.parent = self
 
     def set_submatrix_bounds(self, start_index, end_index, prefix=None):
-        """
-        Store the submatrix bounds for this node.
+        """Store the submatrix bounds for this node with prefix"""
+        self.submatrix_bounds = {
+            "start_index": start_index,
+            "end_index": end_index,
+            "prefix": prefix or self.invariant_prefix
+        }
 
-        Args:
-            start_index (int): The starting absolute index.
-            end_index (int): The ending absolute index.
-            prefix (str, optional): An optional prefix to identify the category.
-                Currently not used in the storage logic, but provided for future extension.
-        """
-        self.submatrix_bounds = {"start_index": start_index, "end_index": end_index}
-
-    def get_submatrix_bounds(self, prefix=None):
-        """
-        Retrieve the stored submatrix bounds for this node.
-
-        Args:
-            prefix (str, optional): An optional prefix to differentiate categories.
-                Currently not used, but available for future extensions.
-
-        Returns:
-            dict: A dictionary with keys "start_index" and "end_index".
-        """
+    def get_submatrix_bounds(self):
+        """Get the stored submatrix bounds including prefix"""
         return self.submatrix_bounds
 
     def inspect(self):
@@ -654,6 +647,40 @@ class FIMHierarchy:
             getattr(node, 'unique_id', node.label) for node in self.linear_order
         ] if hasattr(self, 'linear_order') else []
 
+        # Add these new classes after the Node class definition
+
+        self.rule_engine = RuleEngine()
+        self.validate_and_repair()
+        
+    def validate_and_repair(self):
+        """Validate and repair hierarchy structure"""
+        if not self.rule_engine.repair(self, max_attempts=3):
+            logging.warning("Could not repair all rule violations")
+            
+    def add_custom_rule(self, rule):
+        """Add a custom validation rule"""
+        self.rule_engine.add_rule(rule)
+        
+    def update_ordering(self):
+        """Update linear ordering with rule validation"""
+        self.previous_linear_order = [
+            getattr(node, 'unique_id', node.label) 
+            for node in self.linear_order
+        ]
+        
+        # Build initial ordering
+        self.linear_order = self.build_final_ordering()
+        
+        # Validate and repair
+        self.validate_and_repair()
+        
+        # Update indices and prefixes
+        self.assign_absolute_indices()
+        self.assign_invariant_prefixes()
+        
+        # Compute changes
+        self.compute_ordering_diff()
+
     def update_state(self):
         """
         Update the state field with the latest aggregated HPC and entropy,
@@ -844,7 +871,7 @@ class FIMHierarchy:
         Recursively print a node and its children with a fallback default for invariant_prefix.
         """
         prefix = getattr(node, 'invariant_prefix', 'NA')
-        print("  " * indent + f"Node {node.label}: {prefix}")
+        print("  " * indent + f"Node {node.label} (abs_index: {node.abs_index}, invariant_prefix: {node.invariant_prefix}) - Bounds: {node.get_submatrix_bounds()}")
         for child in node.children:
             self._recursive_print(child, indent+1)
 
@@ -1264,52 +1291,6 @@ class FIMHierarchy:
         self.ordering_diff = diff
         return diff
 
-    def update_ordering(self):
-        """
-        Updates the linear ordering of nodes and computes the diff against the previous order.
-        Reorders the hierarchy while ensuring updated causal metadata.
-        """
-        import copy
-        # Save the previous linear order as a list of unique ids.
-        self.previous_linear_order = [
-            getattr(node, 'unique_id', node.label) for node in self.linear_order
-        ] if hasattr(self, 'linear_order') else []
-        
-        MAX_REORDER_ATTEMPTS = 5
-        attempts = 0
-        while attempts < MAX_REORDER_ATTEMPTS:
-            update_top_level_invariant_prefixes(self)
-            update_subcategory_invariant_prefixes(self)
-            self.linear_order = self.build_final_ordering()
-            self.assign_absolute_indices()
-            self.assign_invariant_prefixes()  # Baseline assignment
-            
-            self.label_positions = {
-                node.abs_index: node.invariant_prefix for node in self.linear_order if node.abs_index is not None
-            }
-            
-            # New: Apply causal metadata after reordering, so new structure is enriched.
-            self.apply_causal_metadata()
-            
-            self.check_errors = {}
-            self.validation_checks = {}
-            self.run_validations()
-            self.collect_validation_results()
-            
-            if not self.check_errors:
-                break
-            else:
-                logger.info("Reordering attempt #%d failed with errors: %s.", attempts+1, self.check_errors)
-                attempts += 1
-
-        if self.check_errors:
-             logger.error("Final validations still show errors after %d reordering retries: %s", attempts, self.check_errors)
-        
-        self.compute_ordering_diff()
-        logger.info("Previous linear order (unique ids): %s", self.previous_linear_order)
-        logger.info("New linear order (unique ids): %s", [getattr(node, 'unique_id', node.label) for node in self.linear_order])
-        logger.info("Ordering diff: %s", self.ordering_diff)
-
     def apply_causal_metadata(self):
         """
         Iterate through the linear ordering and update each node's causal metadata.
@@ -1393,298 +1374,246 @@ class FIMHierarchy:
                 # use its own abs_index.
                 return {"start_index": node.abs_index, "end_index": node.abs_index}
 
-###########################################################
-#         FUNCTIONAL STYLE HELPER FUNCTIONS               #
-###########################################################
+    def validate_submatrix_bounds(self):
+        """
+        Traverse the hierarchy and validate that each node's stored submatrix bounds match
+        the expected bounds computed solely from its direct children. For non-leaf nodes, the
+        expected bounds are the minimum and maximum abs_index values of its direct children.
+        For leaf nodes, the expected bounds are inherited from its parent's category field,
+        ensuring that the node's abs_index is included within that range.
 
-def debug_print(obj, label=""):
-    """
-    Helper to print an object with a label for easier debugging.
-    """
-    print(f"\n=== {label} ===")
-    print(obj)
+        Returns:
+            errors (list): A list of error messages for any mismatches found in the hierarchy.
+        """
+        errors = []
 
-def create_fim_hierarchy(graph, root_label, iterations, dimension):
-    """
-    Create and return a FIMHierarchy object by processing the iterations.
-    At key steps, we print out the objects so that you see what is being
-    passed between functions.
-    """
-    # process_llm_iterations returns a tuple:
-    # (root, aggregated_hpc, aggregated_entropy, final_rand_graph)
-    root, aggregated_hpc, aggregated_entropy, final_rand_graph = process_llm_iterations(
-        graph, root_label, iterations=iterations, dimension=dimension
-    )
-    debug_print(root, "After process_llm_iterations - Root")
-    debug_print(aggregated_hpc, "After process_llm_iterations - Aggregated HPC")
-    debug_print(aggregated_entropy, "After process_llm_iterations - Aggregated Entropy")
-    debug_print(final_rand_graph, "After process_llm_iterations - Final Rand Graph")
-    
-    fim = FIMHierarchy(root, final_rand_graph, aggregated_hpc, aggregated_entropy)
-    debug_print(fim, "After FIMHierarchy Initialization")
-    return fim
+        def _validate(node):
+            # Determine expected bounds for nodes with direct children.
+            if node.children:
+                # Gather abs_index values only of direct children.
+                child_indices = [child.abs_index for child in node.children if child.abs_index is not None]
+                if child_indices:
+                    expected = {"start_index": min(child_indices), "end_index": max(child_indices)}
+                else:
+                    expected = {"start_index": node.abs_index, "end_index": node.abs_index}
+            else:
+                # For a leaf node, inherit the parent's bounds.
+                if node.parent:
+                    # We assume that the parent's invariant_prefix identifies its category.
+                    expected = node.parent.get_submatrix_bounds(node.parent.invariant_prefix)
+                    # If for some reason this call returns None, default to the node's abs_index.
+                    if expected is None:
+                        expected = {"start_index": node.abs_index, "end_index": node.abs_index}
+                    else:
+                        # Validate that the node's abs_index is within the inherited bounds.
+                        if not (expected["start_index"] <= node.abs_index <= expected["end_index"]):
+                            errors.append(
+                                f"Leaf node '{node.label}' (abs_index: {node.abs_index}) is outside its parent's bounds {expected}."
+                            )
+                else:
+                    # If this is the root and it has no children, use its own abs_index.
+                    expected = {"start_index": node.abs_index, "end_index": node.abs_index}
 
-def log_fim_hierarchy(fim):
-    """
-    Log all key fields from the FIMHierarchy.
-    Returns the same fim object (for further functional chaining if needed).
-    """
-    logging.info("=== FIM Hierarchy Data ===")
-    logging.info(f"Root label: {fim.root.label} (Prefix: {fim.label_positions.get(fim.root.abs_index, 'N/A')})")
-    logging.info("Custom Linear Ordering sorted by weight:")
-    for node in fim.linear_order:
-        logging.info(
-            f"Index {node.abs_index}: {node.label} (Prefix: {fim.label_positions.get(node.abs_index, 'N/A')}, "
-            f"Weight: {node.weight:.3f}, Skip: {node.skip_factor:.3f}, "
-            f"Submatrix bounds: {node.submatrix_bounds})"
-        )
-    logging.info("Aggregated HPC usage: " + ", ".join(f"{cost:.3f}" for cost in fim.aggregated_hpc))
-    logging.info("Aggregated entropy: " + ", ".join(f"{ent:.3f}" for ent in fim.aggregated_entropy))
-    return fim
-
-###########################################################
-#                    MAIN PIPELINE                      #
-###########################################################
-
-def parse_args():
-    parser = argparse.ArgumentParser(
-        description="FIM pipeline integrated with skip factor and HPC logging."
-    )
-    parser.add_argument("--iterations", type=int, default=10, help="Number of LLM/HPC iterations")
-    parser.add_argument("--dimension", type=int, default=1, help="Dimension used in skip factor computation")
-    parser.add_argument("--runs", type=int, default=1, help="Number of complete pipeline runs for verification")
-    parser.add_argument("--use_mock", action="store_true", help="Use mock LLM responses")
-    args, unknown = parser.parse_known_args()
-    return args
-
-def main():
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-    args = parse_args()
-    
-    if args.use_mock:
-        print("Mock flag passed: Using mock LLM responses.")
-        
-    logging.info(f"Arguments: {args}")
-
-    graph = {
-        "Origin": {"A": 0.9, "B": 0.7, "C": 0.6, "D": 0.65},
-        "A": {"A1": 0.85, "A2": 0.8, "A3": 0.75, "New_2526": 0.7013515327158085},
-        "B": {"B1": 0.78, "B2": 0.76, "B3": 0.74},
-        "C": {"C1": 0.66, "C2": 0.64, "C3": 0.62},
-        "D": {"D1": 0.6, "D2": 0.55, "D3": 0.5}
-    }
-    root_label = "Origin"
-
-    for trial in range(args.runs):
-        logging.info(f"===== Trial {trial+1} =====")
-        fim = create_fim_hierarchy(graph, root_label, iterations=args.iterations, dimension=args.dimension)
-        fim = log_fim_hierarchy(fim)
-        fim.print_validation_results()
-
-        # --- Minimal change to simulate a dynamic update ---
-        node_B = fim.get_node_by_invariant_label("B")
-        if node_B:
-            new_child = Node("B_New", weight=0.95)
-            node_B.add_child(new_child)
-            fim.mark_weights_changed(True)
-            logging.info("Added new child 'B_New' to node 'B' and set weights_changed flag to True.")
+            # Retrieve the stored bounds using the node's invariant prefix.
+            stored = node.get_submatrix_bounds()
+            if stored != expected:
+                errors.append(
+                    f"Node '{node.label}' (abs_index: {node.abs_index}) has stored bounds {stored} but expected {expected}."
+                )
             
-            # After dynamic update:
-            parent_label = node_B.label.replace("LLM_10_", "")
-            # Suppose rand_graph[parent_label] is a dict,
-            # then add the new node's cleaned label to the dictionary.
-            node_clean = new_child.label.replace("LLM_10_", "")
-            fim.rand_graph.setdefault(parent_label, {})[node_clean] = new_child.weight
-            
-            fim.revalidate()
-            fim.print_validation_results()
-            
-            if "linear_order_staleness" in fim.check_errors or "parent_before_child" in fim.check_errors:
-                logging.info("Immediate reordering detected. Updating ordering and revalidating...")
-                fim.update_ordering()
-                fim.revalidate()
-                fim.print_validation_results()
+            # Recursively validate each child.
+            for child in node.children:
+                _validate(child)
 
-        # Final reordering loop.
-        fim.revalidate()
-        max_retries = 5
-        retries = 0
-        while fim.check_errors and retries < max_retries:
-            logging.info(f"Validation errors still exist: {fim.check_errors}. Reordering attempt {retries+1}...")
-            fim.update_ordering()
-            fim.revalidate()
-            fim.print_validation_results()
-            retries += 1
+        _validate(self.root)
+        return errors
 
-        if fim.check_errors:
-            logging.error("Final validations still show errors after reordering retries: " + str(fim.check_errors))
-        else:
-            logging.info("All validations passed successfully in final ordering.")
-
-        print("Submatrix bounds from FIMHierarchy object:", fim.submatrix_bounds)
-        print("Functional submatrix bounds from graph:", fim.functional_submatrix_bounds)
-        print(f"Root label: {fim.root.label} (Prefix: {fim.label_positions.get(fim.root.abs_index, 'N/A')})")
-        save_hierarchy(fim, filename=f"hierarchy_final_trial_{trial+1}.json")
-        print("Final FIMHierarchy object:", fim)
-        fim.print_hierarchy_and_validation()
-
-    fim.print_serialized()
-    print("Final FIMHierarchy object last in main():", fim)
-
-def update_top_level_invariant_prefixes(hierarchy):
-    """
-    Recompute the invariant prefixes for the top-level nodes,
-    sorting them alphabetically by their cleaned label.
-    If no nodes exist, do nothing.
-    """
-    # Sort top-level nodes alphabetically.
-    top_level_nodes = sorted(hierarchy.root.children, key=lambda n: n.label.replace("LLM_10_", ""))
-    hierarchy.root.children = top_level_nodes
-
-    for i, node in enumerate(top_level_nodes):
-        try:
-            # Assign from ascii_uppercase; fallback if out-of-range.
-            node.invariant_prefix = ascii_uppercase[i]
-        except IndexError:
-            node.invariant_prefix = f"X{i}"
-    logger.info("Top-level invariant prefixes updated to: %s", [node.invariant_prefix for node in top_level_nodes])
-
-
-def update_subcategory_invariant_prefixes(hierarchy):
-    """
-    Recompute invariant prefixes for subcategories, using canonical ordering if available.
-    For canonical children, assign sequential numbers.
-    For noncanonical children, assign a default unique suffix.
-    """
-    top_level_nodes = hierarchy.root.children
-    for node in top_level_nodes:
-        # Clean parent's label.
-        parent_clean = node.label.replace("LLM_10_", "")
-        canonical_order = list(hierarchy.rand_graph.get(parent_clean, {}).keys())
-        # If no canonical ordering defined, leave children unchanged.
-        if not canonical_order:
-            logger.info("No canonical ordering for parent %s; leaving subcategories with existing prefixes.", node.label)
-            continue
-            
-        # Filter canonical children.
-        canonical_children = [child for child in node.children if child.label.replace("LLM_10_", "") in canonical_order]
-        # Default: treat missing weight as zero.
-        canonical_children.sort(key=lambda n: getattr(n, 'weight', 0), reverse=True)
-        for idx, child in enumerate(canonical_children):
-            child.invariant_prefix = f"{node.invariant_prefix}{idx+1}"
+    def assign_submatrix_bounds_to_nodes(self):
+        """
+        Recursively assign submatrix bounds to every node in the hierarchy and update
+        the invariant prefix based on the node's position.
         
-        # For noncanonical children, ensure uniqueness by appending an underscore + cleaned label.
-        noncanonical_children = [child for child in node.children if child not in canonical_children]
-        for child in noncanonical_children:
-            cleaned_label = child.label.replace("LLM_10_", "")
-            child.invariant_prefix = f"{node.invariant_prefix}_{cleaned_label}"
-    logger.info("Subcategory invariant prefixes updated.")
+        Invariant prefix assignment:
+          - The root (origin) gets "O".
+          - Direct children of the origin get letters ("A", "B", "C", etc.).
+          - For deeper nodes, the invariant prefix is the parent's invariant prefix concatenated with a sequential number.
+        """
+        for node in self.linear_order:
+            if node.children:
+                # Internal node: compute bounds from children and produce no prefix.
+                child_indices = [child.abs_index for child in node.children if child.abs_index is not None]
+                bounds = {
+                    "start_index": min(child_indices) if child_indices else node.abs_index,
+                    "end_index": max(child_indices) if child_indices else node.abs_index
+                }
+            else:
+                # Leaf node: simply copy the container's (i.e. parent's) bounds if available,
+                # with no prefix assignment.
+                if node.parent and node.parent.submatrix_bounds:
+                    parent_bounds = node.parent.submatrix_bounds
+                    bounds = {
+                        "start_index": parent_bounds["start_index"],
+                        "end_index": parent_bounds["end_index"]
+                    }
+                else:
+                    bounds = {"start_index": node.abs_index, "end_index": node.abs_index}
 
+            node.submatrix_bounds = bounds
+            logging.debug("Assigned bounds for node %s: %s", node.label, node.submatrix_bounds)
 
-def reorder_hierarchy_until_valid(hierarchy):
-    """
-    Reorders the hierarchy and, after each ordering pass, recomputes both top-level and subcategory invariant prefixes.
-    Then, revalidates the hierarchy until there are no errors or a maximum number of retries is reached.
-    """
-    MAX_REORDER_ATTEMPTS = 5
-    attempt = 0
-    while attempt < MAX_REORDER_ATTEMPTS:
-        # Use your existing logic to reorder the top-level nodes.
-        hierarchy.reorder_top_level_nodes()
-        
-        # Update invariant prefixes at top-level.
-        update_top_level_invariant_prefixes(hierarchy)
-        # Update invariant prefixes for each top-level node's subcategories.
-        update_subcategory_invariant_prefixes(hierarchy)
-        
-        # Re-run validations.
-        hierarchy.revalidate()
-        validation_results = hierarchy.validate()  # Assume validate() returns a dict with potential errors.
-        if not validation_results.get("validation_errors"):
-            break
-        
-        attempt += 1
-        logger.info("Reordering attempt %d failed with errors: %s", attempt, validation_results.get("validation_errors"))
-    
-    if attempt == MAX_REORDER_ATTEMPTS and validation_results.get("validation_errors"):
-        logger.error("Final validations still show errors after reordering retries: %s", validation_results.get("validation_errors"))
-    else:
-        logger.info("Hierarchy successfully reordered after %d attempts.", attempt)
+    def check_and_update_all_submatrix_bounds(self):
+        """
+        Traverse the tree and compare each node's stored submatrix bounds with computed bounds.
+        Returns a list of discrepancy error messages.
+        """
+        errors = []
+        def _traverse(node):
+            stored = node.get_submatrix_bounds()
+            if node.children:
+                indices = [child.abs_index for child in node.children if child.abs_index is not None]
+                if indices:
+                    expected = {"start_index": min(indices), "end_index": max(indices)}
+                else:
+                    expected = {"start_index": node.abs_index, "end_index": node.abs_index}
+            else:
+                if node.parent:
+                    expected = node.parent.get_submatrix_bounds()
+                else:
+                    expected = {"start_index": node.abs_index, "end_index": node.abs_index}
+            if stored != expected:
+                errors.append(f"Node '{node.label}' expected {expected}, got {stored}")
+            for child in node.children:
+                _traverse(child)
+        _traverse(self.root)
+        return errors
 
-def simulate_origin_metadata(origin, iteration):
+    def enforce_submatrix_bounds_rule(self):
+        """
+        Self-healing mechanism: repeatedly assign submatrix bounds until no errors remain.
+        A safe maximum iteration count is used to prevent infinite loops.
+        """
+        attempt = 1
+        max_iterations = 1000   # Safeguard to avoid infinite looping if errors never resolve.
+        while attempt <= max_iterations:
+            # --- Added: Re-compute the ordering based on the current (randomized) weights.
+            self.linear_order = self.build_final_ordering()
+            self.assign_absolute_indices()
+            self.assign_invariant_prefixes()
+            self.label_positions = {node.abs_index: node.invariant_prefix for node in self.linear_order}
+            self.compute_invariant_positions()
+
+            # Now recompute submatrix bounds using the (possibly) updated ordering.
+            self.assign_submatrix_bounds_to_nodes()
+            errors = self.check_and_update_all_submatrix_bounds()
+            if not errors:
+                logging.info("Submatrix bounds rule enforced successfully on attempt %d", attempt)
+                return
+            logging.warning("Attempt %d: Submatrix bounds errors found: %s", attempt, errors)
+            attempt += 1
+        
+        logging.error("Maximum iterations (%d) reached; self-healing failed to remove all submatrix bounds errors.", max_iterations)
+        return errors
+
+def simulate_origin_metadata(node, iteration):
     """
-    Simulate metadata for the origin node.
-    Returns a structured dictionary including the origin's name and other attributes.
+    Simulate causal metadata for the origin node.
     """
     return {
-        "justification": (
-            f"Origin node '{origin.name}' (Prefix {origin.invariant_prefix}, "
-            f"Index {origin.abs_index}, Weight {origin.weight:.2f}) is the foundation of the hierarchy."
-        ),
+        "justification": f"Simulated origin metadata for node {node.label} at iteration {iteration}",
         "payload": {
-            "origin_name": origin.name,
-            "origin_invariant_prefix": origin.invariant_prefix,
-            "origin_abs_index": origin.abs_index,
-            "origin_weight": origin.weight
+            "origin_name": node.label,
+            "origin_invariant_prefix": node.invariant_prefix,
+            "origin_abs_index": node.abs_index,
+            "origin_weight": node.weight,
         }
     }
 
 def simulate_llm_causal_reasoning(parent, child, iteration):
     """
-    Simulate an LLM call to generate structured metadata for a parent→child link,
-    explicitly including the full chain: the origin, the category (parent), and the subcategory/leaf.
+    Simulate causal reasoning metadata for a non-origin node based on its parent.
     """
-    # Determine the origin node.
-    # For top-level nodes (child.parent is origin), the origin is child.parent;
-    # For subcategories, we assume child.parent is the category and its parent is the origin.
-    if child.parent.parent is None:
-        origin = child.parent
-    else:
-        origin = child.parent.parent
-
-    # Build the payload with complete chain information.
-    metadata_payload = {
-         "origin_name": origin.name,
-         "origin_invariant_prefix": origin.invariant_prefix,
-         "origin_abs_index": origin.abs_index,
-         "origin_weight": origin.weight,
-         "parent_name": parent.name,
-         "parent_invariant_prefix": parent.invariant_prefix,
-         "parent_abs_index": parent.abs_index,
-         "parent_weight": parent.weight,
-         "parent_causal": parent.causal_metadata,  # Propagated parent's metadata
-         "child_name": child.name,
-         "child_invariant_prefix": child.invariant_prefix,
-         "child_abs_index": child.abs_index,
-         "child_weight": child.weight
-    }
-
-    # Construct the justification sentence with full chain details.
-    if not child.children:
-        # Leaf node: Describe how the origin's definition (via category) defines the leaf's weight.
-        role_description = "as a leaf node, propagating the causal definition of its weight from its parent."
-        sentence = (
-            f"Given origin's definition from '{origin.name}' (Prefix {origin.invariant_prefix}, "
-            f"Weight {origin.weight:.2f}, Index {origin.abs_index}) and its subsequent definition from "
-            f"category '{parent.name}' (Prefix {parent.invariant_prefix}, Weight {parent.weight:.2f}, Index {parent.abs_index}), "
-            f"how should the connection to leaf node '{child.name}' (Prefix {child.invariant_prefix}, "
-            f"Weight {child.weight:.2f}, Index {child.abs_index}) be interpreted? {role_description}"
-        )
-    else:
-        # Category node: Define the causal relevance from origin to this category.
-        role_description = "as a category node, establishing the causal relevance of the origin to its role."
-        sentence = (
-            f"Given origin's definition from '{origin.name}' (Prefix {origin.invariant_prefix}, "
-            f"Weight {origin.weight:.2f}, Index {origin.abs_index}) and its subsequent definition from "
-            f"category '{parent.name}' (Prefix {parent.invariant_prefix}, Weight {parent.weight:.2f}, Index {parent.abs_index}), "
-            f"how does the connection to category '{child.name}' (Prefix {child.invariant_prefix}, "
-            f"Weight {child.weight:.2f}, Index {child.abs_index}) define its role? {role_description}"
-        )
-
     return {
-         "justification": sentence,
-         "payload": metadata_payload
+        "justification": f"Simulated causal reasoning between {parent.label} and {child.label} at iteration {iteration}",
+        "payload": {
+            "parent_name": parent.label,
+            "parent_invariant_prefix": parent.invariant_prefix,
+            "parent_abs_index": parent.abs_index,
+            "parent_weight": parent.weight,
+            "child_name": child.label,
+            "child_invariant_prefix": child.invariant_prefix,
+            "child_abs_index": child.abs_index,
+            "child_weight": child.weight,
+        }
     }
+
+# --------------------------------------------------------------------
+# Minimal implementation of RuleEngine to support FIMHierarchy.
+# This class provides stubs for add_default_rules() and repair().
+# You can later add more robust rule validation and repair mechanisms.
+# --------------------------------------------------------------------
+class RuleEngine:
+    """
+    Minimal implementation of RuleEngine for validating and repairing the hierarchy.
+    """
+    def __init__(self):
+         self.rules = []
+         self.add_default_rules()
+
+    def add_default_rules(self):
+         # Add default rules if available.
+         # For now, no default rules are set.
+         pass
+
+    def add_rule(self, rule):
+         """Add a custom validation rule."""
+         self.rules.append(rule)
+
+    def repair(self, hierarchy, max_attempts=3):
+         """
+         A minimal repair method.
+         In a complete implementation, this would attempt to fix the hierarchy
+         by reordering or updating nodes until all rules are satisfied.
+         For now, we simply log and return True.
+         """
+         logging.info("Running minimal repair process in RuleEngine.")
+         return True
 
 if __name__ == "__main__":
-    main()
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+    
+    # Updated base graph that includes 4 top-level categories for the Origin node.
+    base_graph = {
+        "Origin": {"A": 1.0, "B": 1.0, "C": 1.0, "D": 1.0},
+        "A": {"A1": 1.0, "A2": 1.0},
+        "B": {"B1": 1.0, "B2": 1.0},
+        "C": {"C1": 1.0, "C2": 1.0},
+        "D": {"D1": 1.0, "D2": 1.0}
+    }
+    root_label = "Origin"
+    
+    # Use the full base graph in our process_llm_iterations function
+    root, aggregated_hpc, aggregated_entropy, final_rand_graph = process_llm_iterations(
+        base_graph, root_label, iterations=3, dimension=1
+    )
+    
+    # At this point, verify that the built tree has the correct structure:
+    # The Origin node should have 4 children (A, B, C, D) directly attached.
+    if len(root.children) < 4:
+        logging.error("The Origin node does not have all expected direct children (expected 4).")
+    else:
+        logging.info(f"Origin has {len(root.children)} direct children as expected.")
+    
+    # Build the FIMHierarchy object using the correct tree.
+    fim = FIMHierarchy(root, final_rand_graph, aggregated_hpc, aggregated_entropy)
+    
+    # Enforce submatrix bounds (which uses direct children for computation).
+    fim.enforce_submatrix_bounds_rule()
+    
+    # For debugging, print out the final hierarchy.
+    def print_tree(node, indent=0):
+        print("  " * indent + f"Node: {node.label} (abs_index: {node.abs_index}, invariant_prefix: {node.invariant_prefix}) - Bounds: {node.get_submatrix_bounds()}")
+        for child in node.children:
+            print_tree(child, indent + 1)
+    
+    print("\nFinal Hierarchy with Submatrix Bounds:")
+    print_tree(root)
