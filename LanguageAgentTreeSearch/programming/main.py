@@ -60,7 +60,7 @@ Build a single cohesive object, `FIMHierarchy`, that encapsulates all key output
    - **Rationale:** This "heavier first" principle supports both effective processing and a consistent address assignment.
 
 
-PLANNING: SUBMATRIX BOUNDS (Rule 10)
+PLANNING: SUBMATRIX BOUNDS (Rule 10)
 
 10. Submatrix Bounds:
 
@@ -72,23 +72,23 @@ PLANNING: SUBMATRIX BOUNDS (Rule 10)
        - These computed bounds must be stored on the node using a setter (set_submatrix_bounds(prefix, start_index, end_index))
          and retrieved via a getter (get_submatrix_bounds(prefix)).
        - After storage, the bounds are checked against the computed values. If any errors exist (i.e., mismatches),
-         then the update step is repeated until all nodes’ submatrix bounds are correct.
+         then the update step is repeated until all nodes' submatrix bounds are correct.
 
     b. Leaf Nodes:
        - For a node with no direct children (a leaf), the submatrix bounds are inherited from its parent.
-       - This means that for a leaf node, you call the parent's getter using the category’s invariant prefix to retrieve the 
-         bounds, which must include the leaf’s own abs_index.
-       - The leaf’s bounds are then set accordingly, ensuring consistency of the hierarchy.
+       - This means that for a leaf node, you call the parent's getter using the category's invariant prefix to retrieve the 
+         bounds, which must include the leaf's own abs_index.
+       - The leaf's bounds are then set accordingly, ensuring consistency of the hierarchy.
 
     c. Validation & Enforcement:
-       - A dedicated validation routine traverses the hierarchy and confirms that every node’s stored submatrix bounds exactly
+       - A dedicated validation routine traverses the hierarchy and confirms that every node's stored submatrix bounds exactly
          match the expected values based solely on its direct children (or, for leaves, the parent's bounds).
        - If validation errors are detected, an enforcement loop (e.g., enforce_submatrix_bounds_rule) will redo the update
          and validation step repeatedly (up to a maximum number of attempts) until every node is compliant.
          
 This rule guarantees that:
-    - Each node’s submatrix bounds accurately represent the range of the abs_index values of its direct children.
-    - Leaf nodes rely on their parent’s bounds to determine their placement.
+    - Each node's submatrix bounds accurately represent the range of the abs_index values of its direct children.
+    - Leaf nodes rely on their parent's bounds to determine their placement.
     - All bounds are stored directly on the corresponding node and revalidated iteratively until the hierarchy is internally consistent.
 
 ---
@@ -199,21 +199,47 @@ class Node:
     def __init__(self, label, weight=1.0, name=None):
         self.label = label                       # Internal identifier
         self.invariant_label = label             # Original ID (immutable)
-        self.name = name if name is not None else label  # New: display name for the node
+        self.name = name if name is not None else label  # Display name
         self.weight = weight                     # Weight is set from the randomized graph
         self.skip_factor = 1.0                   # Computed later based on children
         self.children = []                       # List of Node objects
         self.abs_index = None                    # Absolute position in the linear order
         self.submatrix_bounds = None             # Bounds computed from direct children
-        self.parent = None                       # Parent pointer
-        self.invariant_prefix = None             # Invariant prefix assigned during ordering
-        self.causal_metadata = {}                # New: Stores causal metadata for the node
+        self.parent = None                       # Reference to the parent node
+        self.invariant_prefix = None             # Prefix assigned during ordering
+        self.causal_metadata = {}                # Causal metadata storage
 
     def add_child(self, child):
         self.children.append(child)
-        child.parent = self  # Set the child's parent pointer
+        child.parent = self
+
+    def set_submatrix_bounds(self, start_index, end_index, prefix=None):
+        """
+        Store the submatrix bounds for this node.
+
+        Args:
+            start_index (int): The starting absolute index.
+            end_index (int): The ending absolute index.
+            prefix (str, optional): An optional prefix to identify the category.
+                Currently not used in the storage logic, but provided for future extension.
+        """
+        self.submatrix_bounds = {"start_index": start_index, "end_index": end_index}
+
+    def get_submatrix_bounds(self, prefix=None):
+        """
+        Retrieve the stored submatrix bounds for this node.
+
+        Args:
+            prefix (str, optional): An optional prefix to differentiate categories.
+                Currently not used, but available for future extensions.
+
+        Returns:
+            dict: A dictionary with keys "start_index" and "end_index".
+        """
+        return self.submatrix_bounds
 
     def inspect(self):
+        import pprint
         pprint.pprint(self.__dict__)
 
 ###########################################################
@@ -1311,6 +1337,61 @@ class FIMHierarchy:
                 if not isinstance(meta, dict) or not meta.get("justification"):
                     errors.append(f"Node {node.label} (Index {node.abs_index}) is missing structured causal metadata.")
         return errors
+
+    def compute_expected_submatrix_bounds(self, node, category_prefix=None):
+        """
+        Compute the expected submatrix bounds for a given node following Rule 10.
+
+        For nodes with direct children:
+          - Expected start_index = the minimum abs_index among the direct children.
+          - Expected end_index   = the maximum abs_index among the direct children.
+          
+        For leaf nodes (no direct children):
+          - Expected bounds are inherited from the parent's submatrix bounds.
+          - This is obtained by calling the parent's getter (with its invariant prefix) and
+            verifying that the node's own abs_index is within that range.
+          - If the parent's bounds are not available or the node's abs_index does not fall
+            within them, the node's own abs_index is used for both start and end indices.
+
+        Args:
+            node: The node for which to compute the expected bounds.
+            category_prefix: Optional prefix for retrieving the parent's bounds via a getter.
+                             (Typically, this would be node.parent.invariant_prefix.)
+                             
+        Returns:
+            A dictionary with keys "start_index" and "end_index" representing the expected submatrix bounds.
+        """
+        # Case 1: Node has direct children.
+        if node.children:
+            # Filter out any child that does not have an assigned abs_index.
+            child_indices = [child.abs_index for child in node.children if child.abs_index is not None]
+            if child_indices:
+                return {
+                    "start_index": min(child_indices),
+                    "end_index": max(child_indices)
+                }
+            else:
+                # In the unlikely case that children exist but none have an abs_index,
+                # fall back on the node's own abs_index.
+                return {"start_index": node.abs_index, "end_index": node.abs_index}
+        else:
+            # Case 2: Leaf node. Retrieve parent's bounds.
+            if node.parent:
+                # We assume that parent's invariant_prefix is used as the key.
+                parent_bounds = node.parent.get_submatrix_bounds(node.parent.invariant_prefix)
+                if (node.abs_index is not None and parent_bounds and
+                    parent_bounds.get("start_index") is not None and
+                    parent_bounds.get("end_index") is not None and
+                    parent_bounds["start_index"] <= node.abs_index <= parent_bounds["end_index"]):
+                    return parent_bounds
+                else:
+                    # If parent's bounds are invalid or the abs_index is out-of-range,
+                    # default to using the node's own position.
+                    return {"start_index": node.abs_index, "end_index": node.abs_index}
+            else:
+                # In case of the root having no children (unlikely in proper usage),
+                # use its own abs_index.
+                return {"start_index": node.abs_index, "end_index": node.abs_index}
 
 ###########################################################
 #         FUNCTIONAL STYLE HELPER FUNCTIONS               #
