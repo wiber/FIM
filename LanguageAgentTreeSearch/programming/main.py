@@ -259,7 +259,8 @@ def build_tree_from_graph(graph, root_label):
         for child, weight in children.items():
             child_node = nodes[child]
             child_node.weight = weight
-            parent_node.add_child(child_node)  # This also sets child_node.parent
+            child_node.parent = parent_node
+            parent_node.add_child(child_node)
     if root_label not in nodes:
         raise ValueError(f"Root label '{root_label}' not found in the provided graph.")
     return nodes[root_label]
@@ -1603,17 +1604,19 @@ if __name__ == "__main__":
     else:
         logging.info(f"Origin has {len(root.children)} direct children as expected.")
     
-    # Build the FIMHierarchy object using the correct tree.
+    # Build the FIMHierarchy object from the fully updated tree.
     fim = FIMHierarchy(root, final_rand_graph, aggregated_hpc, aggregated_entropy)
     
-    # Enforce submatrix bounds (which uses direct children for computation).
+    # Enforce submatrix bounds (and any additional repairs) on the FIMHierarchy.
     fim.enforce_submatrix_bounds_rule()
     
-    # For debugging, print out the final hierarchy.
+    # Now, log the final, fully updated hierarchy.
     def print_tree(node, indent=0):
         print("  " * indent + f"Node: {node.label} (abs_index: {node.abs_index}, invariant_prefix: {node.invariant_prefix}) - Bounds: {node.get_submatrix_bounds()}")
         for child in node.children:
             print_tree(child, indent + 1)
     
     print("\nFinal Hierarchy with Submatrix Bounds:")
-    print_tree(root)
+    print_tree(fim.root)
+
+    # (Optionally) now serialize fim (or fim.root) to JSON to ensure all helpers use the same snapshot.

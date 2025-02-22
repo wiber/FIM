@@ -4,49 +4,49 @@
         "invariant_prefix": "O",
         "abs_index": 0,
         "weight": 1.0,
-        "skip_factor": 0.5,
+        "skip_factor": 0.25,
         "submatrix_bounds": null,
         "children": [
             {
                 "label": "LLM_10_A",
-                "invariant_prefix": "B",
-                "abs_index": 2,
-                "weight": 0.7870001449448502,
-                "skip_factor": 0.25,
+                "invariant_prefix": "C",
+                "abs_index": 3,
+                "weight": 0.05918528478115426,
+                "skip_factor": 0.75,
                 "submatrix_bounds": null,
                 "children": [
                     {
                         "label": "LLM_10_A1",
-                        "invariant_prefix": "B1",
-                        "abs_index": 8,
-                        "weight": 0.5510129766434466,
+                        "invariant_prefix": "C3",
+                        "abs_index": 14,
+                        "weight": 0.5319116935871491,
                         "skip_factor": 1.0,
                         "submatrix_bounds": null,
                         "children": []
                     },
                     {
                         "label": "LLM_10_A2",
-                        "invariant_prefix": "B4",
-                        "abs_index": 11,
-                        "weight": 0.011019187648835804,
+                        "invariant_prefix": "C1",
+                        "abs_index": 12,
+                        "weight": 0.8823892373276297,
                         "skip_factor": 1.0,
                         "submatrix_bounds": null,
                         "children": []
                     },
                     {
                         "label": "LLM_10_A3",
-                        "invariant_prefix": "B2",
-                        "abs_index": 9,
-                        "weight": 0.4645893848687299,
+                        "invariant_prefix": "C4",
+                        "abs_index": 15,
+                        "weight": 0.4115600291829361,
                         "skip_factor": 1.0,
                         "submatrix_bounds": null,
                         "children": []
                     },
                     {
                         "label": "LLM_10_New_2526",
-                        "invariant_prefix": "B3",
-                        "abs_index": 10,
-                        "weight": 0.05809099735478329,
+                        "invariant_prefix": "C2",
+                        "abs_index": 13,
+                        "weight": 0.5899899616644392,
                         "skip_factor": 1.0,
                         "submatrix_bounds": null,
                         "children": []
@@ -55,43 +55,43 @@
             },
             {
                 "label": "LLM_10_B",
-                "invariant_prefix": "D",
-                "abs_index": 4,
-                "weight": 0.26473698570621773,
-                "skip_factor": 0.6666666666666666,
+                "invariant_prefix": "A",
+                "abs_index": 1,
+                "weight": 0.7973760191550607,
+                "skip_factor": 0.3333333333333333,
                 "submatrix_bounds": null,
                 "children": [
                     {
                         "label": "LLM_10_B1",
-                        "invariant_prefix": "D1",
-                        "abs_index": 15,
-                        "weight": 0.9960147310328556,
+                        "invariant_prefix": "A4",
+                        "abs_index": 8,
+                        "weight": 0.1289692226310889,
                         "skip_factor": 1.0,
                         "submatrix_bounds": null,
                         "children": []
                     },
                     {
                         "label": "LLM_10_B2",
-                        "invariant_prefix": "D3",
-                        "abs_index": 17,
-                        "weight": 0.5923169887123959,
+                        "invariant_prefix": "A2",
+                        "abs_index": 6,
+                        "weight": 0.8697458949584573,
                         "skip_factor": 1.0,
                         "submatrix_bounds": null,
                         "children": []
                     },
                     {
                         "label": "LLM_10_B3",
-                        "invariant_prefix": "D4",
-                        "abs_index": 18,
-                        "weight": 0.16183138142447673,
+                        "invariant_prefix": "A3",
+                        "abs_index": 7,
+                        "weight": 0.49121987168909187,
                         "skip_factor": 1.0,
                         "submatrix_bounds": null,
                         "children": []
                     },
                     {
                         "label": "B_New",
-                        "invariant_prefix": "D2",
-                        "abs_index": 16,
+                        "invariant_prefix": "A1",
+                        "abs_index": 5,
                         "weight": 0.95,
                         "skip_factor": 1.0,
                         "submatrix_bounds": null,
@@ -101,35 +101,35 @@
             },
             {
                 "label": "LLM_10_C",
-                "invariant_prefix": "A",
-                "abs_index": 1,
-                "weight": 0.9909827254715045,
+                "invariant_prefix": "D",
+                "abs_index": 4,
+                "weight": 0.038500990448713024,
                 "skip_factor": 0.3333333333333333,
                 "submatrix_bounds": null,
                 "children": [
                     {
                         "label": "LLM_10_C1",
-                        "invariant_prefix": "A1",
-                        "abs_index": 5,
-                        "weight": 0.9613314452737164,
+                        "invariant_prefix": "D3",
+                        "abs_index": 18,
+                        "weight": 0.470466020402741,
                         "skip_factor": 1.0,
                         "submatrix_bounds": null,
                         "children": []
                     },
                     {
                         "label": "LLM_10_C2",
-                        "invariant_prefix": "A3",
-                        "abs_index": 7,
-                        "weight": 0.15286264979373798,
+                        "invariant_prefix": "D1",
+                        "abs_index": 16,
+                        "weight": 0.5625204349855866,
                         "skip_factor": 1.0,
                         "submatrix_bounds": null,
                         "children": []
                     },
                     {
                         "label": "LLM_10_C3",
-                        "invariant_prefix": "A2",
-                        "abs_index": 6,
-                        "weight": 0.3890341570511999,
+                        "invariant_prefix": "D2",
+                        "abs_index": 17,
+                        "weight": 0.48749489969228843,
                         "skip_factor": 1.0,
                         "submatrix_bounds": null,
                         "children": []
@@ -138,35 +138,35 @@
             },
             {
                 "label": "LLM_10_D",
-                "invariant_prefix": "C",
-                "abs_index": 3,
-                "weight": 0.45619396620536656,
-                "skip_factor": 0.3333333333333333,
+                "invariant_prefix": "B",
+                "abs_index": 2,
+                "weight": 0.36234647220145144,
+                "skip_factor": 1.0,
                 "submatrix_bounds": null,
                 "children": [
                     {
                         "label": "LLM_10_D1",
-                        "invariant_prefix": "C1",
-                        "abs_index": 12,
-                        "weight": 0.5647972223988807,
+                        "invariant_prefix": "B1",
+                        "abs_index": 9,
+                        "weight": 0.9631372963528811,
                         "skip_factor": 1.0,
                         "submatrix_bounds": null,
                         "children": []
                     },
                     {
                         "label": "LLM_10_D2",
-                        "invariant_prefix": "C2",
-                        "abs_index": 13,
-                        "weight": 0.32290369618367154,
+                        "invariant_prefix": "B3",
+                        "abs_index": 11,
+                        "weight": 0.5385461344914506,
                         "skip_factor": 1.0,
                         "submatrix_bounds": null,
                         "children": []
                     },
                     {
                         "label": "LLM_10_D3",
-                        "invariant_prefix": "C3",
-                        "abs_index": 14,
-                        "weight": 0.24286498710127036,
+                        "invariant_prefix": "B2",
+                        "abs_index": 10,
+                        "weight": 0.7264265489601529,
                         "skip_factor": 1.0,
                         "submatrix_bounds": null,
                         "children": []
@@ -177,86 +177,86 @@
     },
     "rand_graph": {
         "Origin": {
-            "A": 0.7870001449448502,
-            "B": 0.26473698570621773,
-            "C": 0.9909827254715045,
-            "D": 0.45619396620536656
+            "A": 0.05918528478115426,
+            "B": 0.7973760191550607,
+            "C": 0.038500990448713024,
+            "D": 0.36234647220145144
         },
         "A": {
-            "A1": 0.5510129766434466,
-            "A2": 0.011019187648835804,
-            "A3": 0.4645893848687299,
-            "New_2526": 0.05809099735478329
+            "A1": 0.5319116935871491,
+            "A2": 0.8823892373276297,
+            "A3": 0.4115600291829361,
+            "New_2526": 0.5899899616644392
         },
         "B": {
-            "B1": 0.9960147310328556,
-            "B2": 0.5923169887123959,
-            "B3": 0.16183138142447673,
+            "B1": 0.1289692226310889,
+            "B2": 0.8697458949584573,
+            "B3": 0.49121987168909187,
             "B_New": 0.95
         },
         "C": {
-            "C1": 0.9613314452737164,
-            "C2": 0.15286264979373798,
-            "C3": 0.3890341570511999
+            "C1": 0.470466020402741,
+            "C2": 0.5625204349855866,
+            "C3": 0.48749489969228843
         },
         "D": {
-            "D1": 0.5647972223988807,
-            "D2": 0.32290369618367154,
-            "D3": 0.24286498710127036
+            "D1": 0.9631372963528811,
+            "D2": 0.5385461344914506,
+            "D3": 0.7264265489601529
         }
     },
     "aggregated_hpc": [
-        4.64135786197687,
-        2.6875897036293384,
-        4.455131475091992,
-        3.2267979160078983,
-        4.41707841890252,
-        0.6021135581164161,
-        4.187411625431366,
-        3.4428723668559797,
-        4.816107837941946,
-        2.3756846108570606
+        0.756577613187096,
+        1.0323674646202916,
+        0.6647879967407689,
+        0.8637034122000626,
+        2.3338822100728427,
+        2.1823770793032717,
+        3.457943558929806,
+        3.8586227340300123,
+        2.5014744249733267,
+        1.7631354524445448
     ],
     "aggregated_entropy": [
-        0.43957475021313186,
-        0.6079860011913671,
-        0.0973440923691481,
-        0.7650463769425468,
-        0.6804066788465112,
-        0.09790910774873773,
-        0.1669637572822953,
-        0.968148077420243,
-        0.9019179265466728,
-        0.1892831524393006
+        0.44970722967798304,
+        0.9154261907987672,
+        0.1793976077315914,
+        0.453731555855136,
+        0.764643617131409,
+        0.10064181441654929,
+        0.3402349213526785,
+        0.7815643842302692,
+        0.4337041784738128,
+        0.7673784523305919
     ],
     "state": {
         "aggregated_hpc": [
-            4.64135786197687,
-            2.6875897036293384,
-            4.455131475091992,
-            3.2267979160078983,
-            4.41707841890252,
-            0.6021135581164161,
-            4.187411625431366,
-            3.4428723668559797,
-            4.816107837941946,
-            2.3756846108570606
+            0.756577613187096,
+            1.0323674646202916,
+            0.6647879967407689,
+            0.8637034122000626,
+            2.3338822100728427,
+            2.1823770793032717,
+            3.457943558929806,
+            3.8586227340300123,
+            2.5014744249733267,
+            1.7631354524445448
         ],
-        "total_hpc": 34.852145374811386,
+        "total_hpc": 19.414871946502025,
         "aggregated_entropy": [
-            0.43957475021313186,
-            0.6079860011913671,
-            0.0973440923691481,
-            0.7650463769425468,
-            0.6804066788465112,
-            0.09790910774873773,
-            0.1669637572822953,
-            0.968148077420243,
-            0.9019179265466728,
-            0.1892831524393006
+            0.44970722967798304,
+            0.9154261907987672,
+            0.1793976077315914,
+            0.453731555855136,
+            0.764643617131409,
+            0.10064181441654929,
+            0.3402349213526785,
+            0.7815643842302692,
+            0.4337041784738128,
+            0.7673784523305919
         ],
         "weights_changed": true,
-        "last_revalidation": 1740104540.797714
+        "last_revalidation": 1740108098.863229
     },
     "validation_results": {
         "validation_checks": {
@@ -285,133 +285,133 @@
         "5": "A1",
         "6": "A2",
         "7": "A3",
-        "8": "B1",
-        "9": "B2",
-        "10": "B3",
-        "11": "B4",
+        "8": "A4",
+        "9": "B1",
+        "10": "B2",
+        "11": "B3",
         "12": "C1",
         "13": "C2",
         "14": "C3",
-        "15": "D1",
-        "16": "D2",
-        "17": "D3",
-        "18": "D4"
+        "15": "C4",
+        "16": "D1",
+        "17": "D2",
+        "18": "D3"
     },
     "linear_order": [
         "LLM_10_Origin",
-        "LLM_10_C",
-        "LLM_10_A",
-        "LLM_10_D",
         "LLM_10_B",
-        "LLM_10_C1",
-        "LLM_10_C3",
-        "LLM_10_C2",
-        "LLM_10_A1",
-        "LLM_10_A3",
-        "LLM_10_New_2526",
-        "LLM_10_A2",
-        "LLM_10_D1",
-        "LLM_10_D2",
-        "LLM_10_D3",
-        "LLM_10_B1",
+        "LLM_10_D",
+        "LLM_10_A",
+        "LLM_10_C",
         "B_New",
         "LLM_10_B2",
-        "LLM_10_B3"
+        "LLM_10_B3",
+        "LLM_10_B1",
+        "LLM_10_D1",
+        "LLM_10_D3",
+        "LLM_10_D2",
+        "LLM_10_A2",
+        "LLM_10_New_2526",
+        "LLM_10_A1",
+        "LLM_10_A3",
+        "LLM_10_C2",
+        "LLM_10_C3",
+        "LLM_10_C1"
     ],
     "previous_linear_order": [
         "LLM_10_Origin",
-        "LLM_10_C",
-        "LLM_10_A",
-        "LLM_10_D",
         "LLM_10_B",
-        "LLM_10_C1",
-        "LLM_10_C3",
-        "LLM_10_C2",
+        "LLM_10_D",
+        "LLM_10_A",
+        "LLM_10_C",
+        "LLM_10_B2",
+        "LLM_10_B3",
+        "LLM_10_B1",
+        "LLM_10_D1",
+        "LLM_10_D3",
+        "LLM_10_D2",
+        "LLM_10_A2",
+        "LLM_10_New_2526",
         "LLM_10_A1",
         "LLM_10_A3",
-        "LLM_10_New_2526",
-        "LLM_10_A2",
-        "LLM_10_D1",
-        "LLM_10_D2",
-        "LLM_10_D3",
-        "LLM_10_B1",
-        "LLM_10_B2",
-        "LLM_10_B3"
+        "LLM_10_C2",
+        "LLM_10_C3",
+        "LLM_10_C1"
     ],
     "ordering_diff": {
         "LLM_10_Origin": {
             "old_index": 0,
             "new_index": 0
         },
-        "LLM_10_C": {
+        "LLM_10_B": {
             "old_index": 1,
             "new_index": 1
         },
-        "LLM_10_A": {
+        "LLM_10_D": {
             "old_index": 2,
             "new_index": 2
         },
-        "LLM_10_D": {
+        "LLM_10_A": {
             "old_index": 3,
             "new_index": 3
         },
-        "LLM_10_B": {
+        "LLM_10_C": {
             "old_index": 4,
             "new_index": 4
         },
-        "LLM_10_C1": {
-            "old_index": 5,
+        "B_New": {
+            "old_index": null,
             "new_index": 5
         },
-        "LLM_10_C3": {
-            "old_index": 6,
+        "LLM_10_B2": {
+            "old_index": 5,
             "new_index": 6
         },
-        "LLM_10_C2": {
-            "old_index": 7,
+        "LLM_10_B3": {
+            "old_index": 6,
             "new_index": 7
         },
-        "LLM_10_A1": {
-            "old_index": 8,
+        "LLM_10_B1": {
+            "old_index": 7,
             "new_index": 8
         },
-        "LLM_10_A3": {
-            "old_index": 9,
+        "LLM_10_D1": {
+            "old_index": 8,
             "new_index": 9
         },
-        "LLM_10_New_2526": {
-            "old_index": 10,
+        "LLM_10_D3": {
+            "old_index": 9,
             "new_index": 10
+        },
+        "LLM_10_D2": {
+            "old_index": 10,
+            "new_index": 11
         },
         "LLM_10_A2": {
             "old_index": 11,
-            "new_index": 11
-        },
-        "LLM_10_D1": {
-            "old_index": 12,
             "new_index": 12
         },
-        "LLM_10_D2": {
-            "old_index": 13,
+        "LLM_10_New_2526": {
+            "old_index": 12,
             "new_index": 13
         },
-        "LLM_10_D3": {
-            "old_index": 14,
+        "LLM_10_A1": {
+            "old_index": 13,
             "new_index": 14
         },
-        "LLM_10_B1": {
-            "old_index": 15,
+        "LLM_10_A3": {
+            "old_index": 14,
             "new_index": 15
         },
-        "B_New": {
-            "old_index": null,
+        "LLM_10_C2": {
+            "old_index": 15,
             "new_index": 16
         },
-        "LLM_10_B2": {
+        "LLM_10_C3": {
             "old_index": 16,
             "new_index": 17
         },
-        "LLM_10_B3": {
+        "LLM_10_C1": {
             "old_index": 17,
             "new_index": 18
         }
@@ -428,86 +428,8 @@
                 "origin_weight": 1.0
             }
         },
-        "LLM_10_C": {
-            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'C' (Prefix A, Weight 0.99, Index 1) define its role? as a category node, establishing the causal relevance of the origin to its role.",
-            "payload": {
-                "origin_name": "Origin",
-                "origin_invariant_prefix": "O",
-                "origin_abs_index": 0,
-                "origin_weight": 1.0,
-                "parent_name": "Origin",
-                "parent_invariant_prefix": "O",
-                "parent_abs_index": 0,
-                "parent_weight": 1.0,
-                "parent_causal": {
-                    "justification": "Origin node 'Origin' (Prefix O, Index 0, Weight 1.00) is the foundation of the hierarchy.",
-                    "payload": {
-                        "origin_name": "Origin",
-                        "origin_invariant_prefix": "O",
-                        "origin_abs_index": 0,
-                        "origin_weight": 1.0
-                    }
-                },
-                "child_name": "C",
-                "child_invariant_prefix": "A",
-                "child_abs_index": 1,
-                "child_weight": 0.9909827254715045
-            }
-        },
-        "LLM_10_A": {
-            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'A' (Prefix B, Weight 0.79, Index 2) define its role? as a category node, establishing the causal relevance of the origin to its role.",
-            "payload": {
-                "origin_name": "Origin",
-                "origin_invariant_prefix": "O",
-                "origin_abs_index": 0,
-                "origin_weight": 1.0,
-                "parent_name": "Origin",
-                "parent_invariant_prefix": "O",
-                "parent_abs_index": 0,
-                "parent_weight": 1.0,
-                "parent_causal": {
-                    "justification": "Origin node 'Origin' (Prefix O, Index 0, Weight 1.00) is the foundation of the hierarchy.",
-                    "payload": {
-                        "origin_name": "Origin",
-                        "origin_invariant_prefix": "O",
-                        "origin_abs_index": 0,
-                        "origin_weight": 1.0
-                    }
-                },
-                "child_name": "A",
-                "child_invariant_prefix": "B",
-                "child_abs_index": 2,
-                "child_weight": 0.7870001449448502
-            }
-        },
-        "LLM_10_D": {
-            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'D' (Prefix C, Weight 0.46, Index 3) define its role? as a category node, establishing the causal relevance of the origin to its role.",
-            "payload": {
-                "origin_name": "Origin",
-                "origin_invariant_prefix": "O",
-                "origin_abs_index": 0,
-                "origin_weight": 1.0,
-                "parent_name": "Origin",
-                "parent_invariant_prefix": "O",
-                "parent_abs_index": 0,
-                "parent_weight": 1.0,
-                "parent_causal": {
-                    "justification": "Origin node 'Origin' (Prefix O, Index 0, Weight 1.00) is the foundation of the hierarchy.",
-                    "payload": {
-                        "origin_name": "Origin",
-                        "origin_invariant_prefix": "O",
-                        "origin_abs_index": 0,
-                        "origin_weight": 1.0
-                    }
-                },
-                "child_name": "D",
-                "child_invariant_prefix": "C",
-                "child_abs_index": 3,
-                "child_weight": 0.45619396620536656
-            }
-        },
         "LLM_10_B": {
-            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'B' (Prefix D, Weight 0.26, Index 4) define its role? as a category node, establishing the causal relevance of the origin to its role.",
+            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'B' (Prefix A, Weight 0.80, Index 1) define its role? as a category node, establishing the causal relevance of the origin to its role.",
             "payload": {
                 "origin_name": "Origin",
                 "origin_invariant_prefix": "O",
@@ -527,497 +449,102 @@
                     }
                 },
                 "child_name": "B",
+                "child_invariant_prefix": "A",
+                "child_abs_index": 1,
+                "child_weight": 0.7973760191550607
+            }
+        },
+        "LLM_10_D": {
+            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'D' (Prefix B, Weight 0.36, Index 2) define its role? as a category node, establishing the causal relevance of the origin to its role.",
+            "payload": {
+                "origin_name": "Origin",
+                "origin_invariant_prefix": "O",
+                "origin_abs_index": 0,
+                "origin_weight": 1.0,
+                "parent_name": "Origin",
+                "parent_invariant_prefix": "O",
+                "parent_abs_index": 0,
+                "parent_weight": 1.0,
+                "parent_causal": {
+                    "justification": "Origin node 'Origin' (Prefix O, Index 0, Weight 1.00) is the foundation of the hierarchy.",
+                    "payload": {
+                        "origin_name": "Origin",
+                        "origin_invariant_prefix": "O",
+                        "origin_abs_index": 0,
+                        "origin_weight": 1.0
+                    }
+                },
+                "child_name": "D",
+                "child_invariant_prefix": "B",
+                "child_abs_index": 2,
+                "child_weight": 0.36234647220145144
+            }
+        },
+        "LLM_10_A": {
+            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'A' (Prefix C, Weight 0.06, Index 3) define its role? as a category node, establishing the causal relevance of the origin to its role.",
+            "payload": {
+                "origin_name": "Origin",
+                "origin_invariant_prefix": "O",
+                "origin_abs_index": 0,
+                "origin_weight": 1.0,
+                "parent_name": "Origin",
+                "parent_invariant_prefix": "O",
+                "parent_abs_index": 0,
+                "parent_weight": 1.0,
+                "parent_causal": {
+                    "justification": "Origin node 'Origin' (Prefix O, Index 0, Weight 1.00) is the foundation of the hierarchy.",
+                    "payload": {
+                        "origin_name": "Origin",
+                        "origin_invariant_prefix": "O",
+                        "origin_abs_index": 0,
+                        "origin_weight": 1.0
+                    }
+                },
+                "child_name": "A",
+                "child_invariant_prefix": "C",
+                "child_abs_index": 3,
+                "child_weight": 0.05918528478115426
+            }
+        },
+        "LLM_10_C": {
+            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'C' (Prefix D, Weight 0.04, Index 4) define its role? as a category node, establishing the causal relevance of the origin to its role.",
+            "payload": {
+                "origin_name": "Origin",
+                "origin_invariant_prefix": "O",
+                "origin_abs_index": 0,
+                "origin_weight": 1.0,
+                "parent_name": "Origin",
+                "parent_invariant_prefix": "O",
+                "parent_abs_index": 0,
+                "parent_weight": 1.0,
+                "parent_causal": {
+                    "justification": "Origin node 'Origin' (Prefix O, Index 0, Weight 1.00) is the foundation of the hierarchy.",
+                    "payload": {
+                        "origin_name": "Origin",
+                        "origin_invariant_prefix": "O",
+                        "origin_abs_index": 0,
+                        "origin_weight": 1.0
+                    }
+                },
+                "child_name": "C",
                 "child_invariant_prefix": "D",
                 "child_abs_index": 4,
-                "child_weight": 0.26473698570621773
-            }
-        },
-        "LLM_10_C1": {
-            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'C' (Prefix A, Weight 0.99, Index 1), how should the connection to leaf node 'C1' (Prefix A1, Weight 0.96, Index 5) be interpreted? as a leaf node, propagating the causal definition of its weight from its parent.",
-            "payload": {
-                "origin_name": "Origin",
-                "origin_invariant_prefix": "O",
-                "origin_abs_index": 0,
-                "origin_weight": 1.0,
-                "parent_name": "C",
-                "parent_invariant_prefix": "A",
-                "parent_abs_index": 1,
-                "parent_weight": 0.9909827254715045,
-                "parent_causal": {
-                    "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'C' (Prefix A, Weight 0.99, Index 1) define its role? as a category node, establishing the causal relevance of the origin to its role.",
-                    "payload": {
-                        "origin_name": "Origin",
-                        "origin_invariant_prefix": "O",
-                        "origin_abs_index": 0,
-                        "origin_weight": 1.0,
-                        "parent_name": "Origin",
-                        "parent_invariant_prefix": "O",
-                        "parent_abs_index": 0,
-                        "parent_weight": 1.0,
-                        "parent_causal": {
-                            "justification": "Origin node 'Origin' (Prefix O, Index 0, Weight 1.00) is the foundation of the hierarchy.",
-                            "payload": {
-                                "origin_name": "Origin",
-                                "origin_invariant_prefix": "O",
-                                "origin_abs_index": 0,
-                                "origin_weight": 1.0
-                            }
-                        },
-                        "child_name": "C",
-                        "child_invariant_prefix": "A",
-                        "child_abs_index": 1,
-                        "child_weight": 0.9909827254715045
-                    }
-                },
-                "child_name": "C1",
-                "child_invariant_prefix": "A1",
-                "child_abs_index": 5,
-                "child_weight": 0.9613314452737164
-            }
-        },
-        "LLM_10_C3": {
-            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'C' (Prefix A, Weight 0.99, Index 1), how should the connection to leaf node 'C3' (Prefix A2, Weight 0.39, Index 6) be interpreted? as a leaf node, propagating the causal definition of its weight from its parent.",
-            "payload": {
-                "origin_name": "Origin",
-                "origin_invariant_prefix": "O",
-                "origin_abs_index": 0,
-                "origin_weight": 1.0,
-                "parent_name": "C",
-                "parent_invariant_prefix": "A",
-                "parent_abs_index": 1,
-                "parent_weight": 0.9909827254715045,
-                "parent_causal": {
-                    "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'C' (Prefix A, Weight 0.99, Index 1) define its role? as a category node, establishing the causal relevance of the origin to its role.",
-                    "payload": {
-                        "origin_name": "Origin",
-                        "origin_invariant_prefix": "O",
-                        "origin_abs_index": 0,
-                        "origin_weight": 1.0,
-                        "parent_name": "Origin",
-                        "parent_invariant_prefix": "O",
-                        "parent_abs_index": 0,
-                        "parent_weight": 1.0,
-                        "parent_causal": {
-                            "justification": "Origin node 'Origin' (Prefix O, Index 0, Weight 1.00) is the foundation of the hierarchy.",
-                            "payload": {
-                                "origin_name": "Origin",
-                                "origin_invariant_prefix": "O",
-                                "origin_abs_index": 0,
-                                "origin_weight": 1.0
-                            }
-                        },
-                        "child_name": "C",
-                        "child_invariant_prefix": "A",
-                        "child_abs_index": 1,
-                        "child_weight": 0.9909827254715045
-                    }
-                },
-                "child_name": "C3",
-                "child_invariant_prefix": "A2",
-                "child_abs_index": 6,
-                "child_weight": 0.3890341570511999
-            }
-        },
-        "LLM_10_C2": {
-            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'C' (Prefix A, Weight 0.99, Index 1), how should the connection to leaf node 'C2' (Prefix A3, Weight 0.15, Index 7) be interpreted? as a leaf node, propagating the causal definition of its weight from its parent.",
-            "payload": {
-                "origin_name": "Origin",
-                "origin_invariant_prefix": "O",
-                "origin_abs_index": 0,
-                "origin_weight": 1.0,
-                "parent_name": "C",
-                "parent_invariant_prefix": "A",
-                "parent_abs_index": 1,
-                "parent_weight": 0.9909827254715045,
-                "parent_causal": {
-                    "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'C' (Prefix A, Weight 0.99, Index 1) define its role? as a category node, establishing the causal relevance of the origin to its role.",
-                    "payload": {
-                        "origin_name": "Origin",
-                        "origin_invariant_prefix": "O",
-                        "origin_abs_index": 0,
-                        "origin_weight": 1.0,
-                        "parent_name": "Origin",
-                        "parent_invariant_prefix": "O",
-                        "parent_abs_index": 0,
-                        "parent_weight": 1.0,
-                        "parent_causal": {
-                            "justification": "Origin node 'Origin' (Prefix O, Index 0, Weight 1.00) is the foundation of the hierarchy.",
-                            "payload": {
-                                "origin_name": "Origin",
-                                "origin_invariant_prefix": "O",
-                                "origin_abs_index": 0,
-                                "origin_weight": 1.0
-                            }
-                        },
-                        "child_name": "C",
-                        "child_invariant_prefix": "A",
-                        "child_abs_index": 1,
-                        "child_weight": 0.9909827254715045
-                    }
-                },
-                "child_name": "C2",
-                "child_invariant_prefix": "A3",
-                "child_abs_index": 7,
-                "child_weight": 0.15286264979373798
-            }
-        },
-        "LLM_10_A1": {
-            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'A' (Prefix B, Weight 0.79, Index 2), how should the connection to leaf node 'A1' (Prefix B1, Weight 0.55, Index 8) be interpreted? as a leaf node, propagating the causal definition of its weight from its parent.",
-            "payload": {
-                "origin_name": "Origin",
-                "origin_invariant_prefix": "O",
-                "origin_abs_index": 0,
-                "origin_weight": 1.0,
-                "parent_name": "A",
-                "parent_invariant_prefix": "B",
-                "parent_abs_index": 2,
-                "parent_weight": 0.7870001449448502,
-                "parent_causal": {
-                    "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'A' (Prefix B, Weight 0.79, Index 2) define its role? as a category node, establishing the causal relevance of the origin to its role.",
-                    "payload": {
-                        "origin_name": "Origin",
-                        "origin_invariant_prefix": "O",
-                        "origin_abs_index": 0,
-                        "origin_weight": 1.0,
-                        "parent_name": "Origin",
-                        "parent_invariant_prefix": "O",
-                        "parent_abs_index": 0,
-                        "parent_weight": 1.0,
-                        "parent_causal": {
-                            "justification": "Origin node 'Origin' (Prefix O, Index 0, Weight 1.00) is the foundation of the hierarchy.",
-                            "payload": {
-                                "origin_name": "Origin",
-                                "origin_invariant_prefix": "O",
-                                "origin_abs_index": 0,
-                                "origin_weight": 1.0
-                            }
-                        },
-                        "child_name": "A",
-                        "child_invariant_prefix": "B",
-                        "child_abs_index": 2,
-                        "child_weight": 0.7870001449448502
-                    }
-                },
-                "child_name": "A1",
-                "child_invariant_prefix": "B1",
-                "child_abs_index": 8,
-                "child_weight": 0.5510129766434466
-            }
-        },
-        "LLM_10_A3": {
-            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'A' (Prefix B, Weight 0.79, Index 2), how should the connection to leaf node 'A3' (Prefix B2, Weight 0.46, Index 9) be interpreted? as a leaf node, propagating the causal definition of its weight from its parent.",
-            "payload": {
-                "origin_name": "Origin",
-                "origin_invariant_prefix": "O",
-                "origin_abs_index": 0,
-                "origin_weight": 1.0,
-                "parent_name": "A",
-                "parent_invariant_prefix": "B",
-                "parent_abs_index": 2,
-                "parent_weight": 0.7870001449448502,
-                "parent_causal": {
-                    "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'A' (Prefix B, Weight 0.79, Index 2) define its role? as a category node, establishing the causal relevance of the origin to its role.",
-                    "payload": {
-                        "origin_name": "Origin",
-                        "origin_invariant_prefix": "O",
-                        "origin_abs_index": 0,
-                        "origin_weight": 1.0,
-                        "parent_name": "Origin",
-                        "parent_invariant_prefix": "O",
-                        "parent_abs_index": 0,
-                        "parent_weight": 1.0,
-                        "parent_causal": {
-                            "justification": "Origin node 'Origin' (Prefix O, Index 0, Weight 1.00) is the foundation of the hierarchy.",
-                            "payload": {
-                                "origin_name": "Origin",
-                                "origin_invariant_prefix": "O",
-                                "origin_abs_index": 0,
-                                "origin_weight": 1.0
-                            }
-                        },
-                        "child_name": "A",
-                        "child_invariant_prefix": "B",
-                        "child_abs_index": 2,
-                        "child_weight": 0.7870001449448502
-                    }
-                },
-                "child_name": "A3",
-                "child_invariant_prefix": "B2",
-                "child_abs_index": 9,
-                "child_weight": 0.4645893848687299
-            }
-        },
-        "LLM_10_New_2526": {
-            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'A' (Prefix B, Weight 0.79, Index 2), how should the connection to leaf node 'New_2526' (Prefix B3, Weight 0.06, Index 10) be interpreted? as a leaf node, propagating the causal definition of its weight from its parent.",
-            "payload": {
-                "origin_name": "Origin",
-                "origin_invariant_prefix": "O",
-                "origin_abs_index": 0,
-                "origin_weight": 1.0,
-                "parent_name": "A",
-                "parent_invariant_prefix": "B",
-                "parent_abs_index": 2,
-                "parent_weight": 0.7870001449448502,
-                "parent_causal": {
-                    "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'A' (Prefix B, Weight 0.79, Index 2) define its role? as a category node, establishing the causal relevance of the origin to its role.",
-                    "payload": {
-                        "origin_name": "Origin",
-                        "origin_invariant_prefix": "O",
-                        "origin_abs_index": 0,
-                        "origin_weight": 1.0,
-                        "parent_name": "Origin",
-                        "parent_invariant_prefix": "O",
-                        "parent_abs_index": 0,
-                        "parent_weight": 1.0,
-                        "parent_causal": {
-                            "justification": "Origin node 'Origin' (Prefix O, Index 0, Weight 1.00) is the foundation of the hierarchy.",
-                            "payload": {
-                                "origin_name": "Origin",
-                                "origin_invariant_prefix": "O",
-                                "origin_abs_index": 0,
-                                "origin_weight": 1.0
-                            }
-                        },
-                        "child_name": "A",
-                        "child_invariant_prefix": "B",
-                        "child_abs_index": 2,
-                        "child_weight": 0.7870001449448502
-                    }
-                },
-                "child_name": "New_2526",
-                "child_invariant_prefix": "B3",
-                "child_abs_index": 10,
-                "child_weight": 0.05809099735478329
-            }
-        },
-        "LLM_10_A2": {
-            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'A' (Prefix B, Weight 0.79, Index 2), how should the connection to leaf node 'A2' (Prefix B4, Weight 0.01, Index 11) be interpreted? as a leaf node, propagating the causal definition of its weight from its parent.",
-            "payload": {
-                "origin_name": "Origin",
-                "origin_invariant_prefix": "O",
-                "origin_abs_index": 0,
-                "origin_weight": 1.0,
-                "parent_name": "A",
-                "parent_invariant_prefix": "B",
-                "parent_abs_index": 2,
-                "parent_weight": 0.7870001449448502,
-                "parent_causal": {
-                    "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'A' (Prefix B, Weight 0.79, Index 2) define its role? as a category node, establishing the causal relevance of the origin to its role.",
-                    "payload": {
-                        "origin_name": "Origin",
-                        "origin_invariant_prefix": "O",
-                        "origin_abs_index": 0,
-                        "origin_weight": 1.0,
-                        "parent_name": "Origin",
-                        "parent_invariant_prefix": "O",
-                        "parent_abs_index": 0,
-                        "parent_weight": 1.0,
-                        "parent_causal": {
-                            "justification": "Origin node 'Origin' (Prefix O, Index 0, Weight 1.00) is the foundation of the hierarchy.",
-                            "payload": {
-                                "origin_name": "Origin",
-                                "origin_invariant_prefix": "O",
-                                "origin_abs_index": 0,
-                                "origin_weight": 1.0
-                            }
-                        },
-                        "child_name": "A",
-                        "child_invariant_prefix": "B",
-                        "child_abs_index": 2,
-                        "child_weight": 0.7870001449448502
-                    }
-                },
-                "child_name": "A2",
-                "child_invariant_prefix": "B4",
-                "child_abs_index": 11,
-                "child_weight": 0.011019187648835804
-            }
-        },
-        "LLM_10_D1": {
-            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'D' (Prefix C, Weight 0.46, Index 3), how should the connection to leaf node 'D1' (Prefix C1, Weight 0.56, Index 12) be interpreted? as a leaf node, propagating the causal definition of its weight from its parent.",
-            "payload": {
-                "origin_name": "Origin",
-                "origin_invariant_prefix": "O",
-                "origin_abs_index": 0,
-                "origin_weight": 1.0,
-                "parent_name": "D",
-                "parent_invariant_prefix": "C",
-                "parent_abs_index": 3,
-                "parent_weight": 0.45619396620536656,
-                "parent_causal": {
-                    "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'D' (Prefix C, Weight 0.46, Index 3) define its role? as a category node, establishing the causal relevance of the origin to its role.",
-                    "payload": {
-                        "origin_name": "Origin",
-                        "origin_invariant_prefix": "O",
-                        "origin_abs_index": 0,
-                        "origin_weight": 1.0,
-                        "parent_name": "Origin",
-                        "parent_invariant_prefix": "O",
-                        "parent_abs_index": 0,
-                        "parent_weight": 1.0,
-                        "parent_causal": {
-                            "justification": "Origin node 'Origin' (Prefix O, Index 0, Weight 1.00) is the foundation of the hierarchy.",
-                            "payload": {
-                                "origin_name": "Origin",
-                                "origin_invariant_prefix": "O",
-                                "origin_abs_index": 0,
-                                "origin_weight": 1.0
-                            }
-                        },
-                        "child_name": "D",
-                        "child_invariant_prefix": "C",
-                        "child_abs_index": 3,
-                        "child_weight": 0.45619396620536656
-                    }
-                },
-                "child_name": "D1",
-                "child_invariant_prefix": "C1",
-                "child_abs_index": 12,
-                "child_weight": 0.5647972223988807
-            }
-        },
-        "LLM_10_D2": {
-            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'D' (Prefix C, Weight 0.46, Index 3), how should the connection to leaf node 'D2' (Prefix C2, Weight 0.32, Index 13) be interpreted? as a leaf node, propagating the causal definition of its weight from its parent.",
-            "payload": {
-                "origin_name": "Origin",
-                "origin_invariant_prefix": "O",
-                "origin_abs_index": 0,
-                "origin_weight": 1.0,
-                "parent_name": "D",
-                "parent_invariant_prefix": "C",
-                "parent_abs_index": 3,
-                "parent_weight": 0.45619396620536656,
-                "parent_causal": {
-                    "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'D' (Prefix C, Weight 0.46, Index 3) define its role? as a category node, establishing the causal relevance of the origin to its role.",
-                    "payload": {
-                        "origin_name": "Origin",
-                        "origin_invariant_prefix": "O",
-                        "origin_abs_index": 0,
-                        "origin_weight": 1.0,
-                        "parent_name": "Origin",
-                        "parent_invariant_prefix": "O",
-                        "parent_abs_index": 0,
-                        "parent_weight": 1.0,
-                        "parent_causal": {
-                            "justification": "Origin node 'Origin' (Prefix O, Index 0, Weight 1.00) is the foundation of the hierarchy.",
-                            "payload": {
-                                "origin_name": "Origin",
-                                "origin_invariant_prefix": "O",
-                                "origin_abs_index": 0,
-                                "origin_weight": 1.0
-                            }
-                        },
-                        "child_name": "D",
-                        "child_invariant_prefix": "C",
-                        "child_abs_index": 3,
-                        "child_weight": 0.45619396620536656
-                    }
-                },
-                "child_name": "D2",
-                "child_invariant_prefix": "C2",
-                "child_abs_index": 13,
-                "child_weight": 0.32290369618367154
-            }
-        },
-        "LLM_10_D3": {
-            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'D' (Prefix C, Weight 0.46, Index 3), how should the connection to leaf node 'D3' (Prefix C3, Weight 0.24, Index 14) be interpreted? as a leaf node, propagating the causal definition of its weight from its parent.",
-            "payload": {
-                "origin_name": "Origin",
-                "origin_invariant_prefix": "O",
-                "origin_abs_index": 0,
-                "origin_weight": 1.0,
-                "parent_name": "D",
-                "parent_invariant_prefix": "C",
-                "parent_abs_index": 3,
-                "parent_weight": 0.45619396620536656,
-                "parent_causal": {
-                    "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'D' (Prefix C, Weight 0.46, Index 3) define its role? as a category node, establishing the causal relevance of the origin to its role.",
-                    "payload": {
-                        "origin_name": "Origin",
-                        "origin_invariant_prefix": "O",
-                        "origin_abs_index": 0,
-                        "origin_weight": 1.0,
-                        "parent_name": "Origin",
-                        "parent_invariant_prefix": "O",
-                        "parent_abs_index": 0,
-                        "parent_weight": 1.0,
-                        "parent_causal": {
-                            "justification": "Origin node 'Origin' (Prefix O, Index 0, Weight 1.00) is the foundation of the hierarchy.",
-                            "payload": {
-                                "origin_name": "Origin",
-                                "origin_invariant_prefix": "O",
-                                "origin_abs_index": 0,
-                                "origin_weight": 1.0
-                            }
-                        },
-                        "child_name": "D",
-                        "child_invariant_prefix": "C",
-                        "child_abs_index": 3,
-                        "child_weight": 0.45619396620536656
-                    }
-                },
-                "child_name": "D3",
-                "child_invariant_prefix": "C3",
-                "child_abs_index": 14,
-                "child_weight": 0.24286498710127036
-            }
-        },
-        "LLM_10_B1": {
-            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'B' (Prefix D, Weight 0.26, Index 4), how should the connection to leaf node 'B1' (Prefix D1, Weight 1.00, Index 15) be interpreted? as a leaf node, propagating the causal definition of its weight from its parent.",
-            "payload": {
-                "origin_name": "Origin",
-                "origin_invariant_prefix": "O",
-                "origin_abs_index": 0,
-                "origin_weight": 1.0,
-                "parent_name": "B",
-                "parent_invariant_prefix": "D",
-                "parent_abs_index": 4,
-                "parent_weight": 0.26473698570621773,
-                "parent_causal": {
-                    "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'B' (Prefix D, Weight 0.26, Index 4) define its role? as a category node, establishing the causal relevance of the origin to its role.",
-                    "payload": {
-                        "origin_name": "Origin",
-                        "origin_invariant_prefix": "O",
-                        "origin_abs_index": 0,
-                        "origin_weight": 1.0,
-                        "parent_name": "Origin",
-                        "parent_invariant_prefix": "O",
-                        "parent_abs_index": 0,
-                        "parent_weight": 1.0,
-                        "parent_causal": {
-                            "justification": "Origin node 'Origin' (Prefix O, Index 0, Weight 1.00) is the foundation of the hierarchy.",
-                            "payload": {
-                                "origin_name": "Origin",
-                                "origin_invariant_prefix": "O",
-                                "origin_abs_index": 0,
-                                "origin_weight": 1.0
-                            }
-                        },
-                        "child_name": "B",
-                        "child_invariant_prefix": "D",
-                        "child_abs_index": 4,
-                        "child_weight": 0.26473698570621773
-                    }
-                },
-                "child_name": "B1",
-                "child_invariant_prefix": "D1",
-                "child_abs_index": 15,
-                "child_weight": 0.9960147310328556
+                "child_weight": 0.038500990448713024
             }
         },
         "B_New": {
-            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'B' (Prefix D, Weight 0.26, Index 4), how should the connection to leaf node 'B_New' (Prefix D2, Weight 0.95, Index 16) be interpreted? as a leaf node, propagating the causal definition of its weight from its parent.",
+            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'B' (Prefix A, Weight 0.80, Index 1), how should the connection to leaf node 'B_New' (Prefix A1, Weight 0.95, Index 5) be interpreted? as a leaf node, propagating the causal definition of its weight from its parent.",
             "payload": {
                 "origin_name": "Origin",
                 "origin_invariant_prefix": "O",
                 "origin_abs_index": 0,
                 "origin_weight": 1.0,
                 "parent_name": "B",
-                "parent_invariant_prefix": "D",
-                "parent_abs_index": 4,
-                "parent_weight": 0.26473698570621773,
+                "parent_invariant_prefix": "A",
+                "parent_abs_index": 1,
+                "parent_weight": 0.7973760191550607,
                 "parent_causal": {
-                    "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'B' (Prefix D, Weight 0.26, Index 4) define its role? as a category node, establishing the causal relevance of the origin to its role.",
+                    "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'B' (Prefix A, Weight 0.80, Index 1) define its role? as a category node, establishing the causal relevance of the origin to its role.",
                     "payload": {
                         "origin_name": "Origin",
                         "origin_invariant_prefix": "O",
@@ -1037,30 +564,30 @@
                             }
                         },
                         "child_name": "B",
-                        "child_invariant_prefix": "D",
-                        "child_abs_index": 4,
-                        "child_weight": 0.26473698570621773
+                        "child_invariant_prefix": "A",
+                        "child_abs_index": 1,
+                        "child_weight": 0.7973760191550607
                     }
                 },
                 "child_name": "B_New",
-                "child_invariant_prefix": "D2",
-                "child_abs_index": 16,
+                "child_invariant_prefix": "A1",
+                "child_abs_index": 5,
                 "child_weight": 0.95
             }
         },
         "LLM_10_B2": {
-            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'B' (Prefix D, Weight 0.26, Index 4), how should the connection to leaf node 'B2' (Prefix D3, Weight 0.59, Index 17) be interpreted? as a leaf node, propagating the causal definition of its weight from its parent.",
+            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'B' (Prefix A, Weight 0.80, Index 1), how should the connection to leaf node 'B2' (Prefix A2, Weight 0.87, Index 6) be interpreted? as a leaf node, propagating the causal definition of its weight from its parent.",
             "payload": {
                 "origin_name": "Origin",
                 "origin_invariant_prefix": "O",
                 "origin_abs_index": 0,
                 "origin_weight": 1.0,
                 "parent_name": "B",
-                "parent_invariant_prefix": "D",
-                "parent_abs_index": 4,
-                "parent_weight": 0.26473698570621773,
+                "parent_invariant_prefix": "A",
+                "parent_abs_index": 1,
+                "parent_weight": 0.7973760191550607,
                 "parent_causal": {
-                    "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'B' (Prefix D, Weight 0.26, Index 4) define its role? as a category node, establishing the causal relevance of the origin to its role.",
+                    "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'B' (Prefix A, Weight 0.80, Index 1) define its role? as a category node, establishing the causal relevance of the origin to its role.",
                     "payload": {
                         "origin_name": "Origin",
                         "origin_invariant_prefix": "O",
@@ -1080,30 +607,30 @@
                             }
                         },
                         "child_name": "B",
-                        "child_invariant_prefix": "D",
-                        "child_abs_index": 4,
-                        "child_weight": 0.26473698570621773
+                        "child_invariant_prefix": "A",
+                        "child_abs_index": 1,
+                        "child_weight": 0.7973760191550607
                     }
                 },
                 "child_name": "B2",
-                "child_invariant_prefix": "D3",
-                "child_abs_index": 17,
-                "child_weight": 0.5923169887123959
+                "child_invariant_prefix": "A2",
+                "child_abs_index": 6,
+                "child_weight": 0.8697458949584573
             }
         },
         "LLM_10_B3": {
-            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'B' (Prefix D, Weight 0.26, Index 4), how should the connection to leaf node 'B3' (Prefix D4, Weight 0.16, Index 18) be interpreted? as a leaf node, propagating the causal definition of its weight from its parent.",
+            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'B' (Prefix A, Weight 0.80, Index 1), how should the connection to leaf node 'B3' (Prefix A3, Weight 0.49, Index 7) be interpreted? as a leaf node, propagating the causal definition of its weight from its parent.",
             "payload": {
                 "origin_name": "Origin",
                 "origin_invariant_prefix": "O",
                 "origin_abs_index": 0,
                 "origin_weight": 1.0,
                 "parent_name": "B",
-                "parent_invariant_prefix": "D",
-                "parent_abs_index": 4,
-                "parent_weight": 0.26473698570621773,
+                "parent_invariant_prefix": "A",
+                "parent_abs_index": 1,
+                "parent_weight": 0.7973760191550607,
                 "parent_causal": {
-                    "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'B' (Prefix D, Weight 0.26, Index 4) define its role? as a category node, establishing the causal relevance of the origin to its role.",
+                    "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'B' (Prefix A, Weight 0.80, Index 1) define its role? as a category node, establishing the causal relevance of the origin to its role.",
                     "payload": {
                         "origin_name": "Origin",
                         "origin_invariant_prefix": "O",
@@ -1123,16 +650,500 @@
                             }
                         },
                         "child_name": "B",
-                        "child_invariant_prefix": "D",
-                        "child_abs_index": 4,
-                        "child_weight": 0.26473698570621773
+                        "child_invariant_prefix": "A",
+                        "child_abs_index": 1,
+                        "child_weight": 0.7973760191550607
                     }
                 },
                 "child_name": "B3",
-                "child_invariant_prefix": "D4",
+                "child_invariant_prefix": "A3",
+                "child_abs_index": 7,
+                "child_weight": 0.49121987168909187
+            }
+        },
+        "LLM_10_B1": {
+            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'B' (Prefix A, Weight 0.80, Index 1), how should the connection to leaf node 'B1' (Prefix A4, Weight 0.13, Index 8) be interpreted? as a leaf node, propagating the causal definition of its weight from its parent.",
+            "payload": {
+                "origin_name": "Origin",
+                "origin_invariant_prefix": "O",
+                "origin_abs_index": 0,
+                "origin_weight": 1.0,
+                "parent_name": "B",
+                "parent_invariant_prefix": "A",
+                "parent_abs_index": 1,
+                "parent_weight": 0.7973760191550607,
+                "parent_causal": {
+                    "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'B' (Prefix A, Weight 0.80, Index 1) define its role? as a category node, establishing the causal relevance of the origin to its role.",
+                    "payload": {
+                        "origin_name": "Origin",
+                        "origin_invariant_prefix": "O",
+                        "origin_abs_index": 0,
+                        "origin_weight": 1.0,
+                        "parent_name": "Origin",
+                        "parent_invariant_prefix": "O",
+                        "parent_abs_index": 0,
+                        "parent_weight": 1.0,
+                        "parent_causal": {
+                            "justification": "Origin node 'Origin' (Prefix O, Index 0, Weight 1.00) is the foundation of the hierarchy.",
+                            "payload": {
+                                "origin_name": "Origin",
+                                "origin_invariant_prefix": "O",
+                                "origin_abs_index": 0,
+                                "origin_weight": 1.0
+                            }
+                        },
+                        "child_name": "B",
+                        "child_invariant_prefix": "A",
+                        "child_abs_index": 1,
+                        "child_weight": 0.7973760191550607
+                    }
+                },
+                "child_name": "B1",
+                "child_invariant_prefix": "A4",
+                "child_abs_index": 8,
+                "child_weight": 0.1289692226310889
+            }
+        },
+        "LLM_10_D1": {
+            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'D' (Prefix B, Weight 0.36, Index 2), how should the connection to leaf node 'D1' (Prefix B1, Weight 0.96, Index 9) be interpreted? as a leaf node, propagating the causal definition of its weight from its parent.",
+            "payload": {
+                "origin_name": "Origin",
+                "origin_invariant_prefix": "O",
+                "origin_abs_index": 0,
+                "origin_weight": 1.0,
+                "parent_name": "D",
+                "parent_invariant_prefix": "B",
+                "parent_abs_index": 2,
+                "parent_weight": 0.36234647220145144,
+                "parent_causal": {
+                    "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'D' (Prefix B, Weight 0.36, Index 2) define its role? as a category node, establishing the causal relevance of the origin to its role.",
+                    "payload": {
+                        "origin_name": "Origin",
+                        "origin_invariant_prefix": "O",
+                        "origin_abs_index": 0,
+                        "origin_weight": 1.0,
+                        "parent_name": "Origin",
+                        "parent_invariant_prefix": "O",
+                        "parent_abs_index": 0,
+                        "parent_weight": 1.0,
+                        "parent_causal": {
+                            "justification": "Origin node 'Origin' (Prefix O, Index 0, Weight 1.00) is the foundation of the hierarchy.",
+                            "payload": {
+                                "origin_name": "Origin",
+                                "origin_invariant_prefix": "O",
+                                "origin_abs_index": 0,
+                                "origin_weight": 1.0
+                            }
+                        },
+                        "child_name": "D",
+                        "child_invariant_prefix": "B",
+                        "child_abs_index": 2,
+                        "child_weight": 0.36234647220145144
+                    }
+                },
+                "child_name": "D1",
+                "child_invariant_prefix": "B1",
+                "child_abs_index": 9,
+                "child_weight": 0.9631372963528811
+            }
+        },
+        "LLM_10_D3": {
+            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'D' (Prefix B, Weight 0.36, Index 2), how should the connection to leaf node 'D3' (Prefix B2, Weight 0.73, Index 10) be interpreted? as a leaf node, propagating the causal definition of its weight from its parent.",
+            "payload": {
+                "origin_name": "Origin",
+                "origin_invariant_prefix": "O",
+                "origin_abs_index": 0,
+                "origin_weight": 1.0,
+                "parent_name": "D",
+                "parent_invariant_prefix": "B",
+                "parent_abs_index": 2,
+                "parent_weight": 0.36234647220145144,
+                "parent_causal": {
+                    "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'D' (Prefix B, Weight 0.36, Index 2) define its role? as a category node, establishing the causal relevance of the origin to its role.",
+                    "payload": {
+                        "origin_name": "Origin",
+                        "origin_invariant_prefix": "O",
+                        "origin_abs_index": 0,
+                        "origin_weight": 1.0,
+                        "parent_name": "Origin",
+                        "parent_invariant_prefix": "O",
+                        "parent_abs_index": 0,
+                        "parent_weight": 1.0,
+                        "parent_causal": {
+                            "justification": "Origin node 'Origin' (Prefix O, Index 0, Weight 1.00) is the foundation of the hierarchy.",
+                            "payload": {
+                                "origin_name": "Origin",
+                                "origin_invariant_prefix": "O",
+                                "origin_abs_index": 0,
+                                "origin_weight": 1.0
+                            }
+                        },
+                        "child_name": "D",
+                        "child_invariant_prefix": "B",
+                        "child_abs_index": 2,
+                        "child_weight": 0.36234647220145144
+                    }
+                },
+                "child_name": "D3",
+                "child_invariant_prefix": "B2",
+                "child_abs_index": 10,
+                "child_weight": 0.7264265489601529
+            }
+        },
+        "LLM_10_D2": {
+            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'D' (Prefix B, Weight 0.36, Index 2), how should the connection to leaf node 'D2' (Prefix B3, Weight 0.54, Index 11) be interpreted? as a leaf node, propagating the causal definition of its weight from its parent.",
+            "payload": {
+                "origin_name": "Origin",
+                "origin_invariant_prefix": "O",
+                "origin_abs_index": 0,
+                "origin_weight": 1.0,
+                "parent_name": "D",
+                "parent_invariant_prefix": "B",
+                "parent_abs_index": 2,
+                "parent_weight": 0.36234647220145144,
+                "parent_causal": {
+                    "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'D' (Prefix B, Weight 0.36, Index 2) define its role? as a category node, establishing the causal relevance of the origin to its role.",
+                    "payload": {
+                        "origin_name": "Origin",
+                        "origin_invariant_prefix": "O",
+                        "origin_abs_index": 0,
+                        "origin_weight": 1.0,
+                        "parent_name": "Origin",
+                        "parent_invariant_prefix": "O",
+                        "parent_abs_index": 0,
+                        "parent_weight": 1.0,
+                        "parent_causal": {
+                            "justification": "Origin node 'Origin' (Prefix O, Index 0, Weight 1.00) is the foundation of the hierarchy.",
+                            "payload": {
+                                "origin_name": "Origin",
+                                "origin_invariant_prefix": "O",
+                                "origin_abs_index": 0,
+                                "origin_weight": 1.0
+                            }
+                        },
+                        "child_name": "D",
+                        "child_invariant_prefix": "B",
+                        "child_abs_index": 2,
+                        "child_weight": 0.36234647220145144
+                    }
+                },
+                "child_name": "D2",
+                "child_invariant_prefix": "B3",
+                "child_abs_index": 11,
+                "child_weight": 0.5385461344914506
+            }
+        },
+        "LLM_10_A2": {
+            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'A' (Prefix C, Weight 0.06, Index 3), how should the connection to leaf node 'A2' (Prefix C1, Weight 0.88, Index 12) be interpreted? as a leaf node, propagating the causal definition of its weight from its parent.",
+            "payload": {
+                "origin_name": "Origin",
+                "origin_invariant_prefix": "O",
+                "origin_abs_index": 0,
+                "origin_weight": 1.0,
+                "parent_name": "A",
+                "parent_invariant_prefix": "C",
+                "parent_abs_index": 3,
+                "parent_weight": 0.05918528478115426,
+                "parent_causal": {
+                    "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'A' (Prefix C, Weight 0.06, Index 3) define its role? as a category node, establishing the causal relevance of the origin to its role.",
+                    "payload": {
+                        "origin_name": "Origin",
+                        "origin_invariant_prefix": "O",
+                        "origin_abs_index": 0,
+                        "origin_weight": 1.0,
+                        "parent_name": "Origin",
+                        "parent_invariant_prefix": "O",
+                        "parent_abs_index": 0,
+                        "parent_weight": 1.0,
+                        "parent_causal": {
+                            "justification": "Origin node 'Origin' (Prefix O, Index 0, Weight 1.00) is the foundation of the hierarchy.",
+                            "payload": {
+                                "origin_name": "Origin",
+                                "origin_invariant_prefix": "O",
+                                "origin_abs_index": 0,
+                                "origin_weight": 1.0
+                            }
+                        },
+                        "child_name": "A",
+                        "child_invariant_prefix": "C",
+                        "child_abs_index": 3,
+                        "child_weight": 0.05918528478115426
+                    }
+                },
+                "child_name": "A2",
+                "child_invariant_prefix": "C1",
+                "child_abs_index": 12,
+                "child_weight": 0.8823892373276297
+            }
+        },
+        "LLM_10_New_2526": {
+            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'A' (Prefix C, Weight 0.06, Index 3), how should the connection to leaf node 'New_2526' (Prefix C2, Weight 0.59, Index 13) be interpreted? as a leaf node, propagating the causal definition of its weight from its parent.",
+            "payload": {
+                "origin_name": "Origin",
+                "origin_invariant_prefix": "O",
+                "origin_abs_index": 0,
+                "origin_weight": 1.0,
+                "parent_name": "A",
+                "parent_invariant_prefix": "C",
+                "parent_abs_index": 3,
+                "parent_weight": 0.05918528478115426,
+                "parent_causal": {
+                    "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'A' (Prefix C, Weight 0.06, Index 3) define its role? as a category node, establishing the causal relevance of the origin to its role.",
+                    "payload": {
+                        "origin_name": "Origin",
+                        "origin_invariant_prefix": "O",
+                        "origin_abs_index": 0,
+                        "origin_weight": 1.0,
+                        "parent_name": "Origin",
+                        "parent_invariant_prefix": "O",
+                        "parent_abs_index": 0,
+                        "parent_weight": 1.0,
+                        "parent_causal": {
+                            "justification": "Origin node 'Origin' (Prefix O, Index 0, Weight 1.00) is the foundation of the hierarchy.",
+                            "payload": {
+                                "origin_name": "Origin",
+                                "origin_invariant_prefix": "O",
+                                "origin_abs_index": 0,
+                                "origin_weight": 1.0
+                            }
+                        },
+                        "child_name": "A",
+                        "child_invariant_prefix": "C",
+                        "child_abs_index": 3,
+                        "child_weight": 0.05918528478115426
+                    }
+                },
+                "child_name": "New_2526",
+                "child_invariant_prefix": "C2",
+                "child_abs_index": 13,
+                "child_weight": 0.5899899616644392
+            }
+        },
+        "LLM_10_A1": {
+            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'A' (Prefix C, Weight 0.06, Index 3), how should the connection to leaf node 'A1' (Prefix C3, Weight 0.53, Index 14) be interpreted? as a leaf node, propagating the causal definition of its weight from its parent.",
+            "payload": {
+                "origin_name": "Origin",
+                "origin_invariant_prefix": "O",
+                "origin_abs_index": 0,
+                "origin_weight": 1.0,
+                "parent_name": "A",
+                "parent_invariant_prefix": "C",
+                "parent_abs_index": 3,
+                "parent_weight": 0.05918528478115426,
+                "parent_causal": {
+                    "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'A' (Prefix C, Weight 0.06, Index 3) define its role? as a category node, establishing the causal relevance of the origin to its role.",
+                    "payload": {
+                        "origin_name": "Origin",
+                        "origin_invariant_prefix": "O",
+                        "origin_abs_index": 0,
+                        "origin_weight": 1.0,
+                        "parent_name": "Origin",
+                        "parent_invariant_prefix": "O",
+                        "parent_abs_index": 0,
+                        "parent_weight": 1.0,
+                        "parent_causal": {
+                            "justification": "Origin node 'Origin' (Prefix O, Index 0, Weight 1.00) is the foundation of the hierarchy.",
+                            "payload": {
+                                "origin_name": "Origin",
+                                "origin_invariant_prefix": "O",
+                                "origin_abs_index": 0,
+                                "origin_weight": 1.0
+                            }
+                        },
+                        "child_name": "A",
+                        "child_invariant_prefix": "C",
+                        "child_abs_index": 3,
+                        "child_weight": 0.05918528478115426
+                    }
+                },
+                "child_name": "A1",
+                "child_invariant_prefix": "C3",
+                "child_abs_index": 14,
+                "child_weight": 0.5319116935871491
+            }
+        },
+        "LLM_10_A3": {
+            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'A' (Prefix C, Weight 0.06, Index 3), how should the connection to leaf node 'A3' (Prefix C4, Weight 0.41, Index 15) be interpreted? as a leaf node, propagating the causal definition of its weight from its parent.",
+            "payload": {
+                "origin_name": "Origin",
+                "origin_invariant_prefix": "O",
+                "origin_abs_index": 0,
+                "origin_weight": 1.0,
+                "parent_name": "A",
+                "parent_invariant_prefix": "C",
+                "parent_abs_index": 3,
+                "parent_weight": 0.05918528478115426,
+                "parent_causal": {
+                    "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'A' (Prefix C, Weight 0.06, Index 3) define its role? as a category node, establishing the causal relevance of the origin to its role.",
+                    "payload": {
+                        "origin_name": "Origin",
+                        "origin_invariant_prefix": "O",
+                        "origin_abs_index": 0,
+                        "origin_weight": 1.0,
+                        "parent_name": "Origin",
+                        "parent_invariant_prefix": "O",
+                        "parent_abs_index": 0,
+                        "parent_weight": 1.0,
+                        "parent_causal": {
+                            "justification": "Origin node 'Origin' (Prefix O, Index 0, Weight 1.00) is the foundation of the hierarchy.",
+                            "payload": {
+                                "origin_name": "Origin",
+                                "origin_invariant_prefix": "O",
+                                "origin_abs_index": 0,
+                                "origin_weight": 1.0
+                            }
+                        },
+                        "child_name": "A",
+                        "child_invariant_prefix": "C",
+                        "child_abs_index": 3,
+                        "child_weight": 0.05918528478115426
+                    }
+                },
+                "child_name": "A3",
+                "child_invariant_prefix": "C4",
+                "child_abs_index": 15,
+                "child_weight": 0.4115600291829361
+            }
+        },
+        "LLM_10_C2": {
+            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'C' (Prefix D, Weight 0.04, Index 4), how should the connection to leaf node 'C2' (Prefix D1, Weight 0.56, Index 16) be interpreted? as a leaf node, propagating the causal definition of its weight from its parent.",
+            "payload": {
+                "origin_name": "Origin",
+                "origin_invariant_prefix": "O",
+                "origin_abs_index": 0,
+                "origin_weight": 1.0,
+                "parent_name": "C",
+                "parent_invariant_prefix": "D",
+                "parent_abs_index": 4,
+                "parent_weight": 0.038500990448713024,
+                "parent_causal": {
+                    "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'C' (Prefix D, Weight 0.04, Index 4) define its role? as a category node, establishing the causal relevance of the origin to its role.",
+                    "payload": {
+                        "origin_name": "Origin",
+                        "origin_invariant_prefix": "O",
+                        "origin_abs_index": 0,
+                        "origin_weight": 1.0,
+                        "parent_name": "Origin",
+                        "parent_invariant_prefix": "O",
+                        "parent_abs_index": 0,
+                        "parent_weight": 1.0,
+                        "parent_causal": {
+                            "justification": "Origin node 'Origin' (Prefix O, Index 0, Weight 1.00) is the foundation of the hierarchy.",
+                            "payload": {
+                                "origin_name": "Origin",
+                                "origin_invariant_prefix": "O",
+                                "origin_abs_index": 0,
+                                "origin_weight": 1.0
+                            }
+                        },
+                        "child_name": "C",
+                        "child_invariant_prefix": "D",
+                        "child_abs_index": 4,
+                        "child_weight": 0.038500990448713024
+                    }
+                },
+                "child_name": "C2",
+                "child_invariant_prefix": "D1",
+                "child_abs_index": 16,
+                "child_weight": 0.5625204349855866
+            }
+        },
+        "LLM_10_C3": {
+            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'C' (Prefix D, Weight 0.04, Index 4), how should the connection to leaf node 'C3' (Prefix D2, Weight 0.49, Index 17) be interpreted? as a leaf node, propagating the causal definition of its weight from its parent.",
+            "payload": {
+                "origin_name": "Origin",
+                "origin_invariant_prefix": "O",
+                "origin_abs_index": 0,
+                "origin_weight": 1.0,
+                "parent_name": "C",
+                "parent_invariant_prefix": "D",
+                "parent_abs_index": 4,
+                "parent_weight": 0.038500990448713024,
+                "parent_causal": {
+                    "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'C' (Prefix D, Weight 0.04, Index 4) define its role? as a category node, establishing the causal relevance of the origin to its role.",
+                    "payload": {
+                        "origin_name": "Origin",
+                        "origin_invariant_prefix": "O",
+                        "origin_abs_index": 0,
+                        "origin_weight": 1.0,
+                        "parent_name": "Origin",
+                        "parent_invariant_prefix": "O",
+                        "parent_abs_index": 0,
+                        "parent_weight": 1.0,
+                        "parent_causal": {
+                            "justification": "Origin node 'Origin' (Prefix O, Index 0, Weight 1.00) is the foundation of the hierarchy.",
+                            "payload": {
+                                "origin_name": "Origin",
+                                "origin_invariant_prefix": "O",
+                                "origin_abs_index": 0,
+                                "origin_weight": 1.0
+                            }
+                        },
+                        "child_name": "C",
+                        "child_invariant_prefix": "D",
+                        "child_abs_index": 4,
+                        "child_weight": 0.038500990448713024
+                    }
+                },
+                "child_name": "C3",
+                "child_invariant_prefix": "D2",
+                "child_abs_index": 17,
+                "child_weight": 0.48749489969228843
+            }
+        },
+        "LLM_10_C1": {
+            "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'C' (Prefix D, Weight 0.04, Index 4), how should the connection to leaf node 'C1' (Prefix D3, Weight 0.47, Index 18) be interpreted? as a leaf node, propagating the causal definition of its weight from its parent.",
+            "payload": {
+                "origin_name": "Origin",
+                "origin_invariant_prefix": "O",
+                "origin_abs_index": 0,
+                "origin_weight": 1.0,
+                "parent_name": "C",
+                "parent_invariant_prefix": "D",
+                "parent_abs_index": 4,
+                "parent_weight": 0.038500990448713024,
+                "parent_causal": {
+                    "justification": "Given origin's definition from 'Origin' (Prefix O, Weight 1.00, Index 0) and its subsequent definition from category 'Origin' (Prefix O, Weight 1.00, Index 0), how does the connection to category 'C' (Prefix D, Weight 0.04, Index 4) define its role? as a category node, establishing the causal relevance of the origin to its role.",
+                    "payload": {
+                        "origin_name": "Origin",
+                        "origin_invariant_prefix": "O",
+                        "origin_abs_index": 0,
+                        "origin_weight": 1.0,
+                        "parent_name": "Origin",
+                        "parent_invariant_prefix": "O",
+                        "parent_abs_index": 0,
+                        "parent_weight": 1.0,
+                        "parent_causal": {
+                            "justification": "Origin node 'Origin' (Prefix O, Index 0, Weight 1.00) is the foundation of the hierarchy.",
+                            "payload": {
+                                "origin_name": "Origin",
+                                "origin_invariant_prefix": "O",
+                                "origin_abs_index": 0,
+                                "origin_weight": 1.0
+                            }
+                        },
+                        "child_name": "C",
+                        "child_invariant_prefix": "D",
+                        "child_abs_index": 4,
+                        "child_weight": 0.038500990448713024
+                    }
+                },
+                "child_name": "C1",
+                "child_invariant_prefix": "D3",
                 "child_abs_index": 18,
-                "child_weight": 0.16183138142447673
+                "child_weight": 0.470466020402741
             }
         }
     }
 }
+
+def print_tree(node, indent=0):
+    prefix = node.invariant_prefix if node.invariant_prefix is not None else "N/A"
+    bounds = node.get_submatrix_bounds()  # Retrieves the node's submatrix bounds
+    print("  " * indent + f"Node: {node.label} (abs_index: {node.abs_index}) - Prefix: {prefix} - Bounds: {bounds}")
+    for child in node.children:
+        print_tree(child, indent + 1)
+
+# Example usage:
+print("\nFinal Hierarchy with Submatrix Bounds and Prefixes:")
+print_tree(root)
