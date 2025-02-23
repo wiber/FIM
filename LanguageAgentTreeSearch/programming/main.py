@@ -1977,13 +1977,6 @@ class FIMHierarchy:
         max_iterations = 5
         iteration = 0
         while iteration < max_iterations:
-            # First, normalize weights if needed.
-            self.normalize_weights()
-
-            # Then, try to auto-attach any orphaned nodes.
-            self.auto_attach_orphaned_nodes()
-
-            # Validate structure and try to repair ordering.
             valid = self.validate_structure()
             repaired = self.repair_hierarchy()
             self.trigger_hierarchy_update()
@@ -2282,6 +2275,160 @@ class FIMHierarchy:
                     logging.info("Normalized weight of node %s from %s to %s (parent %s weight %s)",
                                  node.label, old_weight, node.weight, node.parent.label, node.parent.weight)
 
+    def set_node_field(self, node_id, field, new_value):
+        """
+        Set the specified field for the node with the given node_id.
+        If no such node exists, raise a ValueError.
+        """
+        found = False
+        for node in self.linear_order:
+            if node.node_id == node_id:
+                setattr(node, field, new_value)
+                logging.info("Set field '%s' of node %s (id: %s) to %s",
+                             field, node.label, node.node_id, new_value)
+                found = True
+                break
+        if not found:
+            raise ValueError(f"Node with id {node_id} not found.")
+    
+    def get_node_field(self, node_id, field):
+        """
+        Retrieve the value of the specified field for the node with the given node_id.
+        Raises a ValueError if the node is not found.
+        """
+        for node in self.linear_order:
+            if node.node_id == node_id:
+                return getattr(node, field)
+        raise ValueError(f"Node with id {node_id} not found.")
+    
+    def get_node_by_prefix(self, prefix):
+        """
+        Return the first node with the given invariant_prefix.
+        If no node is found, return None.
+        """
+        for node in self.linear_order:
+            if node.invariant_prefix == prefix:
+                return node
+        return None
+
+    def get_node_field(self, node_id, field):
+        """
+        Retrieves the value of the given field for the node with the specified node_id.
+        Raises ValueError if no such node is found.
+        """
+        for node in self.linear_order:
+            if node.node_id == node_id:
+                return getattr(node, field)
+        raise ValueError(f"Node {node_id} not found.")
+
+    def set_node_field(self, node_id, field, new_value):
+        """
+        Sets the given field of the node with the specified node_id to new_value.
+        Marks the structure as modified. Raises ValueError if no such node is found.
+        """
+        for node in self.linear_order:
+            if node.node_id == node_id:
+                setattr(node, field, new_value)
+                self.state["structure_modified"] = True
+                logging.info("Field '%s' updated for node %s (new value: %s)",
+                             field, node.label, new_value)
+                return
+        raise ValueError(f"Node {node_id} not found.")
+
+    def get_node_by_prefix(self, prefix):
+        """
+        Returns the first node found with the given invariant prefix.
+        Raises ValueError if no such node is found.
+        """
+        for node in self.linear_order:
+            if node.invariant_prefix == prefix:
+                return node
+        raise ValueError(f"Node with prefix {prefix} not found.")
+
+    def to_prompt_json(self):
+        """
+        Returns a prompt-ready JSON representation as a list of dictionaries,
+        where each dictionary represents a node with select fields.
+        """
+        result = []
+        for node in self.linear_order:
+            node_dict = {
+                "node_id": node.node_id,
+                "label": node.label,
+                "weight": node.weight,
+                "parent_id": node.parent.node_id if node.parent else None,
+                "abs_index": node.abs_index,
+                "prefix": node.invariant_prefix,
+                "submatrix_bounds": node.get_submatrix_bounds(),
+                "cause_effect_relation": node.causal_inference if hasattr(node, "causal_inference") else {}
+            }
+            result.append(node_dict)
+        return result
+
+    def get_node_by_id(self, node_id):
+        """
+        Retrieve a node based on its unique identifier.
+        """
+        for node in self.linear_order:
+            if node.node_id == node_id:
+                return node
+        return None
+
+    def get_node_field(self, node_id, field):
+        """
+        Retrieve the specified field of the node with the given node_id.
+        """
+        node = self.get_node_by_id(node_id)
+        if not node:
+            raise ValueError(f"Node with id {node_id} not found.")
+        return getattr(node, field, None)
+
+    def set_node_field(self, node_id, field, new_value):
+        """
+        Set the specified field of the node with the given node_id to new_value.
+        """
+        node = self.get_node_by_id(node_id)
+        if not node:
+            raise ValueError(f"Node with id {node_id} not found.")
+        setattr(node, field, new_value)
+        logging.info("Set node %s: %s = %s", node_id, field, new_value)
+
+    def set_node_field(self, node_id, field, new_value):
+        """
+        Updates the field for a given node identified by node_id.
+        If the node is not found, raises a ValueError.
+        """
+        for node in self.linear_order:
+            if node.node_id == node_id:
+                setattr(node, field, new_value)
+                logging.info("Updated node %s field %s to value %s", node.label, field, new_value)
+                return
+        raise ValueError(f"Node {node_id} not found.")
+
+    def get_node_field(self, node_id, field):
+        """
+        Returns the value of the given field for a node identified by node_id.
+        If the node is not found, raises a ValueError.
+        """
+        for node in self.linear_order:
+            if node.node_id == node_id:
+                return getattr(node, field)
+        raise ValueError(f"Node {node_id} not found.")
+
+    def get_flat_state(self):
+        """
+        Returns a flattened dictionary mapping node_id to a dictionary of selected fields.
+        Fields include 'weight', 'parent_id' and 'abs_index'.
+        """
+        state = {}
+        for node in self.linear_order:
+            state[node.node_id] = {
+                "weight": node.weight,
+                "parent_id": node.parent.node_id if node.parent else None,
+                "abs_index": node.abs_index,
+            }
+        return state
+
 def simulate_origin_metadata(node, iteration):
     """
     Simulate causal metadata for the origin node.
@@ -2493,6 +2640,8 @@ def main():
 
     # 3. Propagate explicit causal effects to clearly label cause-effect relations.
     propagate_causal_effects(fim.root)
+    # Define the Origin node via LLM simulation.
+    define_origin_via_llm(fim)
 
     # 4. Export a prompt-ready hierarchy JSON for LLM consumption.
     prompt_json = fim.to_prompt_json()
@@ -2551,6 +2700,8 @@ def main():
 
     # 10. Propagate cumulative causal influence (accumulating parent's chain downward).
     propagate_cumulative_causality(fim.root)
+    # Propagate per-node causal influence (inherited vs computed).
+    propagate_causal_influence(fim.root)
 
     # 11. Print the entire hierarchy for inspection.
     print("\n--- Final Hierarchy Structure ---")
@@ -2573,11 +2724,76 @@ def propagate_cumulative_causality(node, cumulative=None):
     if cumulative is None:
         cumulative = []
     new_cumulative = cumulative.copy()
-    if hasattr(node, "causal_inference") and ("cause_effect_relation" in node.causal_inference):
+    if hasattr(node, "causal_inference") and (node.causal_inference.get("cause_effect_relation") is not None):
         new_cumulative.append(node.causal_inference["cause_effect_relation"])
     node.cumulative_causality = new_cumulative
     for child in node.children:
         propagate_cumulative_causality(child, new_cumulative)
+
+def compare_states(previous_state, current_state):
+    """
+    Compares two flattened hierarchy states represented as dictionaries mapping node_id -> state.
+    Returns a diff dictionary where differences are noted.
+    """
+    changes = {}
+    for node_id, old_state in previous_state.items():
+        new_state = current_state.get(node_id)
+        if not new_state:
+            changes[node_id] = "Node removed"
+        else:
+            diffs = {}
+            for key in old_state:
+                if old_state[key] != new_state.get(key):
+                    diffs[key] = (old_state[key], new_state.get(key))
+            if diffs:
+                changes[node_id] = diffs
+    for node_id in current_state:
+        if node_id not in previous_state:
+            changes[node_id] = "New node added"
+    return changes
+
+def define_origin_via_llm(fim_hierarchy):
+    """
+    Uses a simulated LLM call to define the origin node.
+    In a real system, this would call an API; here we assign a dummy explanation.
+    """
+    prompt = """
+    Define the origin node based on its children and their influence.
+    - List all direct children.
+    - Normalize their weights such that their sum is 1.0.
+    - Determine the inherent influence of each.
+    """
+    # Simulate an LLM response.
+    origin_definition = ("Origin node holds the overall structure; direct children serve as "
+                         "primary categories, each influencing the overall decision with normalized weights.")
+    fim_hierarchy.root.causal_metadata["origin_definition"] = origin_definition
+    logging.info("LLM defined Origin: %s", origin_definition)
+
+def propagate_causal_influence(node):
+    """
+    Propagates causal influence down the hierarchy.
+    For each node (except the root), computes its influence score as the ratio of its weight to that of its parent,
+    and marks the source of the influence as 'inherited' by default.
+    """
+    if node.parent:
+        parent_weight = node.parent.weight if node.parent.weight else 1.0
+        node.causal_metadata["influence_score"] = round(node.weight / parent_weight, 2)
+        node.causal_metadata["causal_source"] = "inherited"
+    for child in node.children:
+        propagate_causal_influence(child)
+
+def simulate_llm_update(prompt_json):
+    """
+    Simulates an LLM update process.
+    In a real integration, this function would send prompt_json to an LLM API and return suggestions.
+    
+    For simulation purposes, return a fixed suggestion list.
+    Example suggestion:
+      [{"node_id": "B_simulated_3", "field": "weight", "new_value": 0.85}]
+    """
+    suggestions = []
+    suggestions.append({"node_id": "B_simulated_3", "field": "weight", "new_value": 0.85})
+    return suggestions
 
 if __name__ == "__main__":
     main()
