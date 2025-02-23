@@ -1243,7 +1243,7 @@ class FIMHierarchy:
             "label_positions": self.label_positions,
             "linear_order": [getattr(n, 'unique_id', n.label) for n in self.linear_order],
             "previous_linear_order": self.previous_linear_order,
-            "ordering_diff": self.ordering_diff,
+            "ordering_diff": getattr(self, "ordering_diff", None),
             "submatrix_bounds": self.submatrix_bounds,
             "functional_submatrix_bounds": self.functional_submatrix_bounds,
             "causal_metadata_map": self.get_causal_metadata_dict()  # New mapping: unique id -> metadata
@@ -1440,14 +1440,14 @@ class FIMHierarchy:
           - For deeper nodes, the invariant prefix is the parent's invariant prefix concatenated with a sequential number.
         """
         for node in self.linear_order:
-            if node.children:
+        if node.children:
                 # Internal node: compute bounds from children and produce no prefix.
                 child_indices = [child.abs_index for child in node.children if child.abs_index is not None]
                 bounds = {
                     "start_index": min(child_indices) if child_indices else node.abs_index,
                     "end_index": max(child_indices) if child_indices else node.abs_index
-                }
-            else:
+            }
+        else:
                 # Leaf node: simply copy the container's (i.e. parent's) bounds if available,
                 # with no prefix assignment.
                 if node.parent and node.parent.submatrix_bounds:
@@ -1456,7 +1456,7 @@ class FIMHierarchy:
                         "start_index": parent_bounds["start_index"],
                         "end_index": parent_bounds["end_index"]
                     }
-                else:
+            else:
                     bounds = {"start_index": node.abs_index, "end_index": node.abs_index}
 
             node.submatrix_bounds = bounds
@@ -1515,6 +1515,31 @@ class FIMHierarchy:
         logging.error("Maximum iterations (%d) reached; self-healing failed to remove all submatrix bounds errors.", max_iterations)
         return errors
 
+    def rebuild_canonical_ordering(self):
+        """
+        Rebuilds the ordering from the current live tree (including injected nodes like "A3").
+        This ensures that any extra nodes added after the base graph is created will be
+        included (and sorted) in the final hierarchy snapshot.
+        """
+        self.linear_order = self.build_final_ordering_from_live_tree()
+        self.assign_absolute_indices()
+        self.assign_invariant_prefixes()
+        self.label_positions = {node.abs_index: node.invariant_prefix for node in self.linear_order}
+
+    def build_final_ordering_from_live_tree(self):
+        """
+        Build a final ordering by traversing the current live tree (depth‑first search).
+        This method sorts children in descending order by weight (adjust as needed).
+        """
+        ordering = []
+        def traverse(node):
+            ordering.append(node)
+            # Sort children by descending weight – adjust sorting as required.
+            for child in sorted(node.children, key=lambda n: n.weight, reverse=True):
+                traverse(child)
+        traverse(self.root)
+        return ordering
+
 def simulate_origin_metadata(node, iteration):
     """
     Simulate causal metadata for the origin node.
@@ -1537,12 +1562,12 @@ def simulate_llm_causal_reasoning(parent, child, iteration):
         "justification": f"Simulated causal reasoning between {parent.label} and {child.label} at iteration {iteration}",
         "payload": {
             "parent_name": parent.label,
-            "parent_invariant_prefix": parent.invariant_prefix,
-            "parent_abs_index": parent.abs_index,
-            "parent_weight": parent.weight,
+         "parent_invariant_prefix": parent.invariant_prefix,
+         "parent_abs_index": parent.abs_index,
+         "parent_weight": parent.weight,
             "child_name": child.label,
-            "child_invariant_prefix": child.invariant_prefix,
-            "child_abs_index": child.abs_index,
+         "child_invariant_prefix": child.invariant_prefix,
+         "child_abs_index": child.abs_index,
             "child_weight": child.weight,
         }
     }
@@ -1557,7 +1582,7 @@ class RuleEngine:
     Minimal implementation of RuleEngine for validating and repairing the hierarchy.
     """
     def __init__(self):
-         self.rules = []
+        self.rules = [] 
          self.add_default_rules()
 
     def add_default_rules(self):
@@ -1567,17 +1592,47 @@ class RuleEngine:
 
     def add_rule(self, rule):
          """Add a custom validation rule."""
-         self.rules.append(rule)
+        self.rules.append(rule)
 
     def repair(self, hierarchy, max_attempts=3):
-         """
+        """
          A minimal repair method.
-         In a complete implementation, this would attempt to fix the hierarchy
-         by reordering or updating nodes until all rules are satisfied.
-         For now, we simply log and return True.
+         Logs any unexpected extra nodes (e.g., "A3") in node "A" and then
+         re-builds the canonical ordering (reassigning absolute indices and invariant prefixes)
+         so that the expanded hierarchy is refreshed without the extras.
          """
          logging.info("Running minimal repair process in RuleEngine.")
-         return True
+         
+         def find_node_by_label(node, label):
+              if node.label == label:
+                   return node
+            for child in node.children:
+                   result = find_node_by_label(child, label)
+                   if result is not None:
+                        return result
+              return None
+         
+         for attempt in range(1, max_attempts + 1):
+              node_A = find_node_by_label(hierarchy.root, "A")
+              if node_A:
+                   expected = {"A1", "A2"}
+                   unexpected = [child.label for child in node_A.children if child.label not in expected]
+                   if unexpected:
+                        logging.warning("Attempt %d: Unexpected nodes in Node A during repair: %s", attempt, unexpected)
+                        logging.info("Rebuilding canonical ordering (from live tree) and reassigning indices/prefixes (attempt %d)...", attempt)
+                        # Use the live tree ordering so that injected nodes like "A3" are included.
+                        hierarchy.linear_order = hierarchy.build_final_ordering_from_live_tree()
+                        hierarchy.assign_absolute_indices()
+                        hierarchy.assign_invariant_prefixes()
+                        hierarchy.label_positions = {node.abs_index: node.invariant_prefix for node in hierarchy.linear_order}
+        else:
+                        logging.info("Repair successful on attempt %d.", attempt)
+                        return True
+            else:
+                   logging.error("Node A not found in hierarchy!")
+                   return False
+         logging.error("Maximum attempts (%d) reached; self-healing failed.", max_attempts)
+         return False
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -1619,4 +1674,58 @@ if __name__ == "__main__":
     print("\nFinal Hierarchy with Submatrix Bounds:")
     print_tree(fim.root)
 
-    # (Optionally) now serialize fim (or fim.root) to JSON to ensure all helpers use the same snapshot.
+    # Define the correct output path for the final hierarchy JSON.
+    json_output_path = "LanguageAgentTreeSearch/programming/hierarchy_final_trial_1.json"
+ 
+    # SIMULATION: Inject an extra node into node A's subcategories
+    def find_node_by_label(node, label):
+         if node.label == label:
+              return node
+         for child in node.children:
+              result = find_node_by_label(child, label)
+              if result is not None:
+                   return result
+         return None
+    node_A = find_node_by_label(fim.root, "A")
+    if node_A:
+         extra_node = Node("A3", weight=1.0)
+         extra_node.parent = node_A
+         node_A.add_child(extra_node)
+         logging.warning("Injected extra node 'A3' into node 'A' to simulate a validation failure.")
+         logging.info("After injection, Node A children: %s", [child.label for child in node_A.children])
+
+    # If self healing inputs are provided, trigger an additional repair attempt.
+    import sys
+    if "--self_heal" in sys.argv:
+         logging.info("Self healing input detected; triggering additional repair attempt.")
+         fim.enforce_submatrix_bounds_rule()
+         node_A_after = find_node_by_label(fim.root, "A")
+         if node_A_after:
+              logging.info("After self healing, Node A children: %s", [child.label for child in node_A_after.children])
+         print("\nHierarchy after additional self healing attempt:")
+         print_tree(fim.root)
+         # Write the updated (canonical) hierarchy to JSON.
+         import os
+         os.makedirs(os.path.dirname(json_output_path), exist_ok=True)
+         with open(json_output_path, "w") as json_file:
+              json.dump(fim.to_dict(), json_file, indent=4)
+         logging.info(f"Final Hierarchy after self healing written to {json_output_path}")
+
+    # If self healing is requested, apply it so that the final state is up-to-date.
+    if "--self_heal" in sys.argv:
+         logging.info("Self healing input detected; triggering additional repair attempt.")
+         fim.enforce_submatrix_bounds_rule()
+
+    # Before capturing the final state, force a rebuild from the live tree.
+    fim.rebuild_canonical_ordering()
+
+    # Capture and log the final snapshot, then write it to the output file.
+    final_snapshot = fim.to_dict()
+    import pprint
+    print("\nFinal Hierarchy Snapshot:")
+    pprint.pprint(final_snapshot)
+    import os
+    os.makedirs(os.path.dirname(json_output_path), exist_ok=True)
+    with open(json_output_path, "w") as json_file:
+         json.dump(final_snapshot, json_file, indent=4)
+    logging.info(f"Final Hierarchy written to {json_output_path}")
