@@ -196,24 +196,18 @@ logger = logging.getLogger(__name__)
 
 # For completeness in this example, we define a simple Node class here.
 class Node:
-    def __init__(self, label, weight=1.0, name=None):
-        """
-        Initializes a Node in the hierarchy.
-
-        Parameters:
-            label (str): The label for the node.
-            weight (float): The weight assigned to the node.
-            name (str, optional): A unique identifier for the node (defaults to label).
-        """
+    def __init__(self, label, weight=1.0, skip_factor=1.0):
         self.label = label
-        self.invariant_label = label    # Added to preserve original immutable ID
+        self.invariant_label = label  # Preserve original immutable label for simulation.
         self.weight = weight
-        self.name = name if name is not None else label
-        self.invariant_prefix = ""
+        self.skip_factor = skip_factor
         self.children = []
         self.parent = None
         self.abs_index = None
-        self.submatrix_bounds = {"start_index": None, "end_index": None}
+        self.invariant_prefix = None
+        self.submatrix_bounds = {"start_index": None, "end_index": None}  # Reintroduced submatrix bounds.
+        # Initialize causal_metadata so that every Node has a default value.
+        self.causal_metadata = {}
 
     def add_child(self, child):
         self.children.append(child)
@@ -1440,25 +1434,27 @@ class FIMHierarchy:
           - For deeper nodes, the invariant prefix is the parent's invariant prefix concatenated with a sequential number.
         """
         for node in self.linear_order:
-        if node.children:
+            if node.children:
                 # Internal node: compute bounds from children and produce no prefix.
-                child_indices = [child.abs_index for child in node.children if child.abs_index is not None]
+                child_indices = [
+                    child.abs_index for child in node.children if child.abs_index is not None
+                ]
                 bounds = {
                     "start_index": min(child_indices) if child_indices else node.abs_index,
                     "end_index": max(child_indices) if child_indices else node.abs_index
-            }
-        else:
+                }
+            else:
                 # Leaf node: simply copy the container's (i.e. parent's) bounds if available,
                 # with no prefix assignment.
                 if node.parent and node.parent.submatrix_bounds:
                     parent_bounds = node.parent.submatrix_bounds
                     bounds = {
-                        "start_index": parent_bounds["start_index"],
-                        "end_index": parent_bounds["end_index"]
+                        "start_index": parent_bounds.get("start_index", node.abs_index),
+                        "end_index": parent_bounds.get("end_index", node.abs_index)
                     }
-            else:
+                else:
                     bounds = {"start_index": node.abs_index, "end_index": node.abs_index}
-
+    
             node.submatrix_bounds = bounds
             logging.debug("Assigned bounds for node %s: %s", node.label, node.submatrix_bounds)
 
@@ -1534,7 +1530,6 @@ class FIMHierarchy:
         ordering = []
         def traverse(node):
             ordering.append(node)
-            # Sort children by descending weight – adjust sorting as required.
             for child in sorted(node.children, key=lambda n: n.weight, reverse=True):
                 traverse(child)
         traverse(self.root)
@@ -1582,57 +1577,100 @@ class RuleEngine:
     Minimal implementation of RuleEngine for validating and repairing the hierarchy.
     """
     def __init__(self):
-        self.rules = [] 
-         self.add_default_rules()
+        self.rules = []
+        self.add_default_rules()
 
     def add_default_rules(self):
-         # Add default rules if available.
-         # For now, no default rules are set.
-         pass
+        # Add default rules if available.
+        # For now, no default rules are set.
+        pass
 
     def add_rule(self, rule):
-         """Add a custom validation rule."""
+        """Add a custom validation rule."""
         self.rules.append(rule)
 
     def repair(self, hierarchy, max_attempts=3):
         """
-         A minimal repair method.
-         Logs any unexpected extra nodes (e.g., "A3") in node "A" and then
-         re-builds the canonical ordering (reassigning absolute indices and invariant prefixes)
-         so that the expanded hierarchy is refreshed without the extras.
-         """
-         logging.info("Running minimal repair process in RuleEngine.")
-         
-         def find_node_by_label(node, label):
-              if node.label == label:
-                   return node
+        A minimal repair method.
+        Rebuilds the canonical ordering from the live tree and checks that the extra node is present.
+        """
+        logging.info("Running minimal repair process in RuleEngine.")
+
+        def find_node_by_label(node, label):
+            if node.label == label:
+                return node
             for child in node.children:
-                   result = find_node_by_label(child, label)
-                   if result is not None:
-                        return result
-              return None
-         
-         for attempt in range(1, max_attempts + 1):
-              node_A = find_node_by_label(hierarchy.root, "A")
-              if node_A:
-                   expected = {"A1", "A2"}
-                   unexpected = [child.label for child in node_A.children if child.label not in expected]
-                   if unexpected:
-                        logging.warning("Attempt %d: Unexpected nodes in Node A during repair: %s", attempt, unexpected)
-                        logging.info("Rebuilding canonical ordering (from live tree) and reassigning indices/prefixes (attempt %d)...", attempt)
-                        # Use the live tree ordering so that injected nodes like "A3" are included.
-                        hierarchy.linear_order = hierarchy.build_final_ordering_from_live_tree()
-                        hierarchy.assign_absolute_indices()
-                        hierarchy.assign_invariant_prefixes()
-                        hierarchy.label_positions = {node.abs_index: node.invariant_prefix for node in hierarchy.linear_order}
-        else:
-                        logging.info("Repair successful on attempt %d.", attempt)
-                        return True
-            else:
-                   logging.error("Node A not found in hierarchy!")
-                   return False
-         logging.error("Maximum attempts (%d) reached; self-healing failed.", max_attempts)
-         return False
+                result = find_node_by_label(child, label)
+                if result is not None:
+                    return result
+            return None
+          
+        success = False
+        for attempt in range(1, max_attempts + 1):
+            node_A = find_node_by_label(hierarchy.root, "LLM_3_A")
+            if not node_A:
+                logging.error("Node LLM_3_A not found in hierarchy!")
+                return False
+  
+            logging.info("Rebuilding canonical ordering (from live tree) and reassigning indices/prefixes (attempt %d)...", attempt)
+            # Rebuild ordering from live tree (which now includes the extra node, if attached)
+            hierarchy.linear_order = hierarchy.build_final_ordering_from_live_tree()
+            hierarchy.assign_absolute_indices()
+            hierarchy.assign_invariant_prefixes()
+            hierarchy.label_positions = {node.abs_index: node.invariant_prefix for node in hierarchy.linear_order}
+
+            # Check that the extra node (labeled with "A3") is present among node_A's children.
+            if any("A3" in child.label for child in node_A.children):
+                logging.info("Extra node found in LLM_3_A children. Repair successful on attempt %d.", attempt)
+                success = True
+                break
+        if not success:
+            logging.error("Maximum attempts (%d) reached; self-healing failed.", max_attempts)
+            return False
+        return True
+
+# Global helper defintion for searching a node by label
+def find_node_by_label(node, label):
+    if node.label == label:
+        return node
+    for child in node.children:
+        result = find_node_by_label(child, label)
+        if result is not None:
+            return result
+    return None
+
+# Global helper function to update labels based on simulation rules.
+def update_labels(node, iteration=3):
+    """
+    Recursively update every node's label and causal metadata.
+    This simulation function updates the label by appending a suffix based on the iteration,
+    and adds a 'simulation_iteration' field into the node's causal_metadata.
+    """
+    node.label = f"{node.invariant_label}_simulated_{iteration}"
+    node.causal_metadata["simulation_iteration"] = iteration
+    for child in node.children:
+        update_labels(child, iteration)
+
+# Global helper function to update in-links (simulate causal reasoning)
+def update_in_links(node, iteration=3):
+    """
+    Recursively update each node's causal metadata with simulation link data if missing.
+    This ensures that each node (especially new ones) has a proper in link connecting it to its parent.
+    """
+    if node.parent and 'justification' not in node.causal_metadata:
+        node.causal_metadata["justification"] = f"Simulated causal reasoning between {node.parent.label} and {node.label} at iteration {iteration}"
+        node.causal_metadata["payload"] = {
+            "parent_name": node.parent.label,
+            "parent_invariant_prefix": node.parent.invariant_prefix,
+            "parent_abs_index": node.parent.abs_index,
+            "parent_weight": node.parent.weight,
+            "child_name": node.label,
+            "child_invariant_prefix": node.invariant_prefix,
+            "child_abs_index": node.abs_index,
+            "child_weight": node.weight
+        }
+    for child in node.children:
+        update_in_links(child, iteration)
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -1678,30 +1716,30 @@ if __name__ == "__main__":
     json_output_path = "LanguageAgentTreeSearch/programming/hierarchy_final_trial_1.json"
  
     # SIMULATION: Inject an extra node into node A's subcategories
-    def find_node_by_label(node, label):
-         if node.label == label:
-              return node
-         for child in node.children:
-              result = find_node_by_label(child, label)
-              if result is not None:
-                   return result
-         return None
-    node_A = find_node_by_label(fim.root, "A")
-    if node_A:
-         extra_node = Node("A3", weight=1.0)
-         extra_node.parent = node_A
-         node_A.add_child(extra_node)
-         logging.warning("Injected extra node 'A3' into node 'A' to simulate a validation failure.")
-         logging.info("After injection, Node A children: %s", [child.label for child in node_A.children])
+    node_A = find_node_by_label(fim.root, "LLM_3_A")
+    extra_node = Node("LLM_3_A3", weight=0.5)  # Example weight from cat context
+    extra_node.parent = node_A
+    node_A.add_child(extra_node)
+    logging.info("Injected extra node 'LLM_3_A3' into node 'LLM_3_A' to simulate an additional node.")
+    logging.info("After injection, Node LLM_3_A children: %s", [child.label for child in node_A.children])
+
+    # Re-run simulation updates so that the newly injected extra node receives simulation metadata.
+    update_labels(fim.root)
+
+    # Since a new node has been added, re-run the canonical ordering rebuild (updating indices/invariant prefixes)
+    fim.rebuild_canonical_ordering()
+
+    # Update the in link details for nodes that are missing connection information.
+    update_in_links(fim.root)
 
     # If self healing inputs are provided, trigger an additional repair attempt.
     import sys
     if "--self_heal" in sys.argv:
          logging.info("Self healing input detected; triggering additional repair attempt.")
          fim.enforce_submatrix_bounds_rule()
-         node_A_after = find_node_by_label(fim.root, "A")
+         node_A_after = find_node_by_label(fim.root, "LLM_3_A")
          if node_A_after:
-              logging.info("After self healing, Node A children: %s", [child.label for child in node_A_after.children])
+              logging.info("After self healing, Node LLM_3_A children: %s", [child.label for child in node_A_after.children])
          print("\nHierarchy after additional self healing attempt:")
          print_tree(fim.root)
          # Write the updated (canonical) hierarchy to JSON.
