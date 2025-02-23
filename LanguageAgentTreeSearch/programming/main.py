@@ -229,6 +229,12 @@ class Node:
         import pprint
         pprint.pprint(self.__dict__)
 
+    def update_weight(self, new_weight):
+        """Update the weight of this node and (optionally) trigger a hierarchy rebuild.
+        In our design, FIMHierarchy handles the full update once this method is called."""
+        self.weight = new_weight
+        logging.info("Node %s updated with new weight %s", self.label, new_weight)
+
 ###########################################################
 #      TREE/GRAPH BUILDING AND HELPER FUNCTIONS           #
 ###########################################################
@@ -595,15 +601,17 @@ class FIMHierarchy:
         self.aggregated_hpc = aggregated_hpc
         self.aggregated_entropy = aggregated_entropy
 
-        # Initialize state field to consolidate HPC, entropy, and weight-change information.
+        # Initialize state field to consolidate HPC, entropy, weight-change information,
+        # and add the new universal "structure_modified" (dirty) flag.
         self.state = {
             "aggregated_hpc": self.aggregated_hpc,
             "total_hpc": sum(self.aggregated_hpc) if self.aggregated_hpc else 0,
             "aggregated_entropy": self.aggregated_entropy,
-            "weights_changed": False,  # Flag: True if weights or node structure are modified since last revalidation.
+            "weights_changed": False,  # Already used in current methods.
+            "structure_modified": False,  # <-- New dirty state flag.
             "last_revalidation": None  # Timestamp of the last revalidation/update.
         }
-
+        
         # Initialize validation fields.
         self.validation_checks = {}
         self.check_errors = {}
@@ -642,11 +650,69 @@ class FIMHierarchy:
             getattr(node, 'unique_id', node.label) for node in self.linear_order
         ] if hasattr(self, 'linear_order') else []
 
-        # Add these new classes after the Node class definition
-
         self.rule_engine = RuleEngine()
         self.validate_and_repair()
+    
+    # -------------------- NEW: UNIVERSAL DIRTY FLAG HANDLERS ---------------------
+    def mark_structure_modified(self):
+        """
+        Mark the hierarchy as modified (dirty). This flag should be set whenever any structural
+        changes occur (for example, a node is added, removed, or its weight is updated).
+        """
+        self.state["structure_modified"] = True
+        logging.info("Structure modified flag set to True.")
+
+    def clear_structure_modified(self):
+        """
+        Clear the structure modified (dirty) flag after a successful revalidation.
+        """
+        self.state["structure_modified"] = False
+        logging.info("Structure modified flag cleared (False).")
+    
+    # -------------------- UPDATE ORDERING (EXAMPLE USAGE OF DIRTY FLAG) ---------------------
+    def update_ordering(self):
+        """
+        Update linear ordering with rule validation.
+        """
+        self.previous_linear_order = [
+            getattr(node, 'unique_id', node.label) 
+            for node in self.linear_order
+        ]
         
+        # Build initial ordering
+        self.linear_order = self.build_final_ordering()
+        
+        # Mark structure as modified - ordering has changed.
+        self.mark_structure_modified()
+        
+        # Validate and repair conditionally if structure is dirty.
+        if self.state["structure_modified"]:
+            self.validate_and_repair()
+            self.clear_structure_modified()
+        
+        # Update indices and prefixes
+        self.assign_absolute_indices()
+        self.assign_invariant_prefixes()
+        
+        # Compute changes
+        self.compute_ordering_diff()
+
+    # ------------------------ UPDATING STATE VIA REVALIDATION --------------------
+    def revalidate(self):
+        """
+        Re-run all validations and update internal validation results.
+        Additionally, if the structure was marked as modified (dirty),
+        force re-validation and then clear the dirty flag.
+        """
+        if self.state["structure_modified"]:
+            self.run_validations()
+            self.collect_validation_results()
+            self.update_state()
+            logging.info("Revalidation triggered due to structure modification.")
+            self.clear_structure_modified()
+        else:
+            logging.info("No structural changes detected; skipping revalidation.")
+
     def validate_and_repair(self):
         """Validate and repair hierarchy structure"""
         if not self.rule_engine.repair(self, max_attempts=3):
@@ -656,26 +722,6 @@ class FIMHierarchy:
         """Add a custom validation rule"""
         self.rule_engine.add_rule(rule)
         
-    def update_ordering(self):
-        """Update linear ordering with rule validation"""
-        self.previous_linear_order = [
-            getattr(node, 'unique_id', node.label) 
-            for node in self.linear_order
-        ]
-        
-        # Build initial ordering
-        self.linear_order = self.build_final_ordering()
-        
-        # Validate and repair
-        self.validate_and_repair()
-        
-        # Update indices and prefixes
-        self.assign_absolute_indices()
-        self.assign_invariant_prefixes()
-        
-        # Compute changes
-        self.compute_ordering_diff()
-
     def update_state(self):
         """
         Update the state field with the latest aggregated HPC and entropy,
@@ -692,15 +738,6 @@ class FIMHierarchy:
         Update the state flag to reflect that weights have been modified or new nodes inserted.
         """
         self.state["weights_changed"] = changed
-
-    def revalidate(self):
-        """
-        Re-run all validations and update the internal validation results.
-        Also update the state to reflect the latest HPC, entropy values, and record the revalidation timestamp.
-        """
-        self.run_validations()
-        self.collect_validation_results()
-        self.update_state()
 
     def build_final_ordering(self):
         """
@@ -1534,6 +1571,50 @@ class FIMHierarchy:
                 traverse(child)
         traverse(self.root)
         return ordering
+
+    def trigger_hierarchy_update(self):
+        """Rebuilds hierarchy after weight changes."""
+        logging.info("Triggering full hierarchy update due to weight change.")
+        self.linear_order = self.build_final_ordering()
+        self.assign_absolute_indices()
+        self.assign_invariant_prefixes()
+        # Assuming assign_submatrix_bounds_to_nodes exists; otherwise, use the appropriate method.
+        self.assign_submatrix_bounds_to_nodes()
+        self.propagate_causal_metadata()
+
+    def update_weight(self, identifier, new_weight):
+        """
+        Updates the weight of a node and triggers a full hierarchy update.
+        The identifier can be:
+          - An absolute index (int)
+          - An invariant prefix (str)
+          - A node label (str)
+        """
+        node = None
+        if isinstance(identifier, int):  # Absolute index
+            node = self.get_node_by_abs_index(identifier)
+        elif isinstance(identifier, str):
+            node = self.get_node_by_prefix(identifier) or self.get_node_by_label(identifier)
+
+        if node:
+            node.update_weight(new_weight)
+            self.trigger_hierarchy_update()
+            # Optionally mark via our "dirty flag" as well:
+            self.mark_structure_modified()
+        else:
+            raise ValueError(f"Node {identifier} not found.")
+
+    def propagate_causal_metadata(self):
+        """
+        Updates causal metadata after reordering. Ensures parent-child relationships
+        remain intact with the latest weights.
+        """
+        for node in self.linear_order:
+            if node.parent:
+                node.causal_metadata["parent_causal_weight"] = node.parent.weight
+                total = sum(child.weight for child in node.parent.children)
+                node.causal_metadata["relative_weight"] = node.weight / total if total != 0 else 0
+                logging.info("Propagated causal metadata for node %s", node.label)
 
 def simulate_origin_metadata(node, iteration):
     """
