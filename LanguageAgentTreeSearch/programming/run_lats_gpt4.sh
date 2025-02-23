@@ -41,11 +41,37 @@ if [[ "$@" == *"--run_unittests"* ]]; then
   exit 0
 fi
 
-# New flag to run a single test file for FIMHierarchy.
-if [[ "$@" == *"--run_single_test"* ]]; then
+# New flag to run tests in failure mode.
+if [[ "$@" == *"--fail_tests"* ]]; then
+  cd "$(dirname "$0")/../.."
+  export PYTHONPATH=$(pwd)
+  export UNIT_TEST_FAIL_MODE=1
+  python -m unittest discover -s tests -p "test_*.py"
+  exit 0
+fi
+
+# New flag to run ONLY the FIMHierarchy tests.
+if [[ "$@" == *"--run_single_fim"* ]]; then
+  # Change to repository root to have tests/ importable.
   cd "$(dirname "$0")/../.."
   export PYTHONPATH=$(pwd)
   python -m unittest tests/test_fim_hierarchy.py
+  exit 0
+fi
+
+# New flag to run the rule validation tests.
+if [[ "$@" == *"--run_rule_tests"* ]]; then
+  cd "$(dirname "$0")/../.."
+  export PYTHONPATH=$(pwd)
+  python -m unittest discover -s tests -p "test_rules.py"
+  exit 0
+fi
+
+# New flag to run randomisation tests.
+if [[ "$@" == *"--run_rand_test"* ]]; then
+  cd "$(dirname "$0")/../.."
+  export PYTHONPATH=$(pwd)
+  python -m unittest discover -s tests -p "test_fim_hierarchy.py" -v --run_rand_test
   exit 0
 fi
 
@@ -69,3 +95,11 @@ python main.py "$@" \
   --num_agents 5 \
   --output_path "./output.json" \
   $USE_MOCK
+
+# New flag to run tests in verbose mode
+if [[ "$@" == *"--run_tests_verbose"* ]]; then
+  cd "$(dirname "$0")/../.."
+  export PYTHONPATH=$(pwd)
+  python -m unittest discover -s tests -p "test_*.py" -v
+  exit 0
+fi

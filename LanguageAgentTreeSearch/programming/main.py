@@ -306,8 +306,10 @@ def sort_keys_by_weight(child_dict):
     """
     Given a dictionary mapping child labels to weights,
     returns a list of keys sorted by descending weight.
+    In case of equal weight, sort by label in alphabetical order.
     """
-    return sorted(child_dict.keys(), key=lambda k: child_dict[k], reverse=True)
+    # Negative weight ensures descending; the label acts as a tie-breaker.
+    return sorted(child_dict.keys(), key=lambda k: (-child_dict[k], k))
 
 def linearize_one_d(graph, root_label, node_dict):
     """
@@ -1886,6 +1888,7 @@ class FIMHierarchy:
                 "weight": node.weight,
                 "abs_index": node.abs_index,
                 "invariant_prefix": node.invariant_prefix,
+                "parent_id": node.parent.node_id if node.parent else None,  # Added parent_id.
                 "submatrix_bounds": node.submatrix_bounds,
                 "causal_inference": node.causal_inference if hasattr(node, "causal_inference") else {},
                 "cumulative_causality": node.cumulative_causality if hasattr(node, "cumulative_causality") else [],
@@ -2215,6 +2218,7 @@ class FIMHierarchy:
                 "weight": node.weight,
                 "abs_index": node.abs_index,
                 "invariant_prefix": node.invariant_prefix,
+                "parent_id": node.parent.node_id if node.parent else None,  # Added parent_id.
                 "submatrix_bounds": node.submatrix_bounds,
                 "causal_inference": node.causal_inference if hasattr(node, "causal_inference") else {},
                 "cumulative_causality": node.cumulative_causality if hasattr(node, "cumulative_causality") else [],
@@ -2428,6 +2432,91 @@ class FIMHierarchy:
                 "abs_index": node.abs_index,
             }
         return state
+
+    def get_node_field(self, node_id, field):
+        """
+        Returns the value of the given field for the node with the specified node_id.
+        Raises ValueError if no such node is found.
+        """
+        for node in self.linear_order:
+            if node.node_id == node_id:
+                return getattr(node, field)
+        raise ValueError(f"Node {node_id} not found.")
+
+    def set_node_field(self, node_id, field, new_value):
+        """
+        Sets the value of 'field' to 'new_value' for the node with node_id.
+        """
+        for node in self.linear_order:
+            if node.node_id == node_id:
+                setattr(node, field, new_value)
+                logging.info("Set field %s of node %s to %s", field, node.label, new_value)
+                return
+        raise ValueError(f"Node {node_id} not found.")
+
+    def apply_llm_suggestions(self, suggestions):
+        """
+        Applies LLM update suggestions.
+        Each suggestion is a dict with keys: node_id, field, new_value.
+        """
+        for suggestion in suggestions:
+            self.set_node_field(suggestion["node_id"], suggestion["field"], suggestion["new_value"])
+            logging.info("Applied LLM suggestion on node %s: set %s to %s",
+                         suggestion["node_id"], suggestion["field"], suggestion["new_value"])
+
+    def set_node_field(self, node_id, field, new_value):
+        """
+        Sets the given field on the node identified by node_id.
+        Raises a ValueError if the node is not found or if the field does not exist.
+        """
+        node = next((n for n in self.linear_order if n.node_id == node_id), None)
+        if not node:
+            raise ValueError(f"Node {node_id} not found.")
+        if not hasattr(node, field):
+            raise ValueError(f"Field {field} not found in node {node.label}.")
+        setattr(node, field, new_value)
+    
+    def get_node_field(self, node_id, field):
+        """
+        Returns the value of the given field from the node identified by node_id.
+        Raises a ValueError if the node or field is not found.
+        """
+        node = next((n for n in self.linear_order if n.node_id == node_id), None)
+        if not node:
+            raise ValueError(f"Node {node_id} not found.")
+        if not hasattr(node, field):
+            raise ValueError(f"Field {field} not found in node {node.label}.")
+        return getattr(node, field)
+    
+    def to_prompt_json(self):
+        """
+        Exports a simplified, prompt–ready version of the hierarchy.
+        Returns a list where each element is a dictionary representing
+        select fields of a node needed by an LLM.
+        """
+        prompts = []
+        for node in self.linear_order:
+            prompts.append({
+                "node_id": node.node_id,
+                "label": node.label,
+                "weight": node.weight,
+                "abs_index": node.abs_index,
+                "parent_id": node.parent.node_id if node.parent else None,
+                "invariant_prefix": node.invariant_prefix,
+                "submatrix_bounds": node.get_submatrix_bounds(),
+                "causal_inference": node.causal_inference if hasattr(node, "causal_inference") else {},
+            })
+        return prompts
+    
+    def get_node_by_prefix(self, prefix):
+        """
+        Returns the first node found with the given invariant prefix.
+        Raises a ValueError if no node with the prefix is found.
+        """
+        for node in self.linear_order:
+            if node.invariant_prefix == prefix:
+                return node
+        raise ValueError(f"No node found with prefix {prefix}.")
 
 def simulate_origin_metadata(node, iteration):
     """
@@ -2721,14 +2810,17 @@ def propagate_cumulative_causality(node, cumulative=None):
     Each node's 'cumulative_causality' field will be a list containing the chain of 
     cause_effect_relation dictionaries from the root to that node.
     """
-    if cumulative is None:
-        cumulative = []
-    new_cumulative = cumulative.copy()
-    if hasattr(node, "causal_inference") and (node.causal_inference.get("cause_effect_relation") is not None):
-        new_cumulative.append(node.causal_inference["cause_effect_relation"])
-    node.cumulative_causality = new_cumulative
+    if node.parent is None:
+         # Force root's cumulative causality to be empty.
+         cumulative = []
+    else:
+         # For non-root nodes, copy parent's cumulative list.
+         cumulative = cumulative.copy()
+         if hasattr(node, "causal_inference") and node.causal_inference.get("cause_effect_relation") is not None:
+              cumulative.append(node.causal_inference["cause_effect_relation"])
+    node.cumulative_causality = cumulative
     for child in node.children:
-        propagate_cumulative_causality(child, new_cumulative)
+         propagate_cumulative_causality(child, cumulative)
 
 def compare_states(previous_state, current_state):
     """
