@@ -1,4 +1,5 @@
 #!/bin/bash
+reset
 set -e  # Exit immediately if a command fails
 
 # Reset logs to ensure only one run's output is present
@@ -7,18 +8,18 @@ rm -f test_output.log main_output.log all_executed_files.log
 # Activate virtual environment
 source venv/bin/activate
 
-# Ensure PYTHONPATH is correctly set
-export PYTHONPATH=$(pwd):$(pwd)/LanguageAgentTreeSearch/programming
+# Ensure PYTHONPATH is correctly set to the repository root (adjust as needed)
+export PYTHONPATH=$(pwd)/../..
 
 # Print environment for debugging
 echo "📌 PYTHONPATH: $PYTHONPATH"
 echo "📌 Running tests..."
 
-# Run tests (output both stdout and stderr to test_output.log)
-python -m unittest discover -s tests -p "test_*.py" -v 2>&1 | tee test_output.log
+# Run tests (set UNIT_TEST_FAIL_MODE so that extra tests run)
+UNIT_TEST_FAIL_MODE=1 python -m unittest discover -s tests -p "test_*.py" -v 2>&1 | tee test_output.log
 
-# Run the main program (output both stdout and stderr to main_output.log)
-echo "🚀 Running main.py..."
+# Run the main program, passing through any CLI arguments
+echo "🚀 Running main.py with passed flags: $@"
 python main.py "$@" 2>&1 | tee main_output.log
 
 ### --- NEW: Copy and Print Relevant Files ---
@@ -31,6 +32,7 @@ FILES=(
   "tests/test_fim_hierarchy.py"
   "tests/test_fim_validation.py"
   "tests/test_rules.py"
+  "tests/*"
 )
 
 # Clear (or create) the output log file first
@@ -49,5 +51,4 @@ for FILE in "${FILES[@]}"; do
 done
 
 echo "✅ Copied content saved to all_executed_files.log"
-
 echo "✅ Script execution complete."

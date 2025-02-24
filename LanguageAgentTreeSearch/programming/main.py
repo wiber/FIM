@@ -3088,8 +3088,8 @@ def propagate_cumulative_causality(node, cumulative=None):
          if hasattr(node, "causal_inference") and node.causal_inference.get("cause_effect_relation") is not None:
               cumulative.append(node.causal_inference["cause_effect_relation"])
     node.cumulative_causality = cumulative
-        for child in node.children:
-         propagate_cumulative_causality(child, cumulative)
+    for child in node.children:
+        propagate_cumulative_causality(child, cumulative)
 
 def compare_states(previous_state, current_state):
     """

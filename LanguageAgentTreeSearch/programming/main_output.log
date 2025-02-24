@@ -1,0 +1,2 @@
+Unknown args: ['--use_mock', '--self_heal'] (ignoring...)
+Error reading input JSON: [Errno 2] No such file or directory: 'some_default.json'
