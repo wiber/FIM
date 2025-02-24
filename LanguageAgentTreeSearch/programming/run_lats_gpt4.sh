@@ -1,105 +1,53 @@
 #!/bin/bash
+set -e  # Exit immediately if a command fails
 
-# Activate the virtual environment
+# Reset logs to ensure only one run's output is present
+rm -f test_output.log main_output.log all_executed_files.log
+
+# Activate virtual environment
 source venv/bin/activate
 
-# Echo the API key (be careful not to share this output)
-echo "OPENAI_API_KEY: ${OPENAI_API_KEY:0:5}...${OPENAI_API_KEY: -5}"
+# Ensure PYTHONPATH is correctly set
+export PYTHONPATH=$(pwd):$(pwd)/LanguageAgentTreeSearch/programming
 
-#
-if [[ "$@" == *"--unit_tests"* ]]; then
-  # Change to the repository root (parent of LanguageAgentTreeSearch).
-  cd ../..
-  export PYTHONPATH=$(pwd)
-  python -m unittest tests.test_fim_hierarchy
-  exit 0
-fi
+# Print environment for debugging
+echo "📌 PYTHONPATH: $PYTHONPATH"
+echo "📌 Running tests..."
 
-# If the flag "--run_tests" is provided, run all tests via discovery.
-if [[ "$@" == *"--run_tests"* ]]; then
-  cd "$(dirname "$0")/.."
-  export PYTHONPATH=$(pwd)
-  # Use module discovery; the tests folder is now importable.
-  python -m unittest discover -s tests -p "test_*.py"
-  exit 0
-fi
+# Run tests (output both stdout and stderr to test_output.log)
+python -m unittest discover -s tests -p "test_*.py" -v 2>&1 | tee test_output.log
 
-## Check if we need to run a specific unit test file (using --unit_test_file or --single_test)
-if [[ "$@" == *"--unit_test"* ]]; then
-  # Change directory to the repository root.
-  cd "$(dirname "$0")/../../"
-  export PYTHONPATH=$(pwd)
-  python -m unittest tests.test_fim_hierarchy
-  exit 0
-fi
+# Run the main program (output both stdout and stderr to main_output.log)
+echo "🚀 Running main.py..."
+python main.py "$@" 2>&1 | tee main_output.log
 
-# New flag --run_unittests that uses discovery to run all tests in the tests/ folder.
-if [[ "$@" == *"--run_unittests"* ]]; then
-  cd "$(dirname "$0")/../.."
-  export PYTHONPATH=$(pwd)
-  python -m unittest discover -s tests -p "test_*.py"
-  exit 0
-fi
+### --- NEW: Copy and Print Relevant Files ---
+echo "📌 Copying all relevant executed files to memory..."
 
-# New flag to run tests in failure mode.
-if [[ "$@" == *"--fail_tests"* ]]; then
-  cd "$(dirname "$0")/../.."
-  export PYTHONPATH=$(pwd)
-  export UNIT_TEST_FAIL_MODE=1
-  python -m unittest discover -s tests -p "test_*.py"
-  exit 0
-fi
+# Define the list of files to copy (include the .sh, main.py, and test files)
+FILES=(
+  "run_lats_gpt4.sh"
+  "main.py"
+  "tests/test_fim_hierarchy.py"
+  "tests/test_fim_validation.py"
+  "tests/test_rules.py"
+)
 
-# New flag to run ONLY the FIMHierarchy tests.
-if [[ "$@" == *"--run_single_fim"* ]]; then
-  # Change to repository root to have tests/ importable.
-  cd "$(dirname "$0")/../.."
-  export PYTHONPATH=$(pwd)
-  python -m unittest tests/test_fim_hierarchy.py
-  exit 0
-fi
+# Clear (or create) the output log file first
+> all_executed_files.log
 
-# New flag to run the rule validation tests.
-if [[ "$@" == *"--run_rule_tests"* ]]; then
-  cd "$(dirname "$0")/../.."
-  export PYTHONPATH=$(pwd)
-  python -m unittest discover -s tests -p "test_rules.py"
-  exit 0
-fi
+# Loop through each file and append its contents to the output file
+for FILE in "${FILES[@]}"; do
+    if [[ -f "$FILE" ]]; then
+        echo "🔍 Copying: $FILE"
+        echo -e "\n--- File: $FILE ---\n" >> all_executed_files.log
+        cat "$FILE" >> all_executed_files.log
+        echo "" >> all_executed_files.log
+    else
+        echo "⚠️  Skipped missing file: $FILE"
+    fi
+done
 
-# New flag to run randomisation tests.
-if [[ "$@" == *"--run_rand_test"* ]]; then
-  cd "$(dirname "$0")/../.."
-  export PYTHONPATH=$(pwd)
-  python -m unittest discover -s tests -p "test_fim_hierarchy.py" -v --run_rand_test
-  exit 0
-fi
+echo "✅ Copied content saved to all_executed_files.log"
 
-# Check for mock flag
-if [[ "$1" == "--mock" ]]; then
-  USE_MOCK="--use_mock"
-fi
-
-# If no test flags provided, run the main program.
-python main.py "$@" \
-  --run_name "test_run" \
-  --root_dir "root" \
-  --dataset_path "./benchmarks/humaneval-py.jsonl" \
-  --strategy "mcts" \
-  --language "py" \
-  --model "gpt-03-mini-high" \
-  --max_iters 10 \
-  --expansion_factor 2 \
-  --number_of_tests 2 \
-  --verbose \
-  --num_agents 5 \
-  --output_path "./output.json" \
-  $USE_MOCK
-
-# New flag to run tests in verbose mode
-if [[ "$@" == *"--run_tests_verbose"* ]]; then
-  cd "$(dirname "$0")/../.."
-  export PYTHONPATH=$(pwd)
-  python -m unittest discover -s tests -p "test_*.py" -v
-  exit 0
-fi
+echo "✅ Script execution complete."

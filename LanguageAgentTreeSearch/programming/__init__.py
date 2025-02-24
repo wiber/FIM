@@ -1,3 +1,4 @@
-# This file is intentionally left blank to mark the programming folder as a package. 
+# (Optional) This file can also be empty.
+# It marks the 'programming' folder as a Python package. 
 
-# This file makes the programming directory a package. 
+# Empty file to mark programming as a package within LanguageAgentTreeSearch. 
