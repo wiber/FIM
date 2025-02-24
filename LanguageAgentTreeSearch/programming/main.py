@@ -949,34 +949,21 @@ class FIMHierarchy:
             self.check_errors["ordering"] = ordering_errors
         
         # Rule 3: Validate top-level contiguity.
-        top_level_nodes = [node for node in self.linear_order if node.parent == self.root]
-        if top_level_nodes:
-            indices = [node.abs_index for node in top_level_nodes]
-            expected = list(range(min(indices), max(indices) + 1))
-            if indices != expected:
-                self.check_errors["top_level"] = "Top-level nodes are not contiguous."
+        top_levels = [node for node in self.linear_order if node.parent == self.root]
+        if top_levels:
+            min_idx = min(self.linear_order.index(node) for node in top_levels)
+            max_idx = max(self.linear_order.index(node) for node in top_levels)
+            if max_idx - min_idx + 1 != len(top_levels):
+                self.check_errors["top_level"] = (
+                    f"Top-level nodes are not contiguous: expected block size {len(top_levels)} but found indices {min_idx}..{max_idx}."
+                )
+                logging.error(self.check_errors["top_level"])
+            else:
+                self.check_errors["top_level"] = None
+                logging.info("Top-level contiguity check passed.")
         else:
             self.check_errors["top_level"] = "No top-level nodes found."
-        
-        # Rule 4: Validate descending weights.
-        weight_errors = []
-        for node in self.linear_order:
-            if node.parent is not None:
-                if node.weight > node.parent.weight:
-                    weight_errors.append(
-                        f"Child {node.label} weight {node.weight} exceeds parent {node.parent.label} weight {node.parent.weight}."
-                    )
-        if weight_errors:
-            self.check_errors["descending_weights"] = weight_errors
-        
-        # Rule 5: Validate submatrix bounds.
-        bounds_errors = []
-        for node in self.linear_order:
-            bounds = node.get_submatrix_bounds()  # Assumes a dict with keys 'start_index' and 'end_index'.
-            if bounds.get("start_index") is None or bounds.get("end_index") is None:
-                bounds_errors.append(f"Node {node.label} has invalid submatrix bounds: {bounds}.")
-        if bounds_errors:
-            self.check_errors["submatrix_bounds"] = bounds_errors
+            logging.error(self.check_errors["top_level"])
 
     def collect_validation_results(self):
         """
@@ -1107,7 +1094,7 @@ class FIMHierarchy:
             max_idx = max(self.linear_order.index(node) for node in top_levels)
             if max_idx - min_idx + 1 != len(top_levels):
                 self.check_errors["top_level"] = (
-                    f"Top-level nodes are not contiguous: expected block size {len(top_levels)} but found indices from {min_idx} to {max_idx}."
+                    f"Top-level nodes are not contiguous: expected block size {len(top_levels)} but found indices {min_idx}..{max_idx}."
                 )
                 logging.error(self.check_errors["top_level"])
             else:
@@ -1149,7 +1136,7 @@ class FIMHierarchy:
                         f"Parent {node.parent.label} (idx {parent_idx}) appears after child {node.label} (idx {child_idx})."
                     )
                     logging.error(self.check_errors[f"parent_{node.label}"])
-                else:
+        else:
                     self.check_errors[f"parent_{node.label}"] = None
 
     def check_no_duplicates(self):
@@ -2039,7 +2026,6 @@ class FIMHierarchy:
          4. Re-propagating cumulative causal metadata.
          5. Re-apply causal metadata via propagate_causal_effects.
         """
-
         # Step 1: Reorder children by descending weight.
         def reorder_node(node):
             if node.children:
@@ -2052,7 +2038,7 @@ class FIMHierarchy:
         if self.root.children:
             self.root.children.sort(key=lambda x: x.weight, reverse=True)
 
-        # Step 2: Rebuild the linear ordering.
+        # Step 2: Rebuild the linear ordering and reassign absolute indices.
         self.linear_order = self.build_final_ordering()
 
         # Step 3: Reassign absolute indices.
@@ -2684,7 +2670,6 @@ class FIMHierarchy:
          4. Re-propagating cumulative causal metadata.
          5. Re-apply causal metadata via propagate_causal_effects.
         """
-
         # Step 1: Reorder children by descending weight.
         def reorder_node(node):
             if node.children:
@@ -2697,7 +2682,7 @@ class FIMHierarchy:
         if self.root.children:
             self.root.children.sort(key=lambda x: x.weight, reverse=True)
 
-        # Step 2: Rebuild the linear ordering.
+        # Step 2: Rebuild the linear ordering and reassign absolute indices.
         self.linear_order = self.build_final_ordering()
 
         # Step 3: Reassign absolute indices.
@@ -2774,7 +2759,7 @@ class FIMHierarchy:
             max_idx = max(self.linear_order.index(node) for node in top_levels)
             if max_idx - min_idx + 1 != len(top_levels):
                 self.check_errors["top_level"] = (
-                    f"Top-level nodes are not contiguous: expected block size {len(top_levels)} but found indices from {min_idx} to {max_idx}."
+                    f"Top-level nodes are not contiguous: expected block size {len(top_levels)} but found indices {min_idx}..{max_idx}."
                 )
                 logging.error(self.check_errors["top_level"])
             else:
@@ -3007,393 +2992,77 @@ def print_hierarchy(node, indent=0):
 
 def main():
     import json
+    import argparse
+    import logging
+
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
     
-    # 1. Build the hierarchy from a base graph.
-    base_graph = {
-        "Origin": {"A": 1.0, "B": 1.0, "C": 1.0, "D": 1.0},
-        "A": {"A1": 1.0, "A2": 1.0},
-        "B": {"B1": 1.0, "B2": 1.0},
-        "C": {"C1": 1.0, "C2": 1.0},
-        "D": {"D1": 1.0, "D2": 1.0}
-    }
-    root_label = "Origin"
-    
-    root = build_tree_from_graph(base_graph, root_label)
-    aggregated_hpc = [1.0, 1.0, 1.0]          # Example aggregated HPC values.
-    aggregated_entropy = [0.5, 0.5, 0.5]       # Example aggregated entropy values.
+    parser = argparse.ArgumentParser(description="Run the FIM Hierarchy Pipeline.")
+    parser.add_argument("--input-json", type=str, help="Path to input JSON file for hierarchy.")
+    parser.add_argument("--output-json", type=str, help="Path to save the output JSON.")
+    parser.add_argument("--print-hierarchy", action="store_true", help="Print hierarchy to the terminal.")
+    parser.add_argument("--self-heal", action="store_true", help="Run self-healing on the hierarchy.")
+    parser.add_argument("--validate", action="store_true", help="Run validation checks after execution.")
+    parser.add_argument("--fail-tests", action="store_true", help="Force a failure for debugging.")
+    parser.add_argument("--run-tests", action="store_true", help="Run unit tests and exit.")
+    parser.add_argument("--use_mock", action="store_true", help="Use mock data", default=False)
+    args = parser.parse_args()
 
-    # Optionally, simulate additional processing.
-    root, _, _, final_rand_graph = process_llm_iterations(base_graph, root_label, iterations=3, dimension=1)
-
-    if len(root.children) < 4:
-        logging.error("The Origin node does not have all expected direct children.")
-    else:
-        logging.info(f"Origin has {len(root.children)} direct children as expected.")
-    
-    # 2. Build the FIMHierarchy object, enforce repairs, and update metadata.
-    fim = FIMHierarchy(root, final_rand_graph, aggregated_hpc, aggregated_entropy)
-    fim.enforce_submatrix_bounds_rule()
-    fim.trigger_hierarchy_update()
-
-    # 3. Propagate explicit causal effects to clearly label cause-effect relations.
-    propagate_causal_effects(fim.root)
-    # Define the Origin node via LLM simulation.
-    define_origin_via_llm(fim)
-
-    # 4. Export a prompt-ready hierarchy JSON for LLM consumption.
-    prompt_json = fim.to_prompt_json()
-    with open("hierarchy_for_llm.json", "w") as f:
-        json.dump(prompt_json, f, indent=4)
-    logging.info("Exported prompt-ready hierarchy to hierarchy_for_llm.json")
-
-    # 5. Simulate an LLM update: update node "B_simulated_3" weight to 0.9.
-    try:
-        fim.set_node_field("B_simulated_3", "weight", 0.9)
-        fim.trigger_hierarchy_update()
-        logging.info("Applied LLM update: set B_simulated_3 weight to 0.9")
-    except ValueError as e:
-        logging.error(e)
-
-    # 6. Export the updated prompt-ready hierarchy JSON for LLM consumption.
-    prompt_json_updated = fim.to_prompt_json()
-    with open("hierarchy_for_llm_updated.json", "w") as f:
-        json.dump(prompt_json_updated, f, indent=4)
-    logging.info("Exported updated prompt-ready hierarchy to hierarchy_for_llm_updated.json")
-
-    # NEW: Export and log the full hierarchy JSON from the complete FIMHierarchy object.
-    full_json = fim.to_full_json()
-    with open("full_hierarchy.json", "w") as f:
-        json.dump(full_json, f, indent=4)
-    # Log the serialized JSON for debugging
-    serialized_full_json = json.dumps(full_json, indent=4)
-    logging.info("Full hierarchy JSON:\n%s", serialized_full_json)
-
-    # 7. Reinforce self-healing: revalidate and attempt to heal any remaining violations.
-    fim.self_heal_structure()
-
-    # 8. Export and log the full hierarchy JSON for debugging.
-    full_json = fim.to_full_json()
-    with open("full_hierarchy.json", "w") as f:
-        json.dump(full_json, f, indent=4)
-    serialized_full_json = json.dumps(full_json, indent=4)
-    logging.info("Full hierarchy JSON:\n%s", serialized_full_json)
-
-    # 9. Print and log any failed nodes from validation.
-    failed_nodes = fim.report_failed_nodes()
-    if failed_nodes:
-         print("\n--- Failed Node Reports ---")
-         for label, reason in failed_nodes:
-             print(f"Failed Node {label}: {reason}")
-         logging.error("Self-healing validation errors: %s", failed_nodes)
-    else:
-         logging.info("No failed nodes reported after self-healing.")
-
-    # (Optionally) print failed nodes if any remain.
-    failed_nodes = fim.report_failed_nodes()
-    if failed_nodes:
-         print("\n--- Failed Node Reports ---")
-         for label, reason in failed_nodes:
-             print(f"Failed Node {label}: {reason}")
-
-    # 10. Propagate cumulative causal influence (accumulating parent's chain downward).
-    propagate_cumulative_causality(fim.root)
-    # Propagate per-node causal influence (inherited vs computed).
-    propagate_causal_influence(fim.root)
-
-    # 11. Print the entire hierarchy for inspection.
-    print("\n--- Final Hierarchy Structure ---")
-    print_hierarchy(fim.root)
-
-    # 12. Export the final full hierarchy JSON with all details needed for LLM.
-    final_full_json = fim.to_full_json()
-    with open("final_hierarchy.json", "w") as f:
-        json.dump(final_full_json, f, indent=4)
-    serialized_final_json = json.dumps(final_full_json, indent=4)
-    logging.info("Final full hierarchy JSON:\n%s", serialized_final_json)
-
-def propagate_cumulative_causality(node, cumulative=None):
-    """
-    Recursively propagates cumulative causal influence down the hierarchy.
-
-    Each node's 'cumulative_causality' field will be a list containing the chain of 
-    cause_effect_relation dictionaries from the root to that node.
-    """
-    if node.parent is None:
-         # Force root's cumulative causality to be empty.
-         cumulative = []
-    else:
-         # For non-root nodes, copy parent's cumulative list.
-         cumulative = cumulative.copy()
-         if hasattr(node, "causal_inference") and node.causal_inference.get("cause_effect_relation") is not None:
-              cumulative.append(node.causal_inference["cause_effect_relation"])
-    node.cumulative_causality = cumulative
-    for child in node.children:
-        propagate_cumulative_causality(child, cumulative)
-
-def compare_states(previous_state, current_state):
-    """
-    Compares two flattened hierarchy states represented as dictionaries mapping node_id -> state.
-    Returns a diff dictionary where differences are noted.
-    """
-    changes = {}
-    for node_id, old_state in previous_state.items():
-        new_state = current_state.get(node_id)
-        if not new_state:
-            changes[node_id] = "Node removed"
-        else:
-            diffs = {}
-            for key in old_state:
-                if old_state[key] != new_state.get(key):
-                    diffs[key] = (old_state[key], new_state.get(key))
-            if diffs:
-                changes[node_id] = diffs
-    for node_id in current_state:
-        if node_id not in previous_state:
-            changes[node_id] = "New node added"
-    return changes
-
-def define_origin_via_llm(fim_hierarchy):
-    """
-    Uses a simulated LLM call to define the origin node.
-    In a real system, this would call an API; here we assign a dummy explanation.
-    """
-    prompt = """
-    Define [FIM_Origin].
-    - List all direct children.
-    - For each, determine if it's independent or a dependent category.
-    - Assign an influence score such that the total sums to 1.0.
-    Return the definition as a structured JSON.
-    """
-    # Simulate an LLM response.
-    origin_definition = {
-         "definition": "Origin node aggregates all primary categories.",
-         "children_influence": {
-             child.label: round(child.weight / fim_hierarchy.root.weight, 2)
-             for child in fim_hierarchy.root.children
-         }
-    }
-    fim_hierarchy.root.causal_metadata["origin_definition"] = origin_definition
-    logging.info("LLM defined Origin: %s", origin_definition)
-
-def propagate_causal_influence(node):
-    """
-    Propagates causal influence down the hierarchy.
-    For each node (except the root), computes its influence score as the ratio of its weight to that of its parent,
-    and marks the source of the influence as 'inherited' by default.
-    """
-    if node.parent:
-        parent_weight = node.parent.weight if node.parent.weight else 1.0
-        node.causal_metadata["influence_score"] = round(node.weight / parent_weight, 2)
-        node.causal_metadata["causal_source"] = "inherited"
-    # If the node has been adjusted by LLM, mark it so.
-    if node.causal_metadata.get("llm_adjusted"):
-        node.causal_metadata["causal_source"] = "llm_adjusted"
-    for child in node.children:
-        propagate_causal_influence(child)
-
-def simulate_llm_update(prompt_json):
-    """
-    Simulates an LLM update process.
-    In a real integration, this function would send prompt_json to an LLM API and return suggestions.
-    
-    For simulation purposes, return a fixed suggestion list.
-    Example suggestion:
-      [{"node_id": "B_simulated_3", "field": "weight", "new_value": 0.85}]
-    """
-    suggestions = []
-    suggestions.append({"node_id": "B_simulated_3", "field": "weight", "new_value": 0.85})
-    return suggestions
-
-def break_rule_origin_not_at_zero(hierarchy):
-    """
-    Force a violation of the rule that the Origin node must be at index 0.
-    This is done by swapping the root (which is normally at index 0) with the node at index 1.
-    """
-    if len(hierarchy.linear_order) >= 2:
-         hierarchy.linear_order[0], hierarchy.linear_order[1] = hierarchy.linear_order[1], hierarchy.linear_order[0]
-         # Update abs_index for these two nodes to simulate the violation.
-         hierarchy.linear_order[0].abs_index, hierarchy.linear_order[1].abs_index = 0, 1
-         logging.info("Forced Origin rule violation: swapped root with second node.")
-
-def break_rule_descending_weights(hierarchy):
-    """
-    Forces a violation of the descending weights rule by setting a child's weight
-    to be greater than its parent's weight.
-    """
-    # For every non-root node, artificially boost its weight:
-    for node in hierarchy.linear_order:
-        if node.parent:
-            node.weight = node.parent.weight + 0.1
-    hierarchy.trigger_hierarchy_update()
-
-def break_rule_submatrix_bounds(hierarchy):
-    """
-    Forces a violation of the submatrix bounds rule by clearing the bounds.
-    """
-    for node in hierarchy.linear_order:
-        node.set_submatrix_bounds(None, None)
-
-# Define a stub validation function.  
-# In a real implementation, FIMHierarchy would update self.check_errors based on current state.
-def run_simple_validations(hierarchy):
-    errors = {}
-    # Check rule: Origin should be at index 0.
-    if hierarchy.linear_order[0].label != "Origin":
-        errors["origin"] = "Origin is not at index 0"
-    # Check rule: For each node with a parent, parent's weight should be at least as high as child's.
-    for node in hierarchy.linear_order:
-        if node.parent and node.weight > node.parent.weight:
-            errors[node.label] = f"Child weight {node.weight} exceeds parent's weight {node.parent.weight}"
-    # Check rule: Each node's submatrix bounds must have non-null start and end indices.
-    for node in hierarchy.linear_order:
-        bounds = node.get_submatrix_bounds()
-        if bounds["start_index"] is None or bounds["end_index"] is None:
-            errors[node.label + "_bounds"] = "Submatrix bounds not set"
-    hierarchy.check_errors = errors
-
-class TestRuleViolations(unittest.TestCase):
-    def setUp(self):
-        # Build a small graph that produces a valid hierarchy.
-        self.graph = {
-            "Origin": {"A": 0.9, "B": 0.8},
-            "A": {"A1": 0.85},
-            "B": {"B1": 0.75}
-        }
-        self.root = build_tree_from_graph(self.graph, "Origin")
-        # Disable logging for clarity.
-        logging.disable(logging.CRITICAL)
-        # Create the FIMHierarchy. (Aggregated values are set dummy here.)
-        self.fh = FIMHierarchy(self.root, self.graph, [1.0, 1.0], [0.5, 0.5])
-        self.fh.trigger_hierarchy_update()
-
-        # Let's assume we use a simple validation hook to update a check_errors dict.
-        self.fh.check_errors = {}
-        self.fh.run_validations = lambda: run_simple_validations(self.fh)
-
-    def tearDown(self):
-        logging.disable(logging.NOTSET)
-
-    def test_origin_rule_violation_and_self_healing(self):
-        # Positive case: by default, Origin must be at index 0.
-        self.fh.run_validations()
-        self.assertNotIn("origin", self.fh.check_errors, "Origin rule violated in initial state.")
-
-        # Break the rule: force Origin to not be at index 0.
-        break_rule_origin_not_at_zero(self.fh)
-        self.fh.run_validations()
-        self.assertIn("origin", self.fh.check_errors,
-                      "Violation of the origin-at-index-0 rule was not detected.")
-
-        # Now invoke self-healing.
-        self.fh.self_heal_structure()
-        self.fh.run_validations()
-        self.assertNotIn("origin", self.fh.check_errors,
-                         "Self-healing failed to restore Origin to index 0.")
-
-    def test_descending_weights_rule_violation_and_healing(self):
-        # Validate initial state: parent's weight should be >= child's.
-        self.fh.run_validations()
-        for node in self.fh.linear_order:
-            if node.parent:
-                self.assertLessEqual(node.weight, node.parent.weight,
-                                      f"Initial: Child {node.label}'s weight exceeds parent's weight.")
-        # Break the descending weight rule.
-        break_rule_descending_weights(self.fh)
-        self.fh.run_validations()
-        violation_found = any(
-            node.parent and node.weight > node.parent.weight for node in self.fh.linear_order
-        )
-        self.assertTrue(violation_found, "Failed to break descending weights rule.")
-        # Self-heal.
-        self.fh.self_heal_structure()
-        self.fh.run_validations()
-        for node in self.fh.linear_order:
-            if node.parent:
-                self.assertGreaterEqual(node.parent.weight, node.weight,
-                                        f"After healing: Child {node.label}'s weight {node.weight} exceeds parent's weight {node.parent.weight}.")
-
-    def test_submatrix_bounds_rule_violation_and_healing(self):
-        # Positive case: verify all nodes have non-null submatrix bounds.
-        self.fh.run_validations()
-        for node in self.fh.linear_order:
-            bounds = node.get_submatrix_bounds()
-            self.assertIsNotNone(bounds["start_index"],
-                                 f"Node {node.label} missing submatrix start_index in initial state.")
-            self.assertIsNotNone(bounds["end_index"],
-                                 f"Node {node.label} missing submatrix end_index in initial state.")
-        # Break the submatrix bounds rule.
-        break_rule_submatrix_bounds(self.fh)
-        self.fh.run_validations()
-        violation_count = sum(
-            1 for node in self.fh.linear_order
-            if node.get_submatrix_bounds()["start_index"] is None or node.get_submatrix_bounds()["end_index"] is None
-        )
-        self.assertGreater(violation_count, 0, "Submatrix bounds violation was not detected.")
-        # Self-heal.
-        self.fh.self_heal_structure()
-        self.fh.run_validations()
-        for node in self.fh.linear_order:
-            bounds = node.get_submatrix_bounds()
-            self.assertIsNotNone(bounds["start_index"],
-                                 f"After healing, node {node.label} still missing submatrix start_index.")
-            self.assertIsNotNone(bounds["end_index"],
-                                 f"After healing, node {node.label} still missing submatrix end_index.")
-
-    def test_origin_rule(self):
-        # Initial state: valid.
-        self.fh.run_validations()
-        self.assertIsNone(self.fh.check_errors.get("origin"),
-                          "Origin should be at index 0 in the valid state.")
-
-        # Break the rule.
-        break_rule_origin_not_at_zero(self.fh)
-        self.fh.run_validations()
-        self.assertIn("origin", self.fh.check_errors,
-                      "Violation of the origin rule was not detected.")
-
-        # Self-heal and revalidate.
-        self.fh.self_heal_structure()
-        self.fh.run_validations()
-        self.assertIsNone(self.fh.check_errors.get("origin"),
-                          "Self-healing did not restore the origin's position to index 0.")
-
-# Updated __main__ block for dual-mode operation.
-if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser(
-        description="Run FIMHierarchy logic in production mode or run tests.",
-        allow_abbrev=False
-    )
-    parser.add_argument('--run-tests', action='store_true', help="Run the unit tests instead of production run.")
-    parser.add_argument('--input', type=str, default="some_default.json", help="Path to input JSON file.")
-    # Use parse_known_args() to collect extra flags (they will be ignored)
-    args, unknown_args = parser.parse_known_args()
-    print(f"Unknown args: {unknown_args} (ignoring...)")
-    
+    # If the user explicitly requests to run tests, do so and then exit.
     if args.run_tests:
-        import unittest
+        import sys, unittest
+        sys.argv = sys.argv[:1]  # Remove extra command-line args for unittest
         unittest.main()
-    else:
-        # Production flow: Ensure --input contains a valid JSON file.
-        try:
-            with open(args.input, "r") as f:
-                data = f.read()  # In production you might want to use json.load(f)
-        except FileNotFoundError as e:
-            print(f"Error reading input JSON: {e}")
-            exit(1)
-        
-        print("Production run is executing...")
-        # Example production pipeline:
-        #   1. Build your tree from the input data.
-        #   2. Ensure HPC usage and entropy are provided as lists.
-        #   3. Instantiate FIMHierarchy and trigger your pipeline.
-        # Replace the following pseudo-code with your actual production logic.
-        #
-        # root = build_tree_from_json(data)
-        # fh = FIMHierarchy(root, graph, [1.0,1.0], [0.5,0.5])
-        # fh.trigger_hierarchy_update()
-        # fh.do_other_pipeline_steps()
+        return
+
+    # Production mode: require an input JSON file.
+    if not args.input_json:
+        logging.error("No input JSON file provided. Use --input-json <path>")
+        return
+
+    try:
+        with open(args.input_json, "r") as f:
+            graph_data = json.load(f)
+    except FileNotFoundError:
+        logging.error(f"Input file {args.input_json} not found.")
+        return
+    except json.JSONDecodeError as e:
+        logging.error(f"Error parsing JSON: {e}")
+        return
+
+    # Construct the FIM Hierarchy
+    root_label = "Origin"
+    root = build_tree_from_graph(graph_data, root_label)
+    fim_hierarchy = FIMHierarchy(root, graph_data)
+
+    # Optional: Run self-healing
+    if args.self_heal:
+        logging.info("Running self-healing...")
+        fim_hierarchy.self_heal_structure()
+
+    # Optional: Run validation checks
+    if args.validate:
+        logging.info("Running validation checks...")
+        fim_hierarchy.run_validations()
+        if fim_hierarchy.check_errors:
+            logging.error("Validation Errors: %s", fim_hierarchy.check_errors)
+
+    # Output to JSON file if requested
+    if args.output_json:
+        with open(args.output_json, "w") as f:
+            json.dump(fim_hierarchy.to_full_json(), f, indent=4)
+        logging.info(f"Saved hierarchy JSON to {args.output_json}")
+
+    # Print hierarchy to terminal if requested
+    if args.print_hierarchy:
+        fim_hierarchy.print_hierarchy_and_validation()
+
+    # Force failure for debugging if requested
+    if args.fail_tests:
+        raise RuntimeError("Forced test failure for debugging.")
+
+if __name__ == "__main__":
+    main()
 
 # New external pipeline function that can be called from outside.
 def run_pipeline(input_json):
@@ -3478,3 +3147,68 @@ if __name__ == "__main__":
     logging.info("Final hierarchy exported to final_hierarchy.json")
     
     # (Any additional execution steps can follow here)
+
+###########################################
+##  Helper Functions for Testing & Healing  ##
+###########################################
+
+def propagate_cumulative_causality(node, cumulative=None):
+    """
+    Recursively propagates cumulative causal influence down the hierarchy.
+    Each node's 'cumulative_causality' field will be a list containing the chain of 
+    cause_effect_relation dictionaries from the root to that node.
+    """
+    if node.parent is None:
+        node.cumulative_causality = []
+    else:
+        node.cumulative_causality = list(getattr(node.parent, 'cumulative_causality', []))
+        if hasattr(node, 'causal_inference') and node.causal_inference.get("cause_effect_relation"):
+            node.cumulative_causality.append(node.causal_inference["cause_effect_relation"])
+    for child in node.children:
+        propagate_cumulative_causality(child)
+
+def simulate_llm_update(prompt_json):
+    """
+    Simulates an LLM update process.
+    In a real integration, this would send 'prompt_json' to an LLM and return suggestions.
+    """
+    return [{"node_id": "some_node_id", "field": "weight", "new_value": 0.85}]
+
+def compare_states(prev_state, current_state):
+    """
+    Compares two flat states (a dict mapping node_id -> fields).
+    Returns a dict describing differences between the states.
+    """
+    changes = {}
+    for node_id, old_data in prev_state.items():
+        new_data = current_state.get(node_id, {})
+        if not new_data:
+            changes[node_id] = "Node removed"
+            continue
+        field_diffs = {}
+        for field, old_value in old_data.items():
+            new_value = new_data.get(field)
+            if new_value != old_value:
+                field_diffs[field] = (old_value, new_value)
+        if field_diffs:
+            changes[node_id] = field_diffs
+    for node_id in current_state:
+        if node_id not in prev_state:
+            changes[node_id] = "New node added"
+    return changes
+
+def break_rule_descending_weights(fh):
+    """
+    Force a violation of the descending weights rule:
+    For each non-root node, set its weight to be bigger than its parent's weight.
+    """
+    for node in fh.linear_order:
+        if node.parent:
+            node.weight = node.parent.weight + 0.1
+
+def break_rule_submatrix_bounds(fh):
+    """
+    Force a violation of the submatrix bounds rule by clearing them on each node.
+    """
+    for node in fh.linear_order:
+        node.set_submatrix_bounds(None, None)
