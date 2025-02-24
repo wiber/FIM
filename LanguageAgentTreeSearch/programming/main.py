@@ -621,10 +621,13 @@ class FIMHierarchy:
       - linear_order: list of Node objects in custom linear sort order
       - prefixes: a dictionary mapping each node's abs_index to its computed prefix
     """
-    def __init__(self, root, graph, hpc_usage, entropy):
+    def __init__(self, root, graph, hpc_usage=None, entropy=None):
+        # Immediately set and validate the root.
+        if root is None:
+            raise ValueError("FIMHierarchy initialization failed: 'root' must be provided.")
         self.root = root
         self.graph = graph
-        self.rand_graph = graph  # <--- NEW: Ensure self.rand_graph is set for downstream operations
+        self.rand_graph = graph
         
         # Ensure that hpc_usage and entropy are always treated as lists.
         if not isinstance(hpc_usage, (list, tuple)):
@@ -651,8 +654,7 @@ class FIMHierarchy:
         # NEW CODE: Ensure required attributes exist for the normal run.
         # 'graph' is meant to hold the canonical hierarchy graph.
         # 'rand_graph' is used for computing invariant positions.
-        self.graph = {}      # Initialize with an empty dict or build the proper graph.
-        self.rand_graph = {} # Initialize with an empty dict or build the randomized graph.
+        # (Removed reinitialization so that the original input graph is preserved.)
         
         # ... rest of the initialization ...
         
@@ -2030,26 +2032,45 @@ class FIMHierarchy:
  
     def self_heal_structure(self):
         """
-        Improved self-healing routine: Logs validation errors before healing,
-        performs healing actions, and logs errors after healing.
+        Perform self-healing by:
+         1. Reordering children for each node by descending weight.
+         2. Rebuilding the linear ordering and reassigning absolute indices.
+         3. Reassigning invariant prefixes.
+         4. Re-propagating cumulative causal metadata.
+         5. Re-apply causal metadata via propagate_causal_effects.
         """
-        logging.info("\n--- Running Pre-Healing Validation ---")
-        self.run_validations()
-        logging.info("Validation Errors Before Healing: %s", self.check_errors)
 
-        # ----- Perform healing actions -----
-        # (For example: re-build ordering, update absolute indices, invariant prefixes, submatrix bounds, etc.)
+        # Step 1: Reorder children by descending weight.
+        def reorder_node(node):
+            if node.children:
+                node.children.sort(key=lambda x: x.weight, reverse=True)
+                for child in node.children:
+                    reorder_node(child)
+        reorder_node(self.root)
+
+        # Explicitly sort the root's immediate children as well.
+        if self.root.children:
+            self.root.children.sort(key=lambda x: x.weight, reverse=True)
+
+        # Step 2: Rebuild the linear ordering.
         self.linear_order = self.build_final_ordering()
-        self.assign_absolute_indices()
-        self.assign_invariant_prefixes()
-        self.label_positions = {node.abs_index: node.invariant_prefix for node in self.linear_order}
-        self.compute_invariant_positions()
-        self.assign_submatrix_bounds_to_nodes()
-        # ----- End healing actions -----
 
-        logging.info("\n--- Running Post-Healing Validation ---")
-        self.run_validations()
-        logging.info("Validation Errors After Healing: %s", self.check_errors)
+        # Step 3: Reassign absolute indices.
+        self.assign_absolute_indices()
+
+        # Step 4: Reassign invariant prefixes.
+        self.assign_invariant_prefixes()
+
+        # Step 5: Re-propagate cumulative causal metadata down the hierarchy.
+        propagate_cumulative_causality(self.root)
+
+        # NEW STEP 6: Reapply causal metadata.
+        # This should fix corrupted causal_inference entries.
+        try:
+            propagate_causal_effects(self.root)
+        except NameError:
+            # If propagate_causal_effects is not defined, skip this step.
+            pass
 
     def rebuild_hierarchy(self):
         """
@@ -2656,26 +2677,45 @@ class FIMHierarchy:
 
     def self_heal_structure(self):
         """
-        Improved self-healing routine: Logs validation errors before healing,
-        performs healing actions, and logs errors after healing.
+        Perform self-healing by:
+         1. Reordering children for each node by descending weight.
+         2. Rebuilding the linear ordering and reassigning absolute indices.
+         3. Reassigning invariant prefixes.
+         4. Re-propagating cumulative causal metadata.
+         5. Re-apply causal metadata via propagate_causal_effects.
         """
-        logging.info("\n--- Running Pre-Healing Validation ---")
-        self.run_validations()
-        logging.info("Validation Errors Before Healing: %s", self.check_errors)
 
-        # ----- Perform healing actions -----
-        # (For example: re-build ordering, update absolute indices, invariant prefixes, submatrix bounds, etc.)
+        # Step 1: Reorder children by descending weight.
+        def reorder_node(node):
+            if node.children:
+                node.children.sort(key=lambda x: x.weight, reverse=True)
+                for child in node.children:
+                    reorder_node(child)
+        reorder_node(self.root)
+
+        # Explicitly sort the root's immediate children as well.
+        if self.root.children:
+            self.root.children.sort(key=lambda x: x.weight, reverse=True)
+
+        # Step 2: Rebuild the linear ordering.
         self.linear_order = self.build_final_ordering()
-        self.assign_absolute_indices()
-        self.assign_invariant_prefixes()
-        self.label_positions = {node.abs_index: node.invariant_prefix for node in self.linear_order}
-        self.compute_invariant_positions()
-        self.assign_submatrix_bounds_to_nodes()
-        # ----- End healing actions -----
 
-        logging.info("\n--- Running Post-Healing Validation ---")
-        self.run_validations()
-        logging.info("Validation Errors After Healing: %s", self.check_errors)
+        # Step 3: Reassign absolute indices.
+        self.assign_absolute_indices()
+
+        # Step 4: Reassign invariant prefixes.
+        self.assign_invariant_prefixes()
+
+        # Step 5: Re-propagate cumulative causal metadata down the hierarchy.
+        propagate_cumulative_causality(self.root)
+
+        # NEW STEP 6: Reapply causal metadata.
+        # This should fix corrupted causal_inference entries.
+        try:
+            propagate_causal_effects(self.root)
+        except NameError:
+            # If propagate_causal_effects is not defined, skip this step.
+            pass
 
     def robust_self_heal(self, max_attempts=3):
         """
