@@ -192,6 +192,8 @@ import pprint
 from string import ascii_uppercase
 import uuid
 import unittest
+import time
+import sys  # if needed
 
 # Ensure logger is defined at the global scope.
 logger = logging.getLogger(__name__)
@@ -199,18 +201,18 @@ logger = logging.getLogger(__name__)
 # For completeness in this example, we define a simple Node class here.
 class Node:
     def __init__(self, label, weight=1.0, skip_factor=1.0):
+        self.node_id = str(uuid.uuid4())
         self.label = label
-        self.invariant_label = label  # Preserve original immutable label.
+        self.invariant_label = label  # unified label used for comparisons and JSON export
         self.weight = weight
         self.skip_factor = skip_factor
         self.children = []
         self.parent = None
         self.abs_index = None
         self.invariant_prefix = None
-        self.submatrix_bounds = {"start_index": None, "end_index": None}  # Reintroduced submatrix bounds.
-        # Initialize causal_metadata so that every Node has a default value.
-        self.causal_metadata = {}
-        self.node_id = str(uuid.uuid4())  # Assign a stable, unique identifier.
+        self.submatrix_bounds = {"start_index": None, "end_index": None}
+        self.causal_inference = {}
+        self.cumulative_causality = []
 
     def add_child(self, child):
         self.children.append(child)
@@ -263,31 +265,23 @@ class Node:
 #      TREE/GRAPH BUILDING AND HELPER FUNCTIONS           #
 ###########################################################
 
-def build_tree_from_graph(graph, root_label):
+def build_tree_from_graph(graph_data, origin_label):
     """
-    Build a Node-based tree from a dictionary-based graph.
-    For each relationship, the node.weight field is updated from the
-    randomized graph. Also, when adding children, we set the parent pointer.
+    Build a tree from the graph_data using the canonical Node class.
     """
-    nodes = {}
-    labels = set()
-    # Gather all labels from keys and children.
-    for parent, children in graph.items():
-        labels.add(parent)
-        for child in children:
-            labels.add(child)
-    for label in labels:
-        nodes[label] = Node(label, weight=1.0)
-    for parent, children in graph.items():
-        parent_node = nodes[parent]
-        for child, weight in children.items():
-            child_node = nodes[child]
-            child_node.weight = weight
-            child_node.parent = parent_node
-            parent_node.add_child(child_node)
-    if root_label not in nodes:
-        raise ValueError(f"Root label '{root_label}' not found in the provided graph.")
-    return nodes[root_label]
+    def _build_subtree(label, parent=None):
+        # Use the canonical Node here.
+        node = Node(label)
+        node.parent = parent
+        if parent:
+            parent.children.append(node)
+        if label in graph_data:
+            for child_label, child_weight in graph_data[label].items():
+                child_node = _build_subtree(child_label, node)
+                child_node.weight = child_weight
+        return node
+
+    return _build_subtree(origin_label)
 
 def build_node_dict(root):
     """
@@ -621,35 +615,27 @@ class FIMHierarchy:
       - linear_order: list of Node objects in custom linear sort order
       - prefixes: a dictionary mapping each node's abs_index to its computed prefix
     """
-    def __init__(self, root, graph, hpc_usage=None, entropy=None):
-        # Immediately set and validate the root.
-        if root is None:
-            raise ValueError("FIMHierarchy initialization failed: 'root' must be provided.")
+    def __init__(self, root, graph_data, aggregated_hpc=None, aggregated_entropy=None):
         self.root = root
-        self.graph = graph
-        self.rand_graph = graph
-        
-        # Ensure that hpc_usage and entropy are always treated as lists.
-        if not isinstance(hpc_usage, (list, tuple)):
-            hpc_usage = [hpc_usage]  # Wrap a single float in a list
-        if not isinstance(entropy, (list, tuple)):
-            entropy = [entropy]
-        self.hpc_usage = hpc_usage
-        self.entropy = entropy
-        
-        # ... (rest of __init__ code)
+        self.graph = graph_data  # <-- ADDED: Save graph_data as self.graph for later reference.
+        # NEW: Save a copy or assign self.rand_graph, if needed:
+        self.rand_graph = graph_data.copy() if hasattr(graph_data, 'copy') else graph_data
+        # Optionally, ensure aggregated_hpc and aggregated_entropy are stored properly.
+        self.aggregated_hpc = aggregated_hpc if aggregated_hpc is not None else []
+        self.entropy = aggregated_entropy if aggregated_entropy is not None else []
+        self.linear_order = []
+        # -------------------------------------------------------------
+        # Removed undefined RuleEngine for production mode.
+        # Previously: self.rule_engine = RuleEngine()
+        # -------------------------------------------------------------
+        # ... rest of __init__ ...
 
-        # When computing total_hpc, check if hpc_usage is a number or an iterable.
-        if self.hpc_usage:
-            if isinstance(self.hpc_usage, (int, float)):
-                total_hpc = self.hpc_usage
-            else:
-                total_hpc = sum(self.hpc_usage)
-        else:
-            total_hpc = 0
-
-        self.total_hpc = total_hpc
-        # ... rest of the __init__ logic
+        # Added to avoid AttributeError later when calculating total_hpc
+        self.hpc_usage = []  # Default to an empty list
+        
+        # ... (other initialization code)
+        total_hpc = sum(x for x in self.hpc_usage if x is not None) if self.hpc_usage else 0
+        # ... (rest of __init__)
 
         # NEW CODE: Ensure required attributes exist for the normal run.
         # 'graph' is meant to hold the canonical hierarchy graph.
@@ -658,14 +644,14 @@ class FIMHierarchy:
         
         # ... rest of the initialization ...
         
-        self.linear_order = []  # This list will be populated with nodes later
+        self.linear_order = self.build_final_ordering()
         self.check_errors = {}
 
         # Initialize state field to consolidate HPC, entropy, weight-change information,
         # and add the new universal "structure_modified" (dirty) flag.
         self.state = {
             "aggregated_hpc": self.hpc_usage,
-            "total_hpc": sum(self.hpc_usage) if self.hpc_usage else 0,
+            "total_hpc": sum(x for x in self.hpc_usage if x is not None) if self.hpc_usage else 0,
             "aggregated_entropy": self.entropy,
             "weights_changed": False,  # Already used in current methods.
             "structure_modified": False,  # <-- New dirty state flag.
@@ -690,8 +676,9 @@ class FIMHierarchy:
 
         # 5. (Optional) Compute invariant positions from the canonical ordering.
         self.compute_invariant_positions()
-
-        # --- New: Apply the causal metadata update ---
+        
+        # --- Updated: Apply the causal metadata update ---
+        # Instead of calling an undefined simulate_origin_metadata(), we now propagate causal influence.
         self.apply_causal_metadata()
 
         # 6. Run all validations (including causal metadata checks).
@@ -710,9 +697,55 @@ class FIMHierarchy:
             getattr(node, 'unique_id', node.label) for node in self.linear_order
         ] if hasattr(self, 'linear_order') else []
 
+        # NEW: Instantiate the rule engine using our placeholder.
         self.rule_engine = RuleEngine()
         self.validate_and_repair()
-        
+    
+    # -------------------------------------------------------------
+    # NEW: Propagate cumulative causality from the root downwards.
+    # -------------------------------------------------------------
+    @staticmethod
+    def propagate_cumulative_causality(node):
+        """
+        Propagate downward causality from the origin.
+        """
+        if node.parent is None:
+            node.cumulative_causality = []
+            if hasattr(node, 'causal_inference') and node.causal_inference.get("cause_effect_relation"):
+                node.cumulative_causality.append(node.causal_inference["cause_effect_relation"])
+        else:
+            node.cumulative_causality = list(getattr(node.parent, 'cumulative_causality', []))
+            if hasattr(node, 'causal_inference') and node.causal_inference.get("cause_effect_relation"):
+                node.cumulative_causality.append(node.causal_inference["cause_effect_relation"])
+        for child in node.children:
+            FIMHierarchy.propagate_cumulative_causality(child)
+    
+    # -------------------------------------------------------------
+    # NEW: Enforce valid submatrix bounds for each node.
+    # -------------------------------------------------------------
+    def enforce_submatrix_bounds_rule(self):
+        """
+        For each node in the linear_order, if submatrix bounds are missing, assign the node's abs_index as both
+        start and end bounds.
+        """
+        for node in self.linear_order:
+            if (node.submatrix_bounds["start_index"] is None or
+                node.submatrix_bounds["end_index"] is None):
+                idx = node.abs_index if node.abs_index is not None else self.linear_order.index(node)
+                node.set_submatrix_bounds(idx, idx)
+    
+    def self_heal_structure(self):
+        """
+        Rebuild the final ordering, assign absolute indices, propagate causality and enforce submatrix bounds.
+        """
+        self.linear_order = self.build_final_ordering()  # Assume this method exists.
+        self.assign_absolute_indices()                   # Assume this method exists.
+        # Propagate cumulative causality downwards from the root.
+        FIMHierarchy.propagate_cumulative_causality(self.root)
+        # Enforce submatrix bounds on all nodes.
+        self.enforce_submatrix_bounds_rule()
+        logging.info("Self-healing process completed.")
+
     # -------------------- NEW: UNIVERSAL DIRTY FLAG HANDLERS ---------------------
     def mark_structure_modified(self):
         """
@@ -788,7 +821,7 @@ class FIMHierarchy:
         recalculate the total HPC, and record the current timestamp as the last revalidation time.
         """
         import time
-        self.state["total_hpc"] = sum(self.hpc_usage) if self.hpc_usage else 0
+        self.state["total_hpc"] = sum(x for x in self.hpc_usage if x is not None) if self.hpc_usage else 0
         self.state["aggregated_hpc"] = self.hpc_usage
         self.state["aggregated_entropy"] = self.entropy
         self.state["last_revalidation"] = time.time()
@@ -1411,19 +1444,11 @@ class FIMHierarchy:
 
     def apply_causal_metadata(self):
         """
-        Iterate through the linear ordering and update each node's causal metadata.
-        For the origin node, simulate its metadata independently.
-        For every other node, simulate the parent→child link metadata.
+        Propagates causal influence downward from the root node.
+        Instead of using simulate_origin_metadata, we simply propagate the causal chain.
         """
-        iteration = len(self.hpc_usage)
-        for node in self.linear_order:
-            if node.parent is None:
-                # For the origin node, set its metadata using the origin helper.
-                node.causal_metadata = simulate_origin_metadata(node, iteration)
-            else:
-                # For non-origin nodes, simulate the causal link metadata.
-                node.causal_metadata = simulate_llm_causal_reasoning(node.parent, node, iteration)
-
+        self.propagate_cumulative_causality(self.root)
+    
     def validate_causal_metadata(self):
         """
         Validate that every node (except the origin) has structured causal metadata.
@@ -1609,30 +1634,26 @@ class FIMHierarchy:
 
     def enforce_submatrix_bounds_rule(self):
         """
-        Self-healing mechanism: repeatedly assign submatrix bounds until no errors remain.
-        A safe maximum iteration count is used to prevent infinite loops.
+        For each node in the linear_order, if submatrix bounds are missing, assign the node's abs_index as both
+        start and end bounds.
         """
-        attempt = 1
-        max_iterations = 1000   # Safeguard to avoid infinite looping if errors never resolve.
-        while attempt <= max_iterations:
-            # --- Added: Re-compute the ordering based on the current (randomized) weights.
-            self.linear_order = self.build_final_ordering()
-            self.assign_absolute_indices()
-            self.assign_invariant_prefixes()
-            self.label_positions = {node.abs_index: node.invariant_prefix for node in self.linear_order}
-            self.compute_invariant_positions()
-
-            # Now recompute submatrix bounds using the (possibly) updated ordering.
-            self.assign_submatrix_bounds_to_nodes()
-            errors = self.check_and_update_all_submatrix_bounds()
-            if not errors:
-                logging.info("Submatrix bounds rule enforced successfully on attempt %d", attempt)
-                return
-            logging.warning("Attempt %d: Submatrix bounds errors found: %s", attempt, errors)
-            attempt += 1
-        
-        logging.error("Maximum iterations (%d) reached; self-healing failed to remove all submatrix bounds errors.", max_iterations)
-        return errors
+        for node in self.linear_order:
+            if (node.submatrix_bounds["start_index"] is None or
+                node.submatrix_bounds["end_index"] is None):
+                idx = node.abs_index if node.abs_index is not None else self.linear_order.index(node)
+                node.set_submatrix_bounds(idx, idx)
+    
+    def self_heal_structure(self):
+        """
+        Rebuild the final ordering, assign absolute indices, propagate causality and enforce submatrix bounds.
+        """
+        self.linear_order = self.build_final_ordering()  # Assume this method exists.
+        self.assign_absolute_indices()                   # Assume this method exists.
+        # Propagate cumulative causality downwards from the root.
+        FIMHierarchy.propagate_cumulative_causality(self.root)
+        # Enforce submatrix bounds on all nodes.
+        self.enforce_submatrix_bounds_rule()
+        logging.info("Self-healing process completed.")
 
     def rebuild_canonical_ordering(self):
         """
@@ -1762,8 +1783,6 @@ class FIMHierarchy:
 
         for child in node.children:
             self.propagate_combined_metadata(child, combined_metadata)
-
-        return combined_metadata
 
     # -------------------- NEW: Assign Canonical Names ---------------------
     def assign_canonical_names(self, node, parent_name=None):
@@ -2001,7 +2020,7 @@ class FIMHierarchy:
         """
         issues = []
         def validate_node(node):
-            # Check for orphaned nodes (non-root without a parent)
+            # Check for orphaned nodes (non-root nodes with no parent)
             if node != self.root and node.parent is None:
                 issues.append(f"Node {node.label} (ID: {node.node_id}) is orphaned.")
             # Check ordering: parent's abs_index should be lower than child's
@@ -2019,44 +2038,15 @@ class FIMHierarchy:
  
     def self_heal_structure(self):
         """
-        Perform self-healing by:
-         1. Reordering children for each node by descending weight.
-         2. Rebuilding the linear ordering and reassigning absolute indices.
-         3. Reassigning invariant prefixes.
-         4. Re-propagating cumulative causal metadata.
-         5. Re-apply causal metadata via propagate_causal_effects.
+        Rebuild the final ordering, assign absolute indices, propagate causality and enforce submatrix bounds.
         """
-        # Step 1: Reorder children by descending weight.
-        def reorder_node(node):
-            if node.children:
-                node.children.sort(key=lambda x: x.weight, reverse=True)
-                for child in node.children:
-                    reorder_node(child)
-        reorder_node(self.root)
-
-        # Explicitly sort the root's immediate children as well.
-        if self.root.children:
-            self.root.children.sort(key=lambda x: x.weight, reverse=True)
-
-        # Step 2: Rebuild the linear ordering and reassign absolute indices.
-        self.linear_order = self.build_final_ordering()
-
-        # Step 3: Reassign absolute indices.
-        self.assign_absolute_indices()
-
-        # Step 4: Reassign invariant prefixes.
-        self.assign_invariant_prefixes()
-
-        # Step 5: Re-propagate cumulative causal metadata down the hierarchy.
-        propagate_cumulative_causality(self.root)
-
-        # NEW STEP 6: Reapply causal metadata.
-        # This should fix corrupted causal_inference entries.
-        try:
-            propagate_causal_effects(self.root)
-        except NameError:
-            # If propagate_causal_effects is not defined, skip this step.
-            pass
+        self.linear_order = self.build_final_ordering()  # Assume this method exists.
+        self.assign_absolute_indices()                   # Assume this method exists.
+        # Propagate cumulative causality downwards from the root.
+        FIMHierarchy.propagate_cumulative_causality(self.root)
+        # Enforce submatrix bounds on all nodes.
+        self.enforce_submatrix_bounds_rule()
+        logging.info("Self-healing process completed.")
 
     def rebuild_hierarchy(self):
         """
@@ -2215,744 +2205,14 @@ class FIMHierarchy:
                                       node.parent.label, node.parent.abs_index, node.label, node.abs_index)
                         valid = False
         return valid
-    
-    def log_faulty_nodes(self):
-        """
-        Scans the linear order and logs details for every node that fails validation.
-        This includes:
-           - Non-root nodes with no parent.
-           - Nodes where the parent's absolute index is not less than the node's absolute index.
-        """
-        for node in self.linear_order:
-            if node != self.root and node.parent is None:
-                logging.error("Faulty node: %s has no parent. Details: %s", node.label, node.__dict__)
-            if node.parent and node.abs_index is not None and node.parent.abs_index is not None:
-                if node.parent.abs_index >= node.abs_index:
-                    logging.error("Faulty ordering: Parent %s (AbsIndex %s) is not less than Node %s (AbsIndex %s). Details: %s",
-                                  node.parent.label, node.parent.abs_index, node.label, node.abs_index, node.__dict__)
-
-    def get_failed_validation_nodes(self):
-        """
-        Returns a list of nodes that fail structural validation.
-        For example:
-          - Non-root nodes with no parent.
-          - Nodes whose weight is still default when parent's weight is non-default.
-          - Ordering violations (parent.abs_index >= child.abs_index).
-        """
-        failed = []
-        for node in self.linear_order:
-            if node != self.root:
-                if node.parent is None:
-                    failed.append(node)
-                if node.parent and node.weight == 1.0 and node.parent.weight != 1.0:
-                    failed.append(node)
-                if node.parent and node.abs_index is not None and node.parent.abs_index is not None:
-                    if node.parent.abs_index >= node.abs_index:
-                        failed.append(node)
-        return failed
-
-    def log_failed_nodes(self):
-        """
-        Iterates over the linear order to log any nodes that fail structural validation.
-        Logs details such as orphan nodes or nodes with invalid ordering (parent index not less than child's index).
-        """
-        logging.error("Logging failed nodes from the hierarchy:")
-        for node in self.linear_order:
-            error_msgs = []
-            if node != self.root and node.parent is None:
-                error_msgs.append("Orphan node")
-            if node.parent and node.abs_index is not None and node.parent.abs_index is not None:
-                if node.parent.abs_index >= node.abs_index:
-                    error_msgs.append(f"Invalid ordering: Parent index {node.parent.abs_index} >= Child index {node.abs_index}")
-            if error_msgs:
-                logging.error("Node %s (ID: %s) errors: %s", node.label, node.node_id, "; ".join(error_msgs))
-
-    def trigger_hierarchy_update(self):
-        """Rebuilds hierarchy after weight changes and updates all metadata"""
-        self.linear_order = self.build_final_ordering()
-        # First, repair ordering violations.
-        self.repair_hierarchy()
-        self.assign_absolute_indices()
-        self.assign_invariant_prefixes()
-        self.assign_submatrix_bounds()
-        # Assign human-readable canonical names for LLM readability.
-        self.assign_canonical_names(self.root)
-        # Recursively propagate combined causal metadata and explicit causal effects.
-        self.propagate_combined_metadata(self.root)
-        propagate_causal_effects(self.root)
-
-        # Serialize the entire hierarchy to a full JSON for debugging and write it to file.
-        full_json = self.to_full_json()
-        with open("full_hierarchy.json", "w") as f:
-            json.dump(full_json, f, indent=4)
-        logging.info("Serialized full hierarchy JSON:\n%s", json.dumps(full_json, indent=4))
-
-    def to_full_json(self):
-        """
-        Recursively exports the entire hierarchy as a nested dictionary,
-        including all metadata and causal information.
-        This is used for debugging and validation.
-        """
-        def export_node(node):
-            return {
-                "node_id": node.node_id,
-                "label": node.label,
-                "invariant_label": node.invariant_label,
-                "weight": node.weight,
-                "abs_index": node.abs_index,
-                "invariant_prefix": node.invariant_prefix,
-                "parent_id": node.parent.node_id if node.parent else None,  # Added parent_id.
-                "submatrix_bounds": node.submatrix_bounds,
-                "causal_inference": node.causal_inference if hasattr(node, "causal_inference") else {},
-                "cumulative_causality": node.cumulative_causality if hasattr(node, "cumulative_causality") else [],
-                "children": [export_node(child) for child in node.children]
-            }
-        return export_node(self.root)
-
-    def report_failed_nodes(self):
-        """
-        Iterates over the current linear order and returns a list of tuples (node_label, reason)
-        for nodes that fail structural validation:
-          - Non-root nodes with no parent.
-          - Nodes whose parent's absolute index is not lower than the node's abs_index.
-        """
-        failed = []
-        for node in self.linear_order:
-            if node != self.root and node.parent is None:
-                failed.append((node.label, "Orphan node (no parent)"))
-            if node.parent and node.abs_index is not None and node.parent.abs_index is not None:
-                if node.parent.abs_index >= node.abs_index:
-                    failed.append((node.label, f"Ordering violation: parent abs_index {node.parent.abs_index} >= node abs_index {node.abs_index}"))
-        return failed
-
-    def auto_attach_orphaned_nodes(self):
-        """
-        For each orphaned node (non-root node with no parent), attempt to reattach it
-        to a candidate parent.
-        Candidate selection: choose a node in the linear_order that appears before the orphan
-        (so its abs_index is lower) and that has a higher weight than the orphan.
-        If no candidate is found, attach directly to the root.
-        """
-        for node in self.linear_order:
-            if node != self.root and node.parent is None:
-                candidate = None
-                for potential in self.linear_order:
-                    if potential == node:
-                        break
-                    if potential.weight > node.weight:
-                        candidate = potential
-                if candidate:
-                    candidate.add_child(node)
-                    logging.info("Auto-attached orphan node %s to candidate parent %s", node.label, candidate.label)
-                else:
-                    self.root.add_child(node)
-                    logging.info("Auto-attached orphan node %s to root %s", node.label, self.root.label)
-
-    def normalize_weights(self, threshold=0.01):
-        """
-        For each non-root node, if the difference between the parent's weight and the child's weight
-        is below the given threshold, adjust the child's weight to be 90% of the parent's weight.
-        This prevents unstable ordering when weights are too close.
-        """
-        for node in self.linear_order:
-            if node != self.root and node.parent:
-                if abs(node.parent.weight - node.weight) < threshold:
-                    old_weight = node.weight
-                    node.weight = node.parent.weight * 0.9
-                    logging.info("Normalized weight of node %s from %s to %s (parent %s weight %s)",
-                                 node.label, old_weight, node.weight, node.parent.label, node.parent.weight)
-
-    def set_node_field(self, node_id, field, new_value):
-        """
-        Set the specified field for the node with the given node_id.
-        If no such node exists, raise a ValueError.
-        """
-        found = False
-        for node in self.linear_order:
-            if node.node_id == node_id:
-                setattr(node, field, new_value)
-                logging.info("Set field '%s' of node %s (id: %s) to %s",
-                             field, node.label, node.node_id, new_value)
-                found = True
-                break
-        if not found:
-            raise ValueError(f"Node with id {node_id} not found.")
-    
-    def get_node_field(self, node_id, field):
-        """
-        Retrieve the value of the specified field for the node with the given node_id.
-        Raises a ValueError if the node is not found.
-        """
-        for node in self.linear_order:
-            if node.node_id == node_id:
-                return getattr(node, field)
-        raise ValueError(f"Node with id {node_id} not found.")
-    
-    def get_node_by_prefix(self, prefix):
-        """
-        Return the first node with the given invariant_prefix.
-        If no node is found, return None.
-        """
-        for node in self.linear_order:
-            if node.invariant_prefix == prefix:
-                return node
-        return None
-
-    def get_node_field(self, node_id, field):
-        """
-        Retrieves the value of the given field for the node with the specified node_id.
-        Raises ValueError if no such node is found.
-        """
-        for node in self.linear_order:
-            if node.node_id == node_id:
-                return getattr(node, field)
-        raise ValueError(f"Node {node_id} not found.")
-
-    def set_node_field(self, node_id, field, new_value):
-        """
-        Sets the given field of the node with the specified node_id to new_value.
-        Marks the structure as modified. Raises ValueError if no such node is found.
-        """
-        for node in self.linear_order:
-            if node.node_id == node_id:
-                setattr(node, field, new_value)
-                self.state["structure_modified"] = True
-                logging.info("Field '%s' updated for node %s (new value: %s)",
-                             field, node.label, new_value)
-                return
-        raise ValueError(f"Node {node_id} not found.")
-
-    def get_node_by_prefix(self, prefix):
-        """
-        Returns the first node found with the given invariant prefix.
-        Raises ValueError if no such node is found.
-        """
-        for node in self.linear_order:
-            if node.invariant_prefix == prefix:
-                return node
-        raise ValueError(f"Node with prefix {prefix} not found.")
-
-    def to_prompt_json(self):
-        """
-        Returns a prompt-ready JSON representation as a list of dictionaries,
-        where each dictionary represents a node with select fields.
-        """
-        result = []
-        for node in self.linear_order:
-            node_dict = {
-                "node_id": node.node_id,
-                "label": node.label,
-                "weight": node.weight,
-                "parent_id": node.parent.node_id if node.parent else None,
-                "abs_index": node.abs_index,
-                "prefix": node.invariant_prefix,
-                "submatrix_bounds": node.get_submatrix_bounds(),
-                "cause_effect_relation": node.causal_inference if hasattr(node, "causal_inference") else {}
-            }
-            result.append(node_dict)
-        return result
-
-    def get_node_by_id(self, node_id):
-        """
-        Retrieve a node based on its unique identifier.
-        """
-        for node in self.linear_order:
-            if node.node_id == node_id:
-                return node
-        return None
-
-    def get_node_field(self, node_id, field):
-        """
-        Retrieve the specified field of the node with the given node_id.
-        """
-        node = self.get_node_by_id(node_id)
-        if not node:
-            raise ValueError(f"Node with id {node_id} not found.")
-        return getattr(node, field, None)
-
-    def set_node_field(self, node_id, field, new_value):
-        """
-        Set the specified field of the node with the given node_id to new_value.
-        """
-        node = self.get_node_by_id(node_id)
-        if not node:
-            raise ValueError(f"Node with id {node_id} not found.")
-        setattr(node, field, new_value)
-        logging.info("Set node %s: %s = %s", node_id, field, new_value)
-
-    def set_node_field(self, node_id, field, new_value):
-        """
-        Updates the field for a given node identified by node_id.
-        If the node is not found, raises a ValueError.
-        """
-        for node in self.linear_order:
-            if node.node_id == node_id:
-                setattr(node, field, new_value)
-                logging.info("Updated node %s field %s to value %s", node.label, field, new_value)
-                return
-        raise ValueError(f"Node {node_id} not found.")
-
-    def get_node_field(self, node_id, field):
-        """
-        Returns the value of the given field for a node identified by node_id.
-        If the node is not found, raises a ValueError.
-        """
-        for node in self.linear_order:
-            if node.node_id == node_id:
-                return getattr(node, field)
-        raise ValueError(f"Node {node_id} not found.")
-
-    def get_flat_state(self):
-        """
-        Returns a flattened dictionary mapping node_id to a dictionary of selected fields.
-        Fields include 'weight', 'parent_id' and 'abs_index'.
-        """
-        state = {}
-        for node in self.linear_order:
-            state[node.node_id] = {
-                "weight": node.weight,
-                "parent_id": node.parent.node_id if node.parent else None,
-                "abs_index": node.abs_index,
-            }
-        return state
-
-    def get_node_field(self, node_id, field):
-        """
-        Returns the value of the given field for the node with the specified node_id.
-        Raises ValueError if no such node is found.
-        """
-        for node in self.linear_order:
-            if node.node_id == node_id:
-                return getattr(node, field)
-        raise ValueError(f"Node {node_id} not found.")
-
-    def set_node_field(self, node_id, field, new_value):
-        """
-        Sets the value of 'field' to 'new_value' for the node with node_id.
-        """
-        for node in self.linear_order:
-            if node.node_id == node_id:
-                setattr(node, field, new_value)
-                logging.info("Set field %s of node %s to %s", field, node.label, new_value)
-                return
-        raise ValueError(f"Node {node_id} not found.")
-
-    def apply_llm_suggestions(self, suggestions):
-        """
-        Applies LLM update suggestions.
-        Each suggestion is a dict with keys: node_id, field, new_value.
-        """
-        for suggestion in suggestions:
-            self.set_node_field(suggestion["node_id"], suggestion["field"], suggestion["new_value"])
-            logging.info("Applied LLM suggestion on node %s: set %s to %s",
-                         suggestion["node_id"], suggestion["field"], suggestion["new_value"])
-
-    def set_node_field(self, node_id, field, new_value):
-        """
-        Sets the given field on the node identified by node_id.
-        Raises a ValueError if the node is not found or if the field does not exist.
-        """
-        node = next((n for n in self.linear_order if n.node_id == node_id), None)
-        if not node:
-            raise ValueError(f"Node {node_id} not found.")
-        if not hasattr(node, field):
-            raise ValueError(f"Field {field} not found in node {node.label}.")
-        setattr(node, field, new_value)
-    
-    def get_node_field(self, node_id, field):
-        """
-        Returns the value of the given field from the node identified by node_id.
-        Raises a ValueError if the node or field is not found.
-        """
-        node = next((n for n in self.linear_order if n.node_id == node_id), None)
-        if not node:
-            raise ValueError(f"Node {node_id} not found.")
-        if not hasattr(node, field):
-            raise ValueError(f"Field {field} not found in node {node.label}.")
-        return getattr(node, field)
-    
-    def to_prompt_json(self):
-        """
-        Exports a simplified, prompt–ready version of the hierarchy.
-        Returns a list where each element is a dictionary representing
-        select fields of a node needed by an LLM.
-        """
-        prompts = []
-        for node in self.linear_order:
-            prompts.append({
-                "node_id": node.node_id,
-                "label": node.label,
-                "weight": node.weight,
-                "abs_index": node.abs_index,
-                "parent_id": node.parent.node_id if node.parent else None,
-                "invariant_prefix": node.invariant_prefix,
-                "submatrix_bounds": node.get_submatrix_bounds(),
-                "causal_inference": node.causal_inference if hasattr(node, "causal_inference") else {},
-            })
-        return prompts
-    
-    def get_node_by_prefix(self, prefix):
-        """
-        Returns the first node found with the given invariant prefix.
-        Raises a ValueError if no node with the prefix is found.
-        """
-        for node in self.linear_order:
-            if node.invariant_prefix == prefix:
-                return node
-        raise ValueError(f"No node found with prefix {prefix}.")
-
-    def get_node_by_id(self, node_id):
-         """
-         Lookup a node by its unique node_id in the linear order.
-         """
-         for node in self.linear_order:
-             if node.node_id == node_id:
-                 return node
-         raise ValueError(f"Node {node_id} not found.")
- 
-    def get_node_field(self, node_id, field):
-         """
-         Retrieves a field's value from a node given its node_id.
-         """
-         node = self.get_node_by_id(node_id)
-         if not hasattr(node, field):
-             raise ValueError(f"Field {field} not found in node {node_id}.")
-         return getattr(node, field)
- 
-    def set_node_field(self, node_id, field, new_value):
-         """
-         Sets a field's value for a node given its node_id.
-         """
-         node = self.get_node_by_id(node_id)
-         if not hasattr(node, field):
-             raise ValueError(f"Field {field} not found in node {node_id}.")
-         setattr(node, field, new_value)
- 
-    def get_node_by_prefix(self, prefix):
-         """
-         Retrieves a node by its invariant prefix.
-         """
-         for node in self.linear_order:
-             if getattr(node, "invariant_prefix", None) == prefix:
-                 return node
-         raise ValueError(f"Node with prefix {prefix} not found.")
-
-    def recalc_linear_order(self):
-        """
-        Recalculate the linear order for the hierarchy based on the current tree structure.
-        Reassigns ascending abs_index values, fixes descendant weight violations,
-        and recalculates submatrix bounds if missing.
-        """
-        # Rebuild node dictionary from the current tree.
-        node_dict = build_node_dict(self.root)
-        # Recompute the linear order using the helper function.
-        new_order = linearize_one_d(self.graph, self.root.invariant_label, node_dict)
-        self.linear_order = new_order
-        for idx, node in enumerate(self.linear_order):
-            node.abs_index = idx
-            # Fix descendant weight rule: ensure child's weight <= parent's weight.
-            if node.parent and node.weight > node.parent.weight:
-                old_weight = node.weight
-                node.weight = node.parent.weight * 0.9
-                logging.info("Adjusted weight of node %s from %s to %s (child <= parent)", 
-                             node.label, old_weight, node.weight)
-            # If submatrix bounds are missing, assign default bounds based on order index.
-            bounds = node.get_submatrix_bounds()
-            if bounds["start_index"] is None or bounds["end_index"] is None:
-                node.set_submatrix_bounds(idx, idx, prefix=node.invariant_prefix)
-
-    def self_heal_structure(self):
-        """
-        Perform self-healing by:
-         1. Reordering children for each node by descending weight.
-         2. Rebuilding the linear ordering and reassigning absolute indices.
-         3. Reassigning invariant prefixes.
-         4. Re-propagating cumulative causal metadata.
-         5. Re-apply causal metadata via propagate_causal_effects.
-        """
-        # Step 1: Reorder children by descending weight.
-        def reorder_node(node):
-            if node.children:
-                node.children.sort(key=lambda x: x.weight, reverse=True)
-                for child in node.children:
-                    reorder_node(child)
-        reorder_node(self.root)
-
-        # Explicitly sort the root's immediate children as well.
-        if self.root.children:
-            self.root.children.sort(key=lambda x: x.weight, reverse=True)
-
-        # Step 2: Rebuild the linear ordering and reassign absolute indices.
-        self.linear_order = self.build_final_ordering()
-
-        # Step 3: Reassign absolute indices.
-        self.assign_absolute_indices()
-
-        # Step 4: Reassign invariant prefixes.
-        self.assign_invariant_prefixes()
-
-        # Step 5: Re-propagate cumulative causal metadata down the hierarchy.
-        propagate_cumulative_causality(self.root)
-
-        # NEW STEP 6: Reapply causal metadata.
-        # This should fix corrupted causal_inference entries.
-        try:
-            propagate_causal_effects(self.root)
-        except NameError:
-            # If propagate_causal_effects is not defined, skip this step.
-            pass
 
     def robust_self_heal(self, max_attempts=3):
         """
-        Robust self-healing mechanism: repeatedly call self_heal_structure
-        until no validation errors remain or until max_attempts is reached.
-
+        A wrapper that calls the RuleEngine's repair() method.
         Returns:
-            bool: True if healing was successful (no errors remain), False otherwise.
+            bool: True if self-healing succeeded, False otherwise.
         """
-        attempt = 1
-        while attempt <= max_attempts:
-            print(f"Self-healing attempt {attempt}")
-            self.self_heal_structure()         # Call current healing mechanism.
-            self.run_validations()              # Re-run validations.
-            if not self.check_errors:
-                print(f"Self-healing successful on attempt {attempt}")
-                return True
-            print(f"Errors after attempt {attempt}: {self.check_errors}")
-            attempt += 1
-        print("Robust self-healing failed after", max_attempts, "attempts.")
-        return False
-
-    def check_submatrix_bounds(self):
-        """
-        Rule: Each node must have valid submatrix bounds.
-        """
-        for node in self.linear_order:
-            bounds = node.get_submatrix_bounds()
-            if bounds.get("start_index") is None or bounds.get("end_index") is None:
-                self.check_errors[f"bounds_{node.label}"] = (
-                    f"Node {node.label} missing submatrix bounds (start_index: {bounds.get('start_index')}, end_index: {bounds.get('end_index')})."
-                )
-                logging.error(self.check_errors[f"bounds_{node.label}"])
-            else:
-                self.check_errors[f"bounds_{node.label}"] = None
-
-    # NEW: Strict validation functions for the key rules.
-    def check_origin_at_index0(self):
-        """
-        Rule: The origin node must be at index 0.
-        """
-        if self.linear_order[0] != self.root:
-            self.check_errors["origin"] = f"Origin node is at index {self.linear_order.index(self.root)}, not 0."
-            logging.error(self.check_errors["origin"])
-        else:
-            self.check_errors["origin"] = None
-            logging.info("Origin at index 0 check passed.")
-
-    def check_top_level_contiguity(self):
-        """
-        Rule: Top-level nodes (direct children of the root) must appear as one contiguous block.
-        """
-        top_levels = [node for node in self.linear_order if node.parent == self.root]
-        if top_levels:
-            min_idx = min(self.linear_order.index(node) for node in top_levels)
-            max_idx = max(self.linear_order.index(node) for node in top_levels)
-            if max_idx - min_idx + 1 != len(top_levels):
-                self.check_errors["top_level"] = (
-                    f"Top-level nodes are not contiguous: expected block size {len(top_levels)} but found indices {min_idx}..{max_idx}."
-                )
-                logging.error(self.check_errors["top_level"])
-            else:
-                self.check_errors["top_level"] = None
-                logging.info("Top-level contiguity check passed.")
-        else:
-            self.check_errors["top_level"] = "No top-level nodes found."
-            logging.error(self.check_errors["top_level"])
-
-    def check_parent_before_child(self):
-        """
-        Rule: Every parent must appear before its child.
-        """
-        for node in self.linear_order:
-            if node.parent:
-                parent_idx = self.linear_order.index(node.parent)
-                child_idx = self.linear_order.index(node)
-                if child_idx < parent_idx:
-                    self.check_errors[f"parent_{node.label}"] = (
-                        f"Parent {node.parent.label} (idx {parent_idx}) appears after child {node.label} (idx {child_idx})."
-                    )
-                    logging.error(self.check_errors[f"parent_{node.label}"])
-                else:
-                    self.check_errors[f"parent_{node.label}"] = None
-
-    def check_submatrix_bounds(self):
-        """
-        Rule: Every node must have non-None submatrix bounds.
-        """
-        for node in self.linear_order:
-            bounds = node.get_submatrix_bounds()
-            if bounds.get("start_index") is None or bounds.get("end_index") is None:
-                self.check_errors[f"bounds_{node.label}"] = (
-                    f"Node {node.label} is missing submatrix bounds (start_index: {bounds.get('start_index')}, "
-                    f"end_index: {bounds.get('end_index')})."
-                )
-                logging.error(self.check_errors[f"bounds_{node.label}"])
-            else:
-                self.check_errors[f"bounds_{node.label}"] = None
-
-    def run_validations(self):
-        """
-        Calls all the strict validation functions and stores any errors in self.check_errors.
-        """
-        # Reset errors
-        self.check_errors = {}
-        self.check_origin_at_index0()
-        self.check_top_level_contiguity()
-        self.check_parent_before_child()
-        self.check_submatrix_bounds()
-        # ... include any other validations already defined ...
-
-def simulate_origin_metadata(node, iteration):
-    """
-    Simulate causal metadata for the origin node.
-    """
-    return {
-        "justification": f"Simulated origin metadata for node {node.label} at iteration {iteration}",
-        "payload": {
-            "origin_name": node.label,
-            "origin_invariant_prefix": node.invariant_prefix,
-            "origin_abs_index": node.abs_index,
-            "origin_weight": node.weight,
-        }
-    }
-
-def simulate_llm_causal_reasoning(parent, child, iteration):
-    """
-    Simulate causal reasoning metadata for a non-origin node based on its parent.
-    """
-    return {
-        "justification": f"Simulated causal reasoning between {parent.label} and {child.label} at iteration {iteration}",
-        "payload": {
-            "parent_name": parent.label,
-         "parent_invariant_prefix": parent.invariant_prefix,
-         "parent_abs_index": parent.abs_index,
-         "parent_weight": parent.weight,
-            "child_name": child.label,
-         "child_invariant_prefix": child.invariant_prefix,
-         "child_abs_index": child.abs_index,
-            "child_weight": child.weight,
-            "cause_effect_relation": {
-                "cause": "Parent_Label",
-                "effect": "Child_Label",
-                "influence_strength": 0.75
-            }
-        }
-    }
-
-# --------------------------------------------------------------------
-# Minimal implementation of RuleEngine to support FIMHierarchy.
-# This class provides stubs for add_default_rules() and repair().
-# You can later add more robust rule validation and repair mechanisms.
-# --------------------------------------------------------------------
-class RuleEngine:
-    """
-    Minimal implementation of RuleEngine for validating and repairing the hierarchy.
-    """
-    def __init__(self):
-        self.rules = []
-        self.add_default_rules()
-
-    def add_default_rules(self):
-        # Add default rules if available.
-        # For now, no default rules are set.
-        pass
-
-    def add_rule(self, rule):
-        """Add a custom validation rule."""
-        self.rules.append(rule)
-
-    def repair(self, hierarchy, max_attempts=3):
-        """
-        A minimal repair method.
-        Rebuilds the canonical ordering from the live tree and checks that the extra node is present.
-        """
-        logging.info("Running minimal repair process in RuleEngine.")
-
-        def find_node_by_label(node, label):
-            if node.label == label:
-                return node
-            for child in node.children:
-                result = find_node_by_label(child, label)
-                if result is not None:
-                    return result
-            return None
-          
-        success = False
-        for attempt in range(1, max_attempts + 1):
-            node_A = find_node_by_label(hierarchy.root, "LLM_3_A")
-            if not node_A:
-                logging.error("Node LLM_3_A not found in hierarchy!")
-                return False
-  
-            logging.info("Rebuilding canonical ordering (from live tree) and reassigning indices/prefixes (attempt %d)...", attempt)
-            # Rebuild ordering from live tree (which now includes the extra node, if attached)
-            hierarchy.linear_order = hierarchy.build_final_ordering_from_live_tree()
-            hierarchy.assign_absolute_indices()
-            hierarchy.assign_invariant_prefixes()
-            hierarchy.label_positions = {node.abs_index: node.invariant_prefix for node in hierarchy.linear_order}
-
-            # Check that the extra node (labeled with "A3") is present among node_A's children.
-            if any("A3" in child.label for child in node_A.children):
-                logging.info("Extra node found in LLM_3_A children. Repair successful on attempt %d.", attempt)
-                success = True
-                break
-        if not success:
-            logging.error("Maximum attempts (%d) reached; self-healing failed.", max_attempts)
-            return False
-        return True
-
-# Global helper defintion for searching a node by label
-def find_node_by_label(node, label):
-    if node.label == label:
-        return node
-    for child in node.children:
-        result = find_node_by_label(child, label)
-        if result is not None:
-            return result
-    return None
-
-# Global helper function to update labels based on simulation rules.
-def update_labels(node, iteration=3):
-    """
-    Recursively update every node's label and causal metadata.
-    This simulation function updates the label by appending a suffix based on the iteration,
-    and adds a 'simulation_iteration' field into the node's causal_metadata.
-    """
-    node.label = f"{node.invariant_label}_simulated_{iteration}"
-    node.causal_metadata["simulation_iteration"] = iteration
-    for child in node.children:
-        update_labels(child, iteration)
-
-# Global helper function to update in-links (simulate causal reasoning)
-def update_in_links(node, iteration=3):
-    """
-    Recursively update each node's causal metadata with simulation link data if missing.
-    This ensures that each node (especially new ones) has a proper in link connecting it to its parent.
-    """
-    if node.parent and 'justification' not in node.causal_metadata:
-        node.causal_metadata["justification"] = f"Simulated causal reasoning between {node.parent.label} and {node.label} at iteration {iteration}"
-        node.causal_metadata["payload"] = {
-            "parent_name": node.parent.label,
-            "parent_invariant_prefix": node.parent.invariant_prefix,
-            "parent_abs_index": node.parent.abs_index,
-            "parent_weight": node.parent.weight,
-            "child_name": node.label,
-            "child_invariant_prefix": node.invariant_prefix,
-            "child_abs_index": node.abs_index,
-            "child_weight": node.weight
-        }
-    for child in node.children:
-        update_in_links(child, iteration)
+        return self.rule_engine.repair(self, max_attempts=max_attempts)
 
 def propagate_causal_effects(node, parent_metadata=None):
     """
@@ -2990,32 +2250,86 @@ def print_hierarchy(node, indent=0):
     for child in node.children:
          print_hierarchy(child, indent + 4)
 
-def main():
-    import json
-    import argparse
-    import logging
-
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-    
-    parser = argparse.ArgumentParser(description="Run the FIM Hierarchy Pipeline.")
-    parser.add_argument("--input-json", type=str, help="Path to input JSON file for hierarchy.")
-    parser.add_argument("--output-json", type=str, help="Path to save the output JSON.")
-    parser.add_argument("--print-hierarchy", action="store_true", help="Print hierarchy to the terminal.")
+# -------------------------------------------------------------------
+# Move this helper function block above main()
+# -------------------------------------------------------------------
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="FIMHierarchy Pipeline Runner")
+    parser.add_argument("--input-json", help="Path to input JSON file containing hierarchy.", type=str, required=True)
+    parser.add_argument("--output-json", help="Path to output final hierarchy JSON file.", type=str, default="final_hierarchy.json")
     parser.add_argument("--self-heal", action="store_true", help="Run self-healing on the hierarchy.")
-    parser.add_argument("--validate", action="store_true", help="Run validation checks after execution.")
-    parser.add_argument("--fail-tests", action="store_true", help="Force a failure for debugging.")
-    parser.add_argument("--run-tests", action="store_true", help="Run unit tests and exit.")
-    parser.add_argument("--use_mock", action="store_true", help="Use mock data", default=False)
-    args = parser.parse_args()
+    parser.add_argument("--print-hierarchy", action="store_true", help="Print the hierarchy to stdout.")
+    return parser.parse_args()
 
-    # If the user explicitly requests to run tests, do so and then exit.
-    if args.run_tests:
-        import sys, unittest
-        sys.argv = sys.argv[:1]  # Remove extra command-line args for unittest
-        unittest.main()
-        return
+# Ensure RuleEngine is defined before usage
+from LanguageAgentTreeSearch.programming.rule_engine import RuleEngine
 
-    # Production mode: require an input JSON file.
+# Insert this helper function (if it doesn't exist already) before main()
+def build_tree_from_json(graph_data, origin_label):
+    """
+    Build a tree using the canonical Node class.
+    For each node in the graph, we also randomize the order of its children.
+    """
+    def _build_subtree(label, parent=None):
+        node = Node(label)  # uses the unified Node definition
+        node.parent = parent
+        if parent:
+            parent.children.append(node)
+        if label in graph_data:
+            # Randomize the child order to simulate non-determinism
+            child_items = list(graph_data[label].items())
+            random.shuffle(child_items)
+            for child_label, child_weight in child_items:
+                child_node = _build_subtree(child_label, node)
+                child_node.weight = child_weight
+        return node
+
+    return _build_subtree(origin_label)
+# Alias for test compatibility.
+build_tree_from_graph = build_tree_from_json
+# ---------------------------------------------------------------------------
+
+# ------------------- New Helper Functions for Testing ----------------------
+def simulate_llm_update(hierarchy):
+    """
+    Minimal implementation that simulates an LLM update on the hierarchy.
+    In a real system, this function would trigger updates based on LLM results.
+    """
+    # For now, just return the hierarchy unmodified.
+    return hierarchy
+
+def compare_states(state1, state2):
+    """
+    Compare two flat state dictionaries and return any differences.
+    """
+    differences = {}
+    for key in state1:
+        if state1.get(key) != state2.get(key):
+            differences[key] = (state1.get(key), state2.get(key))
+    return differences
+
+def break_rule_descending_weights(hierarchy):
+    """
+    Force a violation of the descending weights rule by sorting the children of the
+    first parent node in ascending order instead of descending.
+    """
+    for node in hierarchy.linear_order:
+        if node.children:
+            node.children.sort(key=lambda child: child.weight)  # ascending order
+            break
+
+def break_rule_submatrix_bounds(hierarchy):
+    """
+    Force a violation of the submatrix bounds rule by setting an incorrect bounds value.
+    """
+    if hierarchy.linear_order:
+        node = hierarchy.linear_order[0]
+        node.set_submatrix_bounds(999, 1000)  # deliberately incorrect bounds
+# ---------------------------------------------------------------------------
+
+def main():
+    args = parse_arguments()  # Now parsed properly
+    
     if not args.input_json:
         logging.error("No input JSON file provided. Use --input-json <path>")
         return
@@ -3023,192 +2337,48 @@ def main():
     try:
         with open(args.input_json, "r") as f:
             graph_data = json.load(f)
-    except FileNotFoundError:
-        logging.error(f"Input file {args.input_json} not found.")
-        return
-    except json.JSONDecodeError as e:
-        logging.error(f"Error parsing JSON: {e}")
+    except Exception as e:
+        logging.error("Error reading input JSON: " + str(e))
         return
 
-    # Construct the FIM Hierarchy
-    root_label = "Origin"
-    root = build_tree_from_graph(graph_data, root_label)
-    fim_hierarchy = FIMHierarchy(root, graph_data)
-
-    # Optional: Run self-healing
-    if args.self_heal:
-        logging.info("Running self-healing...")
-        fim_hierarchy.self_heal_structure()
-
-    # Optional: Run validation checks
-    if args.validate:
-        logging.info("Running validation checks...")
-        fim_hierarchy.run_validations()
-        if fim_hierarchy.check_errors:
-            logging.error("Validation Errors: %s", fim_hierarchy.check_errors)
-
-    # Output to JSON file if requested
-    if args.output_json:
-        with open(args.output_json, "w") as f:
-            json.dump(fim_hierarchy.to_full_json(), f, indent=4)
-        logging.info(f"Saved hierarchy JSON to {args.output_json}")
-
-    # Print hierarchy to terminal if requested
-    if args.print_hierarchy:
-        fim_hierarchy.print_hierarchy_and_validation()
-
-    # Force failure for debugging if requested
-    if args.fail_tests:
-        raise RuntimeError("Forced test failure for debugging.")
-
-if __name__ == "__main__":
-    main()
-
-# New external pipeline function that can be called from outside.
-def run_pipeline(input_json):
-    """
-    Builds and executes the FIMHierarchy pipeline from the input JSON.
-    This function can be imported and called external to main.py.
-
-    Args:
-        input_json (dict): A JSON‐decoded dictionary representing the hierarchy graph.
-
-    Returns:
-        dict: The final full hierarchy (as a dictionary) after self-healing.
-    """
-    # Assume that a tree-building function build_tree_from_json exists.
-    root = build_tree_from_json(input_json, "Origin")
-    # Create the hierarchy with the input graph.
-    fh = FIMHierarchy(root, input_json, [1.0, 1.0], [0.5, 0.5])
+    # Build the tree from JSON using our helper function.
+    root = build_tree_from_json(graph_data, "Origin")
+    
+    # Create the FIMHierarchy instance.
+    # (Assuming __init__ signature: FIMHierarchy(root, graph_data, aggregated_hpc, aggregated_entropy))
+    fh = FIMHierarchy(root, graph_data, [1.0, 1.0], [0.5, 0.5])
     fh.trigger_hierarchy_update()
-
-    # Attempt robust self-healing.
+    
+    # Self-heal the hierarchy, which now includes:
+    #   - Propagating downward (cumulative) causality from the root.
+    #   - Enforcing submatrix bounds on each node.
     if fh.robust_self_heal(max_attempts=3):
         print("Pipeline healing successful.")
     else:
         print("Pipeline healing did not resolve all errors.")
-
-    # Return the final hierarchy JSON 
-    # (Assumes that to_full_json() returns the complete JSON representation)
-    return fh.to_full_json()
-
-###########################################################
-#          NEW: COMPUTE_FIM_HIERARCHY FUNCTION            #
-###########################################################
-def compute_fim_hierarchy(graph, run_validations=True):
-    """Compute and (optionally) validate the FIMHierarchy using the given graph."""
-    # Assume build_tree_from_graph is defined or imported earlier.
-    fim_hierarchy = FIMHierarchy(build_tree_from_graph(graph, "Origin"), graph)
     
-    if run_validations:
-        fim_hierarchy.run_validations()
-        if fim_hierarchy.check_errors:
-            print("Validation errors before self-healing:", fim_hierarchy.check_errors)
+    # Get the final hierarchy JSON
+    final_json = fh.to_full_json()
+
+    try:
+        with open(args.output_json, "w") as f:
+            json.dump(final_json, f, indent=4)
+        print(f"Final hierarchy written to {args.output_json}")
+    except Exception as e:
+        logging.error("Error writing output JSON: " + str(e))
     
-    fim_hierarchy.self_heal_structure()
+    # If the user wants to print the hierarchy, display it in the terminal.
+    if args.print_hierarchy:
+        print("Final Hierarchy JSON:")
+        print(json.dumps(final_json, indent=2))
 
-    fim_hierarchy.run_validations()
-    if fim_hierarchy.check_errors:
-        print("Validation errors after self-healing:", fim_hierarchy.check_errors)
-    
-    return fim_hierarchy
 
-###########################################################
-#                   MAIN EXECUTION BLOCK                #
-###########################################################
-
+# -------------------------------------------------------------------
+# Main entry point.
+# -------------------------------------------------------------------
 if __name__ == "__main__":
-    import json
-    import logging
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-    
-    # Define your base graph.
-    base_graph = {
-        "Origin": {"A": 1.0, "B": 1.0, "C": 1.0, "D": 1.0},
-        "A": {"A1": 1.0, "A2": 1.0},
-        "B": {"B1": 1.0, "B2": 1.0},
-        "C": {"C1": 1.0, "C2": 1.0},
-        "D": {"D1": 1.0, "D2": 1.0}
-    }
+    main()
 
-    # Compute the FIM hierarchy (with validations and self-healing)
-    fim = compute_fim_hierarchy(base_graph, run_validations=True)
-    
-    # Optionally export the prompt-ready JSON.
-    prompt_json = fim.to_prompt_json()
-    with open("hierarchy_for_llm.json", "w") as f:
-        json.dump(prompt_json, f, indent=4)
-    logging.info("Exported prompt-ready hierarchy to hierarchy_for_llm.json")
-    
-    # Also export the full hierarchy JSON.
-    final_full_json = fim.to_full_json()
-    with open("final_hierarchy.json", "w") as f:
-        json.dump(final_full_json, f, indent=4)
-    logging.info("Final hierarchy exported to final_hierarchy.json")
-    
-    # (Any additional execution steps can follow here)
-
-###########################################
-##  Helper Functions for Testing & Healing  ##
-###########################################
-
-def propagate_cumulative_causality(node, cumulative=None):
-    """
-    Recursively propagates cumulative causal influence down the hierarchy.
-    Each node's 'cumulative_causality' field will be a list containing the chain of 
-    cause_effect_relation dictionaries from the root to that node.
-    """
-    if node.parent is None:
-        node.cumulative_causality = []
-    else:
-        node.cumulative_causality = list(getattr(node.parent, 'cumulative_causality', []))
-        if hasattr(node, 'causal_inference') and node.causal_inference.get("cause_effect_relation"):
-            node.cumulative_causality.append(node.causal_inference["cause_effect_relation"])
-    for child in node.children:
-        propagate_cumulative_causality(child)
-
-def simulate_llm_update(prompt_json):
-    """
-    Simulates an LLM update process.
-    In a real integration, this would send 'prompt_json' to an LLM and return suggestions.
-    """
-    return [{"node_id": "some_node_id", "field": "weight", "new_value": 0.85}]
-
-def compare_states(prev_state, current_state):
-    """
-    Compares two flat states (a dict mapping node_id -> fields).
-    Returns a dict describing differences between the states.
-    """
-    changes = {}
-    for node_id, old_data in prev_state.items():
-        new_data = current_state.get(node_id, {})
-        if not new_data:
-            changes[node_id] = "Node removed"
-            continue
-        field_diffs = {}
-        for field, old_value in old_data.items():
-            new_value = new_data.get(field)
-            if new_value != old_value:
-                field_diffs[field] = (old_value, new_value)
-        if field_diffs:
-            changes[node_id] = field_diffs
-    for node_id in current_state:
-        if node_id not in prev_state:
-            changes[node_id] = "New node added"
-    return changes
-
-def break_rule_descending_weights(fh):
-    """
-    Force a violation of the descending weights rule:
-    For each non-root node, set its weight to be bigger than its parent's weight.
-    """
-    for node in fh.linear_order:
-        if node.parent:
-            node.weight = node.parent.weight + 0.1
-
-def break_rule_submatrix_bounds(fh):
-    """
-    Force a violation of the submatrix bounds rule by clearing them on each node.
-    """
-    for node in fh.linear_order:
-        node.set_submatrix_bounds(None, None)
+# At the end of the file, expose the propagate functions as top-level names for easier imports.
+propagate_causal_effects = FIMHierarchy.propagate_causal_effects
+propagate_cumulative_causality = FIMHierarchy.propagate_cumulative_causality

@@ -1,5 +1,9 @@
 #!/bin/bash
 reset
+echo "📌 Current working directory:"
+ls 
+echo "📌 ls for directiry tests..."
+ls tests
 set -e  # Exit immediately if a command fails
 
 # Process CLI arguments to optionally skip tests.
@@ -7,7 +11,7 @@ RUN_TESTS=1
 args=("$@")
 filtered_args=()
 for arg in "${args[@]}"; do
-    if [ "$arg" == "--no-tests" ] || [ "$arg" == "--prod" ]; then
+    if [ "$arg" == "--no-tests" ] || [ "$arg" == "--prod" ] || [ "$arg" == "--no_tests" ]; then
         RUN_TESTS=0
     else
         filtered_args+=("$arg")
@@ -52,6 +56,7 @@ FILES=(
   "tests/test_fim_validation.py"
   "tests/test_rules.py"
   "full_terminal_output.log"
+  "rule_engine.py"
 )
 
 # Clear (or create) the output log file first
