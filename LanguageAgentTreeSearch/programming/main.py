@@ -677,7 +677,11 @@ class FIMHierarchy:
         """
         # Step 1: Build strict 1D ordering (origin, top-level, and subcategories)
         self.linear_order = self.build_strict_ordering()
-        # Step 2: Reassign invariant prefixes: Origin, A, B, ... for top-level; parent's prefix + counter for subcategories.
+        # New: Assign absolute indices based on ordering.
+        self.assign_abs_indices()
+        # New: If a node doesn't have a unique id, assign one.
+        self.assign_node_ids()
+        # Step 2: Reassign invariant prefixes.
         self.assign_invariant_prefixes()
         # Step 3: Propagate cumulative causality from the root downwards.
         FIMHierarchy.propagate_cumulative_causality(self.root)
@@ -799,6 +803,7 @@ class FIMHierarchy:
         """
         def node_to_dict(node):
             return {
+                "node_id": node.node_id,
                 "label": node.label,
                 "invariant_prefix": node.invariant_prefix,
                 "weight": node.weight,
@@ -876,6 +881,17 @@ class FIMHierarchy:
             for node in self.linear_order
         ]
 
+    # NEW: Assign absolute indices based on linear_order.
+    def assign_abs_indices(self):
+        for idx, node in enumerate(self.linear_order):
+            node.abs_index = idx
+
+    # NEW: Assign a unique node id to each node if not already set.
+    def assign_node_ids(self):
+        for idx, node in enumerate(self.linear_order):
+            if not hasattr(node, "node_id") or node.node_id is None:
+                node.node_id = f"node_{idx}"
+
 # NEW: Update the parse_arguments function to accept additional flags.
 def parse_arguments():
     import argparse
@@ -885,69 +901,42 @@ def parse_arguments():
     parser.add_argument('--input-json', type=str, required=True, help="Path to JSON input seed for the hierarchy")
     parser.add_argument('--self-heal', action='store_true', help="Trigger the self-healing routine on initialization")
     parser.add_argument('--print-hierarchy', action='store_true', help="Print the final hierarchy to terminal")
+    # NEW: Add flag to randomize weights.
+    parser.add_argument('--randomize', action='store_true', help="Randomize node weights before self-healing.")
     return parser.parse_args()
 
 # Updated main() function to load the external JSON and create the hierarchy.
 def main():
     args = parse_arguments()
-    import json
+    import json, random
     with open(args.input_json, "r") as f:
         hierarchy_data = json.load(f)
     
-    # Create the FIMHierarchy instance.
+    # Create the FIMHierarchy instance using our local definition.
+    # Instead of: "from fim import FIMHierarchy", we use the FIMHierarchy already defined in this script.
     hierarchy = FIMHierarchy.from_json(hierarchy_data)
 
-    # Optionally, simulate LLM/HPC updates.
-    # Uncomment the following lines if you want to simulate iterative updates:
-    # hierarchy, aggregated_hpc, aggregated_entropy, final_rand_graph = process_llm_iterations(hierarchy.graph, "Origin", iterations=3)
+    # Optionally randomize weights:
+    if args.randomize:
+        # Traverse the tree (using linear_order or a simple traversal) and randomize weights.
+        # Here we randomize for each node in linear_order for demonstration.
+        for node in hierarchy.linear_order:
+            # For example, give a random weight between 0.7 and 1.0.
+            node.weight = round(random.uniform(0.7, 1.0), 2)
+        print("🔀 Weights after randomization:")
+        for node in hierarchy.linear_order:
+            print(f"Node {node.node_id} ({node.label}) new weight: {node.weight}")
     
-    # Trigger self-healing to finalize ordering, assign invariant prefixes,
-    # propagate causality, and compute bounds.
-    hierarchy.self_heal()
+    if args.self_heal:
+        hierarchy.self_heal()
 
-    # Explicitly assign absolute indices to nodes using our helper function.
-    from LanguageAgentTreeSearch.programming.main import assign_linear_bounds
-    assign_linear_bounds(hierarchy.linear_order, hierarchy.graph)
-    
-    # -----------------------------
-    # NEW STEP: Reassign invariant prefixes based on final order.
-    # -----------------------------
-    hierarchy.assign_invariant_prefixes()
-    
-    # -----------------------------
-    # NEW STEP: Final Validation
-    # -----------------------------
-    from LanguageAgentTreeSearch.programming.rule_engine import RuleEngine
-    rule_engine = RuleEngine()
-    is_valid, errors = rule_engine.validate(hierarchy)
-    if not is_valid:
-        logging.error(f"Validation errors encountered: {errors}")
-        # Optionally, call repair to self-heal any errors.
-        if not rule_engine.repair(hierarchy):
-            logging.error("Repair failed; exiting.")
-            sys.exit(1)
-        else:
-            logging.info("Hierarchy repaired successfully.")
-    else:
-        logging.info("Final hierarchy validation passed.")
-
-    # -----------------------------
-    # NEW STEP: Visualize "Map of Thought"
-    # -----------------------------
-    print("\n--- Map of Thought Visualization ---")
+    # Print the final hierarchy (showing node IDs, invariant prefixes, abs_index, etc.)
+    print("📋 Final Hierarchy Linear Order:")
     for node in hierarchy.linear_order:
-        parent_label = node.parent.label if node.parent else "None"
-        # Updated: Add node.node_id for clarity.
-        print(f"NodeID: {node.node_id} | Node: {node.label} | Prefix: {node.invariant_prefix} | Abs_Index: {node.abs_index} | Weight: {node.weight:.2f} | Parent: {parent_label}")
-    print("--------------------------------------")
+        print(f"ID: {node.node_id} | Label: {node.label} | Prefix: {node.invariant_prefix} "
+              f"| AbsIndex: {node.abs_index} | Weight: {node.weight}")
     
-    # Print final Hierarchy Linear Order summary.
-    print("\nFinal Hierarchy Linear Order:")
-    for node in hierarchy.linear_order:
-        # Updated: Print node.node_id along with other details.
-        print(f"ID: {node.node_id}, Label: {node.label}, Abs_Index: {node.abs_index}, Prefix: {node.invariant_prefix}, Bounds: {node.get_submatrix_bounds()}")
-
-    # Write the updated hierarchy to file.
+    # Example: write updated hierarchy to file.
     with open("hierarchy_updated.json", "w") as out_file:
         json.dump(hierarchy.to_dict(), out_file, indent=4)
 
