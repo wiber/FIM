@@ -901,12 +901,18 @@ def main():
     # Uncomment the following lines if you want to simulate iterative updates:
     # hierarchy, aggregated_hpc, aggregated_entropy, final_rand_graph = process_llm_iterations(hierarchy.graph, "Origin", iterations=3)
     
-    # Trigger self-healing to finalize ordering, assign invariant prefixes, propagate causality, and compute bounds.
+    # Trigger self-healing to finalize ordering, assign invariant prefixes,
+    # propagate causality, and compute bounds.
     hierarchy.self_heal()
 
     # Explicitly assign absolute indices to nodes using our helper function.
     from LanguageAgentTreeSearch.programming.main import assign_linear_bounds
     assign_linear_bounds(hierarchy.linear_order, hierarchy.graph)
+    
+    # -----------------------------
+    # NEW STEP: Reassign invariant prefixes based on final order.
+    # -----------------------------
+    hierarchy.assign_invariant_prefixes()
     
     # -----------------------------
     # NEW STEP: Final Validation
@@ -931,14 +937,15 @@ def main():
     print("\n--- Map of Thought Visualization ---")
     for node in hierarchy.linear_order:
         parent_label = node.parent.label if node.parent else "None"
-        # Here we denote the bias by the node's weight
-        print(f"Node: {node.label} | Prefix: {node.invariant_prefix} | Abs_Index: {node.abs_index} | Weight: {node.weight:.2f} | Parent: {parent_label}")
+        # Updated: Add node.node_id for clarity.
+        print(f"NodeID: {node.node_id} | Node: {node.label} | Prefix: {node.invariant_prefix} | Abs_Index: {node.abs_index} | Weight: {node.weight:.2f} | Parent: {parent_label}")
     print("--------------------------------------")
-
+    
     # Print final Hierarchy Linear Order summary.
     print("\nFinal Hierarchy Linear Order:")
     for node in hierarchy.linear_order:
-        print(f"Label: {node.label}, Abs_Index: {node.abs_index}, Prefix: {node.invariant_prefix}, Bounds: {node.get_submatrix_bounds()}")
+        # Updated: Print node.node_id along with other details.
+        print(f"ID: {node.node_id}, Label: {node.label}, Abs_Index: {node.abs_index}, Prefix: {node.invariant_prefix}, Bounds: {node.get_submatrix_bounds()}")
 
     # Write the updated hierarchy to file.
     with open("hierarchy_updated.json", "w") as out_file:
