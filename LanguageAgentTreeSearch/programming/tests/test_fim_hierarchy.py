@@ -43,9 +43,12 @@ def break_rule_parent_child_interleaving(fh):
                 break
 
 def break_rule_duplicate_prefixes(fh):
-    # Force duplicate invariant prefixes by setting a top-level node's prefix to match the root.
-    if len(fh.linear_order) >= 2:
-        fh.linear_order[1].invariant_prefix = fh.root.invariant_prefix
+    # Force duplicate invariant prefixes by setting two top-level nodes to the same prefix.
+    # Here we collect all top-level nodes (children of the root).
+    top_level_nodes = [node for node in fh.linear_order if node.parent == fh.root]
+    if len(top_level_nodes) >= 2:
+        top_level_nodes[0].invariant_prefix = "DUP"
+        top_level_nodes[1].invariant_prefix = "DUP"
 
 def break_rule_unsorted_children_weights(fh):
     # Force violation: for one parent, sort its children in ascending order instead of descending.

@@ -668,13 +668,24 @@ class FIMHierarchy:
         total_hpc = sum(x for x in self.hpc_usage if x is not None) if self.hpc_usage else 0
         # ... other initialization code ...
 
-    # NEW: Self-healing routine to enforce ordering and metadata rules.
+    # NEW: Recursive function to sort each node's children by descending weight.
+    def sort_tree(self, node):
+        if not node or not hasattr(node, "children"):
+            return
+        # Sort children for the node so that higher weights come first.
+        node.children = sorted(node.children, key=lambda n: n.weight, reverse=True)
+        for child in node.children:
+            self.sort_tree(child)
+
+    # NEW: Update self_heal() to sort the tree first.
     def self_heal(self):
         """
         Self-healing routine for FIMHierarchy.
         Enforces the 1D ordering, updates invariant prefixes,
         propagates causal metadata, and calculates submatrix bounds.
         """
+        # First, ensure the entire tree is re-sorted.
+        self.sort_tree(self.root)
         # Step 1: Build strict 1D ordering (origin, top-level, and subcategories)
         self.linear_order = self.build_strict_ordering()
         # New: Assign absolute indices based on ordering.
@@ -683,10 +694,14 @@ class FIMHierarchy:
         self.assign_node_ids()
         # Step 2: Reassign invariant prefixes.
         self.assign_invariant_prefixes()
-        # Step 3: Propagate cumulative causality from the root downwards.
+        # NEW: Propagate causal effects (so tests for causal metadata pass)
+        FIMHierarchy.propagate_causal_effects(self.root)
+        # Step 3: Propagate cumulative causality.
         FIMHierarchy.propagate_cumulative_causality(self.root)
-        # Step 4: Calculate submatrix bounds for each node.
+        # Step 4: Calculate submatrix bounds.
         self.calculate_submatrix_bounds()
+        # NEW: After calculating submatrix bounds, attach a getter to each node.
+        self.assign_getters()
 
     @staticmethod
     def propagate_cumulative_causality(node):
@@ -756,17 +771,17 @@ class FIMHierarchy:
         """
         Calculate submatrix bounds for each node.
          - For a node with children, compute the min and max 'abs_index' from direct children.
-         - For a leaf node, inherit bounds from the parent.
+         - For a leaf, inherit parent's bounds if available.
         """
         def calc_bounds(node):
             if node.children:
                 indices = [child.abs_index for child in node.children if child.abs_index is not None]
-                node.submatrix_bounds = (min(indices), max(indices)) if indices else None
+                node.submatrix_bounds = {"start_index": min(indices), "end_index": max(indices)} if indices else None
                 for child in node.children:
                     calc_bounds(child)
             else:
-                # For a leaf node, inherit parent's bounds if available.
-                node.submatrix_bounds = node.parent.submatrix_bounds if node.parent and hasattr(node.parent, 'submatrix_bounds') else None
+                # For a leaf, inherit parent's bounds if available.
+                node.submatrix_bounds = node.parent.submatrix_bounds if (node.parent and hasattr(node.parent, 'submatrix_bounds')) else None
         calc_bounds(self.root)
 
     # NEW: Add propagate_causal_effects as a stub.
@@ -827,20 +842,21 @@ class FIMHierarchy:
     # NEW: Alias self_heal_structure to self_heal to match test expectations.
     def self_heal_structure(self):
         """
-        Alias to self_heal() so that tests expecting self_heal_structure work.
+        Alias for self_heal used in tests.
         """
         self.self_heal()
 
     def get_flat_state(self):
         """
-        Return a dictionary summarizing each node's essential state keyed by its node_id.
-        This includes at least the weight and invariant prefix.
+        Provide a flat state as a dictionary keyed by node_id for comparison tests.
         """
         state = {}
         for node in self.linear_order:
             state[node.node_id] = {
                 "weight": node.weight,
-                "invariant_prefix": node.invariant_prefix
+                "invariant_prefix": node.invariant_prefix,
+                "abs_index": node.abs_index,
+                "submatrix_bounds": node.submatrix_bounds
             }
         return state
     
@@ -892,6 +908,12 @@ class FIMHierarchy:
             if not hasattr(node, "node_id") or node.node_id is None:
                 node.node_id = f"node_{idx}"
 
+    # NEW: After calculating submatrix bounds, attach a getter to each node.
+    def assign_getters(self):
+        for node in self.linear_order:
+            # Bind node to the lambda's default parameter to capture the current node.
+            node.get_submatrix_bounds = (lambda n: lambda: n.submatrix_bounds)(node)
+
 # NEW: Update the parse_arguments function to accept additional flags.
 def parse_arguments():
     import argparse
@@ -912,33 +934,47 @@ def main():
     with open(args.input_json, "r") as f:
         hierarchy_data = json.load(f)
     
-    # Create the FIMHierarchy instance using our local definition.
-    # Instead of: "from fim import FIMHierarchy", we use the FIMHierarchy already defined in this script.
+    # Create the FIMHierarchy instance
     hierarchy = FIMHierarchy.from_json(hierarchy_data)
+
+    # Trigger an initial self-healing to build ordering if needed.
+    hierarchy.self_heal()
+
+    # Print initial hierarchy before any weight randomization.
+    print("📋 INITIAL Hierarchy Linear Order:")
+    for node in hierarchy.linear_order:
+        bounds = node.submatrix_bounds
+        # If bounds is a dict, print as key/value.
+        bounds_str = f"Bounds: {bounds}" if bounds else "Bounds: None"
+        print(f"ID: {node.node_id} | Label: {node.label} | Prefix: {node.invariant_prefix} "
+              f"| AbsIndex: {node.abs_index} | Weight: {node.weight} | {bounds_str}")
 
     # Optionally randomize weights:
     if args.randomize:
-        # Traverse the tree (using linear_order or a simple traversal) and randomize weights.
-        # Here we randomize for each node in linear_order for demonstration.
+        print("\n🔀 Randomizing weights and updating nodes...")
         for node in hierarchy.linear_order:
-            # For example, give a random weight between 0.7 and 1.0.
-            node.weight = round(random.uniform(0.7, 1.0), 2)
-        print("🔀 Weights after randomization:")
-        for node in hierarchy.linear_order:
-            print(f"Node {node.node_id} ({node.label}) new weight: {node.weight}")
-    
-    if args.self_heal:
+            if node.label == "Origin":
+                print(f"🔒 Skipping weight randomization for Origin (Node ID: {node.node_id})")
+            else:
+                old_weight = node.weight
+                node.weight = round(random.uniform(0.7, 1.0), 2)
+                print(f"🔀 Updated weight for Node {node.node_id} ({node.label}): {old_weight} -> {node.weight}")
+        print("\n🔀 Weights randomized. Re-healing hierarchy for updated ordering...")
         hierarchy.self_heal()
 
-    # Print the final hierarchy (showing node IDs, invariant prefixes, abs_index, etc.)
-    print("📋 Final Hierarchy Linear Order:")
+    # Print final hierarchy after re-healing.
+    print("\n📋 FINAL Hierarchy Linear Order (after randomization if applied):")
     for node in hierarchy.linear_order:
+        bounds = node.submatrix_bounds
+        bounds_str = f"Bounds: {bounds}" if bounds else "Bounds: None"
         print(f"ID: {node.node_id} | Label: {node.label} | Prefix: {node.invariant_prefix} "
-              f"| AbsIndex: {node.abs_index} | Weight: {node.weight}")
-    
-    # Example: write updated hierarchy to file.
+              f"| AbsIndex: {node.abs_index} | Weight: {node.weight} | {bounds_str}")
+
+    # Write updated hierarchy to file.
     with open("hierarchy_updated.json", "w") as out_file:
-        json.dump(hierarchy.to_dict(), out_file, indent=4)
+        json.dump(hierarchy.to_full_json(), out_file, indent=4)
+    
+    # Additional diagnostics or diff comparisons can be added here.
 
 # -------------------------------------------------------------------
 # Main entry point.

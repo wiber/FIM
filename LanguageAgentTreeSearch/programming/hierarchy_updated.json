@@ -1,29 +1,41 @@
 {
     "linear_order": [
         {
+            "node_id": "928fbd62-c8fc-43d2-952f-4ec7182e7e1b",
             "label": "Origin",
             "invariant_prefix": "O",
             "weight": 1.0,
-            "abs_index": null,
-            "submatrix_bounds": null,
+            "abs_index": 0,
+            "submatrix_bounds": {
+                "start_index": 1,
+                "end_index": 3
+            },
             "cumulative_causality": [],
             "children": [
                 {
+                    "node_id": "46df46b0-3c28-440b-8400-0fe6bc9a5c63",
                     "label": "A",
                     "invariant_prefix": "A",
                     "weight": 1.0,
-                    "abs_index": null,
-                    "submatrix_bounds": null,
+                    "abs_index": 1,
+                    "submatrix_bounds": {
+                        "start_index": 4,
+                        "end_index": 6
+                    },
                     "cumulative_causality": [
                         "Origin"
                     ],
                     "children": [
                         {
+                            "node_id": "1348860a-c2dc-4e22-94e7-01045b53feea",
                             "label": "A1",
                             "invariant_prefix": "A1",
                             "weight": 0.8,
-                            "abs_index": null,
-                            "submatrix_bounds": null,
+                            "abs_index": 4,
+                            "submatrix_bounds": {
+                                "start_index": 4,
+                                "end_index": 6
+                            },
                             "cumulative_causality": [
                                 "Origin",
                                 "A"
@@ -31,11 +43,15 @@
                             "children": []
                         },
                         {
+                            "node_id": "a4f78d13-1df6-4fa2-a74a-1f08acd2abef",
                             "label": "A2",
                             "invariant_prefix": "A2",
                             "weight": 0.75,
-                            "abs_index": null,
-                            "submatrix_bounds": null,
+                            "abs_index": 5,
+                            "submatrix_bounds": {
+                                "start_index": 4,
+                                "end_index": 6
+                            },
                             "cumulative_causality": [
                                 "Origin",
                                 "A"
@@ -43,11 +59,15 @@
                             "children": []
                         },
                         {
+                            "node_id": "4f4f4669-de17-44fa-97dc-f7febb91e3d1",
                             "label": "A3",
                             "invariant_prefix": "A3",
                             "weight": 0.7,
-                            "abs_index": null,
-                            "submatrix_bounds": null,
+                            "abs_index": 6,
+                            "submatrix_bounds": {
+                                "start_index": 4,
+                                "end_index": 6
+                            },
                             "cumulative_causality": [
                                 "Origin",
                                 "A"
@@ -57,21 +77,29 @@
                     ]
                 },
                 {
+                    "node_id": "2bf1c8c6-dba5-4a75-adda-646840c17745",
                     "label": "B",
                     "invariant_prefix": "B",
                     "weight": 1.0,
-                    "abs_index": null,
-                    "submatrix_bounds": null,
+                    "abs_index": 2,
+                    "submatrix_bounds": {
+                        "start_index": 7,
+                        "end_index": 9
+                    },
                     "cumulative_causality": [
                         "Origin"
                     ],
                     "children": [
                         {
+                            "node_id": "757e8803-99bd-4322-9ebe-3cdfbdd5738f",
                             "label": "B1",
                             "invariant_prefix": "B1",
                             "weight": 0.85,
-                            "abs_index": null,
-                            "submatrix_bounds": null,
+                            "abs_index": 7,
+                            "submatrix_bounds": {
+                                "start_index": 7,
+                                "end_index": 9
+                            },
                             "cumulative_causality": [
                                 "Origin",
                                 "B"
@@ -79,11 +107,15 @@
                             "children": []
                         },
                         {
+                            "node_id": "ca1f959a-11ea-46ee-922c-04b92b211be0",
                             "label": "B2",
                             "invariant_prefix": "B2",
                             "weight": 0.8,
-                            "abs_index": null,
-                            "submatrix_bounds": null,
+                            "abs_index": 8,
+                            "submatrix_bounds": {
+                                "start_index": 7,
+                                "end_index": 9
+                            },
                             "cumulative_causality": [
                                 "Origin",
                                 "B"
@@ -91,11 +123,15 @@
                             "children": []
                         },
                         {
+                            "node_id": "322c0e14-240c-421c-b2f6-ff0d10098742",
                             "label": "B3",
                             "invariant_prefix": "B3",
                             "weight": 0.78,
-                            "abs_index": null,
-                            "submatrix_bounds": null,
+                            "abs_index": 9,
+                            "submatrix_bounds": {
+                                "start_index": 7,
+                                "end_index": 9
+                            },
                             "cumulative_causality": [
                                 "Origin",
                                 "B"
@@ -105,21 +141,29 @@
                     ]
                 },
                 {
+                    "node_id": "f4130b90-91bc-4557-986d-61dfc29302f7",
                     "label": "C",
                     "invariant_prefix": "C",
                     "weight": 1.0,
-                    "abs_index": null,
-                    "submatrix_bounds": null,
+                    "abs_index": 3,
+                    "submatrix_bounds": {
+                        "start_index": 10,
+                        "end_index": 12
+                    },
                     "cumulative_causality": [
                         "Origin"
                     ],
                     "children": [
                         {
+                            "node_id": "ee5cb36e-6f11-4970-8bd4-2a0704c0e495",
                             "label": "C1",
                             "invariant_prefix": "C1",
                             "weight": 0.9,
-                            "abs_index": null,
-                            "submatrix_bounds": null,
+                            "abs_index": 10,
+                            "submatrix_bounds": {
+                                "start_index": 10,
+                                "end_index": 12
+                            },
                             "cumulative_causality": [
                                 "Origin",
                                 "C"
@@ -127,11 +171,15 @@
                             "children": []
                         },
                         {
+                            "node_id": "68e2bcbf-7280-4dd0-ad29-43e63fd8b5dc",
                             "label": "C2",
                             "invariant_prefix": "C2",
                             "weight": 0.85,
-                            "abs_index": null,
-                            "submatrix_bounds": null,
+                            "abs_index": 11,
+                            "submatrix_bounds": {
+                                "start_index": 10,
+                                "end_index": 12
+                            },
                             "cumulative_causality": [
                                 "Origin",
                                 "C"
@@ -139,11 +187,15 @@
                             "children": []
                         },
                         {
+                            "node_id": "03cd0ff6-13f1-45c1-89e6-7edda711feac",
                             "label": "C3",
                             "invariant_prefix": "C3",
                             "weight": 0.8,
-                            "abs_index": null,
-                            "submatrix_bounds": null,
+                            "abs_index": 12,
+                            "submatrix_bounds": {
+                                "start_index": 10,
+                                "end_index": 12
+                            },
                             "cumulative_causality": [
                                 "Origin",
                                 "C"
@@ -155,21 +207,29 @@
             ]
         },
         {
+            "node_id": "46df46b0-3c28-440b-8400-0fe6bc9a5c63",
             "label": "A",
             "invariant_prefix": "A",
             "weight": 1.0,
-            "abs_index": null,
-            "submatrix_bounds": null,
+            "abs_index": 1,
+            "submatrix_bounds": {
+                "start_index": 4,
+                "end_index": 6
+            },
             "cumulative_causality": [
                 "Origin"
             ],
             "children": [
                 {
+                    "node_id": "1348860a-c2dc-4e22-94e7-01045b53feea",
                     "label": "A1",
                     "invariant_prefix": "A1",
                     "weight": 0.8,
-                    "abs_index": null,
-                    "submatrix_bounds": null,
+                    "abs_index": 4,
+                    "submatrix_bounds": {
+                        "start_index": 4,
+                        "end_index": 6
+                    },
                     "cumulative_causality": [
                         "Origin",
                         "A"
@@ -177,11 +237,15 @@
                     "children": []
                 },
                 {
+                    "node_id": "a4f78d13-1df6-4fa2-a74a-1f08acd2abef",
                     "label": "A2",
                     "invariant_prefix": "A2",
                     "weight": 0.75,
-                    "abs_index": null,
-                    "submatrix_bounds": null,
+                    "abs_index": 5,
+                    "submatrix_bounds": {
+                        "start_index": 4,
+                        "end_index": 6
+                    },
                     "cumulative_causality": [
                         "Origin",
                         "A"
@@ -189,11 +253,15 @@
                     "children": []
                 },
                 {
+                    "node_id": "4f4f4669-de17-44fa-97dc-f7febb91e3d1",
                     "label": "A3",
                     "invariant_prefix": "A3",
                     "weight": 0.7,
-                    "abs_index": null,
-                    "submatrix_bounds": null,
+                    "abs_index": 6,
+                    "submatrix_bounds": {
+                        "start_index": 4,
+                        "end_index": 6
+                    },
                     "cumulative_causality": [
                         "Origin",
                         "A"
@@ -203,21 +271,29 @@
             ]
         },
         {
+            "node_id": "2bf1c8c6-dba5-4a75-adda-646840c17745",
             "label": "B",
             "invariant_prefix": "B",
             "weight": 1.0,
-            "abs_index": null,
-            "submatrix_bounds": null,
+            "abs_index": 2,
+            "submatrix_bounds": {
+                "start_index": 7,
+                "end_index": 9
+            },
             "cumulative_causality": [
                 "Origin"
             ],
             "children": [
                 {
+                    "node_id": "757e8803-99bd-4322-9ebe-3cdfbdd5738f",
                     "label": "B1",
                     "invariant_prefix": "B1",
                     "weight": 0.85,
-                    "abs_index": null,
-                    "submatrix_bounds": null,
+                    "abs_index": 7,
+                    "submatrix_bounds": {
+                        "start_index": 7,
+                        "end_index": 9
+                    },
                     "cumulative_causality": [
                         "Origin",
                         "B"
@@ -225,11 +301,15 @@
                     "children": []
                 },
                 {
+                    "node_id": "ca1f959a-11ea-46ee-922c-04b92b211be0",
                     "label": "B2",
                     "invariant_prefix": "B2",
                     "weight": 0.8,
-                    "abs_index": null,
-                    "submatrix_bounds": null,
+                    "abs_index": 8,
+                    "submatrix_bounds": {
+                        "start_index": 7,
+                        "end_index": 9
+                    },
                     "cumulative_causality": [
                         "Origin",
                         "B"
@@ -237,11 +317,15 @@
                     "children": []
                 },
                 {
+                    "node_id": "322c0e14-240c-421c-b2f6-ff0d10098742",
                     "label": "B3",
                     "invariant_prefix": "B3",
                     "weight": 0.78,
-                    "abs_index": null,
-                    "submatrix_bounds": null,
+                    "abs_index": 9,
+                    "submatrix_bounds": {
+                        "start_index": 7,
+                        "end_index": 9
+                    },
                     "cumulative_causality": [
                         "Origin",
                         "B"
@@ -251,21 +335,29 @@
             ]
         },
         {
+            "node_id": "f4130b90-91bc-4557-986d-61dfc29302f7",
             "label": "C",
             "invariant_prefix": "C",
             "weight": 1.0,
-            "abs_index": null,
-            "submatrix_bounds": null,
+            "abs_index": 3,
+            "submatrix_bounds": {
+                "start_index": 10,
+                "end_index": 12
+            },
             "cumulative_causality": [
                 "Origin"
             ],
             "children": [
                 {
+                    "node_id": "ee5cb36e-6f11-4970-8bd4-2a0704c0e495",
                     "label": "C1",
                     "invariant_prefix": "C1",
                     "weight": 0.9,
-                    "abs_index": null,
-                    "submatrix_bounds": null,
+                    "abs_index": 10,
+                    "submatrix_bounds": {
+                        "start_index": 10,
+                        "end_index": 12
+                    },
                     "cumulative_causality": [
                         "Origin",
                         "C"
@@ -273,11 +365,15 @@
                     "children": []
                 },
                 {
+                    "node_id": "68e2bcbf-7280-4dd0-ad29-43e63fd8b5dc",
                     "label": "C2",
                     "invariant_prefix": "C2",
                     "weight": 0.85,
-                    "abs_index": null,
-                    "submatrix_bounds": null,
+                    "abs_index": 11,
+                    "submatrix_bounds": {
+                        "start_index": 10,
+                        "end_index": 12
+                    },
                     "cumulative_causality": [
                         "Origin",
                         "C"
@@ -285,11 +381,15 @@
                     "children": []
                 },
                 {
+                    "node_id": "03cd0ff6-13f1-45c1-89e6-7edda711feac",
                     "label": "C3",
                     "invariant_prefix": "C3",
                     "weight": 0.8,
-                    "abs_index": null,
-                    "submatrix_bounds": null,
+                    "abs_index": 12,
+                    "submatrix_bounds": {
+                        "start_index": 10,
+                        "end_index": 12
+                    },
                     "cumulative_causality": [
                         "Origin",
                         "C"
@@ -299,11 +399,15 @@
             ]
         },
         {
+            "node_id": "1348860a-c2dc-4e22-94e7-01045b53feea",
             "label": "A1",
             "invariant_prefix": "A1",
             "weight": 0.8,
-            "abs_index": null,
-            "submatrix_bounds": null,
+            "abs_index": 4,
+            "submatrix_bounds": {
+                "start_index": 4,
+                "end_index": 6
+            },
             "cumulative_causality": [
                 "Origin",
                 "A"
@@ -311,11 +415,15 @@
             "children": []
         },
         {
+            "node_id": "a4f78d13-1df6-4fa2-a74a-1f08acd2abef",
             "label": "A2",
             "invariant_prefix": "A2",
             "weight": 0.75,
-            "abs_index": null,
-            "submatrix_bounds": null,
+            "abs_index": 5,
+            "submatrix_bounds": {
+                "start_index": 4,
+                "end_index": 6
+            },
             "cumulative_causality": [
                 "Origin",
                 "A"
@@ -323,11 +431,15 @@
             "children": []
         },
         {
+            "node_id": "4f4f4669-de17-44fa-97dc-f7febb91e3d1",
             "label": "A3",
             "invariant_prefix": "A3",
             "weight": 0.7,
-            "abs_index": null,
-            "submatrix_bounds": null,
+            "abs_index": 6,
+            "submatrix_bounds": {
+                "start_index": 4,
+                "end_index": 6
+            },
             "cumulative_causality": [
                 "Origin",
                 "A"
@@ -335,11 +447,15 @@
             "children": []
         },
         {
+            "node_id": "757e8803-99bd-4322-9ebe-3cdfbdd5738f",
             "label": "B1",
             "invariant_prefix": "B1",
             "weight": 0.85,
-            "abs_index": null,
-            "submatrix_bounds": null,
+            "abs_index": 7,
+            "submatrix_bounds": {
+                "start_index": 7,
+                "end_index": 9
+            },
             "cumulative_causality": [
                 "Origin",
                 "B"
@@ -347,11 +463,15 @@
             "children": []
         },
         {
+            "node_id": "ca1f959a-11ea-46ee-922c-04b92b211be0",
             "label": "B2",
             "invariant_prefix": "B2",
             "weight": 0.8,
-            "abs_index": null,
-            "submatrix_bounds": null,
+            "abs_index": 8,
+            "submatrix_bounds": {
+                "start_index": 7,
+                "end_index": 9
+            },
             "cumulative_causality": [
                 "Origin",
                 "B"
@@ -359,11 +479,15 @@
             "children": []
         },
         {
+            "node_id": "322c0e14-240c-421c-b2f6-ff0d10098742",
             "label": "B3",
             "invariant_prefix": "B3",
             "weight": 0.78,
-            "abs_index": null,
-            "submatrix_bounds": null,
+            "abs_index": 9,
+            "submatrix_bounds": {
+                "start_index": 7,
+                "end_index": 9
+            },
             "cumulative_causality": [
                 "Origin",
                 "B"
@@ -371,11 +495,15 @@
             "children": []
         },
         {
+            "node_id": "ee5cb36e-6f11-4970-8bd4-2a0704c0e495",
             "label": "C1",
             "invariant_prefix": "C1",
             "weight": 0.9,
-            "abs_index": null,
-            "submatrix_bounds": null,
+            "abs_index": 10,
+            "submatrix_bounds": {
+                "start_index": 10,
+                "end_index": 12
+            },
             "cumulative_causality": [
                 "Origin",
                 "C"
@@ -383,11 +511,15 @@
             "children": []
         },
         {
+            "node_id": "68e2bcbf-7280-4dd0-ad29-43e63fd8b5dc",
             "label": "C2",
             "invariant_prefix": "C2",
             "weight": 0.85,
-            "abs_index": null,
-            "submatrix_bounds": null,
+            "abs_index": 11,
+            "submatrix_bounds": {
+                "start_index": 10,
+                "end_index": 12
+            },
             "cumulative_causality": [
                 "Origin",
                 "C"
@@ -395,11 +527,15 @@
             "children": []
         },
         {
+            "node_id": "03cd0ff6-13f1-45c1-89e6-7edda711feac",
             "label": "C3",
             "invariant_prefix": "C3",
             "weight": 0.8,
-            "abs_index": null,
-            "submatrix_bounds": null,
+            "abs_index": 12,
+            "submatrix_bounds": {
+                "start_index": 10,
+                "end_index": 12
+            },
             "cumulative_causality": [
                 "Origin",
                 "C"
