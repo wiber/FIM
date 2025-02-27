@@ -925,23 +925,24 @@ class FIMHierarchy:
             if not hasattr(node, "node_id") or node.node_id is None:
                 node.node_id = f"node_{idx}"
 
-    def update_global_skip_factors(self, threshold=0.5, dimension=1):
+    def update_global_skip_factors(self, threshold=0.5, dimension=1, use_global_axis=False, result_field="skip_factor"):
         """
         Update the skip factors for the hierarchy.
 
-        For the root node, the denominator is the total number of nodes in the linear order,
-        reflecting the full axis (e.g. 13 nodes in your test case). For non-root
-        nodes, if submatrix bounds are defined (via calculate_submatrix_bounds),
-        we use the width of that submatrix; otherwise we fall back to the number of immediate children.
+        For the root node and nodes whose parent is the Origin, the denominator is the total number of nodes in the
+        linear order. For deeper nodes with defined submatrix bounds we compute the width (end_index - start_index + 1),
+        and otherwise we fall back on the number of immediate children.
 
-        Then, for each node, skip_factor = (processed / total) ** dimension.
+        The computed value is stored in each node under the attribute specified by `result_field`.
         """
         def update_skip_factors(node):
-            if node == self.root:
-                # For the root, use the full axis count.
+            if use_global_axis:
+                total = len(self.linear_order)
+            elif node == self.root:
+                total = len(self.linear_order)
+            elif node.parent == self.root:
                 total = len(self.linear_order)
             elif node.submatrix_bounds is not None:
-                # Expect submatrix_bounds to be a dict with keys 'start_index' and 'end_index'
                 start = int(node.submatrix_bounds.get('start_index', 0))
                 end = int(node.submatrix_bounds.get('end_index', 0))
                 total = end - start + 1
@@ -950,9 +951,11 @@ class FIMHierarchy:
 
             if total > 0:
                 processed = sum(1 for child in node.children if child.weight >= threshold)
-                node.skip_factor = (processed / total) ** dimension
+                computed = (processed / total) ** dimension
             else:
-                node.skip_factor = 1.0
+                computed = 1.0
+
+            setattr(node, result_field, computed)
 
             for child in node.children:
                 update_skip_factors(child)
@@ -1048,12 +1051,13 @@ def main():
     with open("hierarchy_updated.json", "w") as out_file:
         json.dump(hierarchy.to_full_json(), out_file, indent=4)
     
-    # Update skip factors using the local axis (each node's immediate children).
-    hierarchy.update_global_skip_factors(threshold=0.5, dimension=1)
-    # Print skip factors per node (ignoring any level info)
+    # Update skip factors for dimension 1 and dimension 2.
+    hierarchy.update_global_skip_factors(threshold=0.5, dimension=1, result_field="skip_factor")
+    hierarchy.update_global_skip_factors(threshold=0.5, dimension=2, result_field="skip_factor_2d")
+    # Print skip factors per node for both dimensions.
     print("\n--- Skip Factors Report ---")
     for node in hierarchy.linear_order:
-         print(f"Node {node.label}: skip_factor = {node.skip_factor}")
+         print(f"Node {node.label}: skip_factor (1D) = {node.skip_factor}, skip_factor (2D) = {node.skip_factor_2d}")
 
 # -------------------------------------------------------------------
 # Main entry point.

@@ -1,2 +1,45 @@
-Unknown args: ['--use_mock', '--self_heal'] (ignoring...)
-Error reading input JSON: [Errno 2] No such file or directory: 'some_default.json'
+DEBUG: Total nodes in full hierarchy: 13
+📋 INITIAL Hierarchy Linear Order:
+ID: 292df925-cb03-48f9-b3c2-732a38d16fc8 | Label: Origin | Prefix: O | AbsIndex: 0 | Weight: 1.0
+ID: e665a95c-88de-474d-81f4-47c71c17a8cb | Label: A | Prefix: A | AbsIndex: 1 | Weight: 1.0
+ID: dc81f8b2-ecff-47f5-9eca-73d5ac6f2bde | Label: B | Prefix: B | AbsIndex: 2 | Weight: 1.0
+ID: e70b4f1d-9776-4322-9a51-c53f48ab492f | Label: C | Prefix: C | AbsIndex: 3 | Weight: 1.0
+ID: 9420c0e2-f77d-4447-afc2-96a89e5914a0 | Label: A1 | Prefix: A1 | AbsIndex: 4 | Weight: 0.8
+ID: 047494f8-0721-4b0e-8648-3edd1d9d189a | Label: A2 | Prefix: A2 | AbsIndex: 5 | Weight: 0.75
+ID: 8af150d4-c264-4162-bd8e-aa3b60cda66e | Label: A3 | Prefix: A3 | AbsIndex: 6 | Weight: 0.7
+ID: 205695b1-4e20-4aca-9561-2084b1246d40 | Label: B1 | Prefix: B1 | AbsIndex: 7 | Weight: 0.85
+ID: c4786b5b-8549-4410-8508-ed98256b3a4e | Label: B2 | Prefix: B2 | AbsIndex: 8 | Weight: 0.8
+ID: 3e7c8825-59d8-4daa-965b-cba15c079494 | Label: B3 | Prefix: B3 | AbsIndex: 9 | Weight: 0.78
+ID: 3ba1f471-3ec4-4435-910e-fe25966163b7 | Label: C1 | Prefix: C1 | AbsIndex: 10 | Weight: 0.9
+ID: 5cbeddfb-6db5-457c-ac94-34aaee545c28 | Label: C2 | Prefix: C2 | AbsIndex: 11 | Weight: 0.85
+ID: a5fc9512-7773-484a-b6a3-e4ed20bdc4f9 | Label: C3 | Prefix: C3 | AbsIndex: 12 | Weight: 0.8
+
+📋 FINAL Hierarchy Linear Order (after randomization if applied):
+ID: 292df925-cb03-48f9-b3c2-732a38d16fc8 | Label: Origin | Prefix: O | AbsIndex: 0 | Weight: 1.0 | Bounds: {'start_index': 1, 'end_index': 3}
+ID: e665a95c-88de-474d-81f4-47c71c17a8cb | Label: A | Prefix: A | AbsIndex: 1 | Weight: 1.0 | Bounds: {'start_index': 4, 'end_index': 6}
+ID: dc81f8b2-ecff-47f5-9eca-73d5ac6f2bde | Label: B | Prefix: B | AbsIndex: 2 | Weight: 1.0 | Bounds: {'start_index': 7, 'end_index': 9}
+ID: e70b4f1d-9776-4322-9a51-c53f48ab492f | Label: C | Prefix: C | AbsIndex: 3 | Weight: 1.0 | Bounds: {'start_index': 10, 'end_index': 12}
+ID: 9420c0e2-f77d-4447-afc2-96a89e5914a0 | Label: A1 | Prefix: A1 | AbsIndex: 4 | Weight: 0.8 | Bounds: {'start_index': 4, 'end_index': 6}
+ID: 047494f8-0721-4b0e-8648-3edd1d9d189a | Label: A2 | Prefix: A2 | AbsIndex: 5 | Weight: 0.75 | Bounds: {'start_index': 4, 'end_index': 6}
+ID: 8af150d4-c264-4162-bd8e-aa3b60cda66e | Label: A3 | Prefix: A3 | AbsIndex: 6 | Weight: 0.7 | Bounds: {'start_index': 4, 'end_index': 6}
+ID: 205695b1-4e20-4aca-9561-2084b1246d40 | Label: B1 | Prefix: B1 | AbsIndex: 7 | Weight: 0.85 | Bounds: {'start_index': 7, 'end_index': 9}
+ID: c4786b5b-8549-4410-8508-ed98256b3a4e | Label: B2 | Prefix: B2 | AbsIndex: 8 | Weight: 0.8 | Bounds: {'start_index': 7, 'end_index': 9}
+ID: 3e7c8825-59d8-4daa-965b-cba15c079494 | Label: B3 | Prefix: B3 | AbsIndex: 9 | Weight: 0.78 | Bounds: {'start_index': 7, 'end_index': 9}
+ID: 3ba1f471-3ec4-4435-910e-fe25966163b7 | Label: C1 | Prefix: C1 | AbsIndex: 10 | Weight: 0.9 | Bounds: {'start_index': 10, 'end_index': 12}
+ID: 5cbeddfb-6db5-457c-ac94-34aaee545c28 | Label: C2 | Prefix: C2 | AbsIndex: 11 | Weight: 0.85 | Bounds: {'start_index': 10, 'end_index': 12}
+ID: a5fc9512-7773-484a-b6a3-e4ed20bdc4f9 | Label: C3 | Prefix: C3 | AbsIndex: 12 | Weight: 0.8 | Bounds: {'start_index': 10, 'end_index': 12}
+
+--- Skip Factors Report ---
+Node Origin: skip_factor (1D) = 0.23076923076923078, skip_factor (2D) = 0.053254437869822494
+Node A: skip_factor (1D) = 0.23076923076923078, skip_factor (2D) = 0.053254437869822494
+Node B: skip_factor (1D) = 0.23076923076923078, skip_factor (2D) = 0.053254437869822494
+Node C: skip_factor (1D) = 0.23076923076923078, skip_factor (2D) = 0.053254437869822494
+Node A1: skip_factor (1D) = 0.0, skip_factor (2D) = 0.0
+Node A2: skip_factor (1D) = 0.0, skip_factor (2D) = 0.0
+Node A3: skip_factor (1D) = 0.0, skip_factor (2D) = 0.0
+Node B1: skip_factor (1D) = 0.0, skip_factor (2D) = 0.0
+Node B2: skip_factor (1D) = 0.0, skip_factor (2D) = 0.0
+Node B3: skip_factor (1D) = 0.0, skip_factor (2D) = 0.0
+Node C1: skip_factor (1D) = 0.0, skip_factor (2D) = 0.0
+Node C2: skip_factor (1D) = 0.0, skip_factor (2D) = 0.0
+Node C3: skip_factor (1D) = 0.0, skip_factor (2D) = 0.0

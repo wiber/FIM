@@ -55,8 +55,9 @@ FILES=(
   "tests/test_fim_hierarchy.py"
   "tests/test_fim_validation.py"
   "tests/test_rules.py"
-  "full_terminal_output.log"
   "rule_engine.py"
+  "tests/test_fim_hierarchy.py"
+  "tests/skip_factors.py"
 )
 
 # Clear (or create) the output log file first
