@@ -699,6 +699,7 @@ class FIMHierarchy:
         """
         # First, ensure the entire tree is re-sorted.
         self.sort_tree(self.root)
+        
         # Step 1: Build strict 1D ordering (origin, top-level, and subcategories)
         self.linear_order = self.build_strict_ordering()
         # New: Assign absolute indices based on ordering.
@@ -924,31 +925,104 @@ class FIMHierarchy:
             if not hasattr(node, "node_id") or node.node_id is None:
                 node.node_id = f"node_{idx}"
 
-# NEW: Update the parse_arguments function to accept additional flags.
+    def update_global_skip_factors(self, threshold=0.5, dimension=1):
+        """
+        Update the skip factors for the hierarchy.
+
+        For the root node, the denominator is the total number of nodes in the linear order,
+        reflecting the full axis (e.g. 13 nodes in your test case). For non-root
+        nodes, if submatrix bounds are defined (via calculate_submatrix_bounds),
+        we use the width of that submatrix; otherwise we fall back to the number of immediate children.
+
+        Then, for each node, skip_factor = (processed / total) ** dimension.
+        """
+        def update_skip_factors(node):
+            if node == self.root:
+                # For the root, use the full axis count.
+                total = len(self.linear_order)
+            elif node.submatrix_bounds is not None:
+                # Expect submatrix_bounds to be a dict with keys 'start_index' and 'end_index'
+                start = int(node.submatrix_bounds.get('start_index', 0))
+                end = int(node.submatrix_bounds.get('end_index', 0))
+                total = end - start + 1
+            else:
+                total = len(node.children)
+
+            if total > 0:
+                processed = sum(1 for child in node.children if child.weight >= threshold)
+                node.skip_factor = (processed / total) ** dimension
+            else:
+                node.skip_factor = 1.0
+
+            for child in node.children:
+                update_skip_factors(child)
+
+        update_skip_factors(self.root)
+
+# NEW: Add a helper function to return a default larger hierarchy.
+def get_default_hierarchy():
+    """
+    Return an extended default hierarchy JSON structure.
+    This structure includes:
+      - 1 Origin.
+      - 3 top-level categories (A, B, C).
+      - Each top-level category has 3 children (e.g., A1, A2, A3, etc.).
+      - Each child further has 3 sub-children, making the hierarchy three levels deep.
+    Total nodes: 1 + 3 + 9 + 27 = 40.
+    """
+    return {
+        "Origin": {"A": 1.0, "B": 1.0, "C": 1.0},
+        "A": {"A1": 0.8, "A2": 0.75, "A3": 0.7},
+        "B": {"B1": 0.85, "B2": 0.8, "B3": 0.78},
+        "C": {"C1": 0.9, "C2": 0.85, "C3": 0.8},
+        "A1": {"A1a": 0.7, "A1b": 0.68, "A1c": 0.66},
+        "A2": {"A2a": 0.65, "A2b": 0.63, "A2c": 0.6},
+        "A3": {"A3a": 0.64, "A3b": 0.62, "A3c": 0.6},
+        "B1": {"B1a": 0.85, "B1b": 0.83, "B1c": 0.8},
+        "B2": {"B2a": 0.81, "B2b": 0.8, "B2c": 0.79},
+        "B3": {"B3a": 0.77, "B3b": 0.75, "B3c": 0.73},
+        "C1": {"C1a": 0.92, "C1b": 0.9, "C1c": 0.88},
+        "C2": {"C2a": 0.87, "C2b": 0.85, "C2c": 0.83},
+        "C3": {"C3a": 0.82, "C3b": 0.8, "C3c": 0.78}
+    }
+
+# ----------------------------------------------
+# NEW: Update the argument parsing to include a flag for default hierarchy.
 def parse_arguments():
     import argparse
     parser = argparse.ArgumentParser(description="Run FIMHierarchy pipeline")
     parser.add_argument('--use_mock', action='store_true', help="Use mock data source")
     parser.add_argument('--run-tests', action='store_true', help="Flag to run tests mode")
-    parser.add_argument('--input-json', type=str, required=True, help="Path to JSON input seed for the hierarchy")
+    # Instead of requiring --input-json, allow using a default hierarchy via --use-default.
+    parser.add_argument('--input-json', type=str, help="Path to JSON input seed for the hierarchy")
+    parser.add_argument('--use-default', action='store_true', help="Use default hierarchy (3 categories and 3 sub-categories each)")
     parser.add_argument('--self-heal', action='store_true', help="Trigger the self-healing routine on initialization")
     parser.add_argument('--print-hierarchy', action='store_true', help="Print the final hierarchy to terminal")
     # NEW: Add flag to randomize weights.
     parser.add_argument('--randomize', action='store_true', help="Randomize node weights before self-healing.")
     return parser.parse_args()
 
-# Updated main() function to load the external JSON and create the hierarchy.
+# ----------------------------------------------
+# Updated main() function to use default hierarchy if flag is set.
 def main():
     args = parse_arguments()
     import json, random
-    with open(args.input_json, "r") as f:
-        hierarchy_data = json.load(f)
+
+    # NEW: Use default hierarchy structure if --use-default flag is provided.
+    if args.use_default or not args.input_json:
+        hierarchy_data = get_default_hierarchy()
+        print("ℹ️  Using default hierarchy structure (40 nodes)")
+    else:
+        with open(args.input_json, "r") as f:
+            hierarchy_data = json.load(f)
     
     # Create the FIMHierarchy instance
     hierarchy = FIMHierarchy.from_json(hierarchy_data)
 
     # Trigger an initial self-healing to build ordering if needed.
     hierarchy.self_heal()
+    # DEBUG: Print out the total number of nodes in the full hierarchy.
+    print(f"DEBUG: Total nodes in full hierarchy: {len(hierarchy.linear_order)}")
 
     # Print initial hierarchy before any weight randomization.
     print("📋 INITIAL Hierarchy Linear Order:")
@@ -964,7 +1038,7 @@ def main():
         # Re-run self-healing to update ordering, indices, bounds, etc.
         hierarchy.self_heal()
 
-    # Print final hierarchy after re-healing to show re-assigned prefixes, positions, weights, and bounds.
+    # Print final hierarchy after re-healing to show updated ordering and bounds.
     print("\n📋 FINAL Hierarchy Linear Order (after randomization if applied):")
     for node in hierarchy.linear_order:
         print(f"ID: {node.node_id} | Label: {node.label} | Prefix: {node.invariant_prefix} "
@@ -974,7 +1048,12 @@ def main():
     with open("hierarchy_updated.json", "w") as out_file:
         json.dump(hierarchy.to_full_json(), out_file, indent=4)
     
-    # (Optional) You might also want to print a diff comparison or additional diagnostic info here.
+    # Update skip factors using the local axis (each node's immediate children).
+    hierarchy.update_global_skip_factors(threshold=0.5, dimension=1)
+    # Print skip factors per node (ignoring any level info)
+    print("\n--- Skip Factors Report ---")
+    for node in hierarchy.linear_order:
+         print(f"Node {node.label}: skip_factor = {node.skip_factor}")
 
 # -------------------------------------------------------------------
 # Main entry point.
