@@ -896,9 +896,24 @@ class FIMHierarchy:
     # NEW: Expose full JSON export as expected by tests.
     def to_full_json(self):
         """
-        For testing, return a full JSON (dict) representation of the hierarchy.
+        Return a full JSON (dict) representation of the hierarchy,
+        including randomized weights, additive causal metadata,
+        skip factors, and all other node properties.
         """
-        return self.to_dict()
+        def node_to_dict(node):
+            return {
+                "node_id": getattr(node, "node_id", None),
+                "label": node.label,
+                "weight": node.weight,
+                "invariant_prefix": node.invariant_prefix,
+                "abs_index": node.abs_index,
+                "cumulative_causality": getattr(node, "cumulative_causality", []),
+                "skip_factor": getattr(node, "skip_factor", None),
+                "skip_factor_2d": getattr(node, "skip_factor_2d", None),
+                "submatrix_bounds": node.submatrix_bounds,
+                "children": [node_to_dict(child) for child in node.children]
+            }
+        return node_to_dict(self.root)
 
     # NEW: Expose prompt-ready JSON as a list
     def to_prompt_json(self):
@@ -936,6 +951,15 @@ class FIMHierarchy:
         The computed value is stored in each node under the attribute specified by `result_field`.
         """
         def update_skip_factors(node):
+            # Special handling for leaf nodes: if no children, use the global axis as denominator
+            if not node.children:
+                total = len(self.linear_order)
+                # Instead of summing over children (which would be zero), treat the leaf as qualifying itself if above threshold.
+                processed = 1 if node.weight >= threshold else 0
+                computed = (processed / total) ** dimension
+                setattr(node, result_field, computed)
+                return
+
             if use_global_axis:
                 total = len(self.linear_order)
             elif node == self.root:
