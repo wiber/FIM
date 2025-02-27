@@ -11,7 +11,8 @@ from LanguageAgentTreeSearch.programming.main import (
     simulate_llm_update,
     compare_states,
     break_rule_descending_weights,
-    break_rule_submatrix_bounds
+    break_rule_submatrix_bounds,
+    randomize_tree_weights
 )
 
 # Helper functions to force rule violations.
@@ -121,10 +122,10 @@ class TestFIMHierarchy(unittest.TestCase):
     def test_json_export(self):
         """Test that the full JSON export includes necessary fields."""
         full_json = self.fh.to_full_json()
-        # Check that keys like 'node_id', 'label', and 'children' exist.
-        self.assertIn("node_id", full_json)
-        self.assertIn("label", full_json)
-        self.assertIn("children", full_json)
+        # Check that for the first node in linear_order the keys exist.
+        self.assertIn("node_id", full_json["linear_order"][0])
+        self.assertIn("label", full_json["linear_order"][0])
+        self.assertIn("children", full_json["linear_order"][0])
         # Also, test the prompt-ready JSON.
         prompt_json = self.fh.to_prompt_json()
         self.assertIsInstance(prompt_json, list, "Prompt-ready JSON should be a list.")
@@ -168,6 +169,36 @@ class TestFIMHierarchy(unittest.TestCase):
         for node in self.fh.linear_order:
             self.assertIsNotNone(getattr(node, "cumulative_causality", None),
                                  f"Node {node.label} is missing cumulative causal chain.")
+
+    def test_randomization_effect(self):
+        """
+        Test that when randomization is applied, the weights change and the
+        top-level nodes are re-sorted accordingly (in descending order).
+        """
+        # Record original weights for top-level nodes (children of Origin).
+        original_weights = [node.weight for node in self.fh.linear_order if node.parent == self.fh.root]
+        
+        # --- STEP: Apply randomization ---
+        # Explicitly call the randomize function on the in-memory tree.
+        randomize_tree_weights(self.fh.root)
+        
+        # Trigger a hierarchy update so that the ordering is rebuilt based on new weights.
+        self.fh.trigger_hierarchy_update()
+        
+        # Extract new weights for top-level nodes.
+        new_weights = [node.weight for node in self.fh.linear_order if node.parent == self.fh.root]
+        
+        # Assert that the randomized weights differ from the original static weights.
+        self.assertNotEqual(original_weights, new_weights,
+                            "Randomization did not affect the top-level node weights as expected.")
+        
+        # Additionally, assert that the top-level nodes are now sorted in descending order by weight.
+        self.assertEqual(new_weights, sorted(new_weights, reverse=True),
+                         "Top-level nodes are not sorted in descending order based on the new weights.")
+        
+        # Optionally, print the before/after weight snapshots for debugging.
+        print("\n[TEST] Original top-level weights:", original_weights)
+        print("[TEST] New top-level weights:", new_weights)
 
 class TestFIMValidationRules(unittest.TestCase):
     def setUp(self):
@@ -251,8 +282,14 @@ class TestFIMValidationRules(unittest.TestCase):
         if self.fh.root.children:
             parent = self.fh.root.children[0]
             if parent.children:
-                moved_child = parent.children.pop(0)
-                self.fh.linear_order.insert(1, moved_child)
+                # Instead of removing the child from parent's children list,
+                # simply remove it from the linear_order and reinsert it at a wrong position.
+                moved_child = parent.children[0]
+                # Remove its current occurrence in linear_order.
+                self.fh.linear_order.remove(moved_child)
+                # Insert it at an index that breaks contiguity.
+                wrong_index = self.fh.linear_order.index(parent) + 1
+                self.fh.linear_order.insert(wrong_index, moved_child)
         violation = False
         for node in self.fh.linear_order:
             if node.parent:

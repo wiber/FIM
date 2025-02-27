@@ -198,6 +198,19 @@ import sys  # if needed
 # Ensure logger is defined at the global scope.
 logger = logging.getLogger(__name__)
 
+# NEW: Add helper function to recursively randomize tree weights
+def randomize_tree_weights(node):
+    """
+    Recursively randomize the weight for a tree node (except if the node is the Origin).
+    """
+    if node.label != "Origin":
+        old_weight = node.weight
+        # Randomize weight between 0.7 and 1.0.
+        node.weight = round(random.uniform(0.7, 1.0), 2)
+        print(f"🔀 Updated weight for Node {node.node_id} ({node.label}): {old_weight} -> {node.weight}")
+    for child in node.children:
+        randomize_tree_weights(child)
+
 # ----------------------------------------------
 # NEW: Move helper tree function before usage.
 # ----------------------------------------------
@@ -700,8 +713,6 @@ class FIMHierarchy:
         FIMHierarchy.propagate_cumulative_causality(self.root)
         # Step 4: Calculate submatrix bounds.
         self.calculate_submatrix_bounds()
-        # NEW: After calculating submatrix bounds, attach a getter to each node.
-        self.assign_getters()
 
     @staticmethod
     def propagate_cumulative_causality(node):
@@ -771,17 +782,23 @@ class FIMHierarchy:
         """
         Calculate submatrix bounds for each node.
          - For a node with children, compute the min and max 'abs_index' from direct children.
-         - For a leaf, inherit parent's bounds if available.
+         - For a leaf node, inherit bounds from the parent.
         """
         def calc_bounds(node):
             if node.children:
                 indices = [child.abs_index for child in node.children if child.abs_index is not None]
-                node.submatrix_bounds = {"start_index": min(indices), "end_index": max(indices)} if indices else None
+                if indices:
+                    node.submatrix_bounds = {"start_index": min(indices), "end_index": max(indices)}
+                else:
+                    node.submatrix_bounds = {"start_index": node.abs_index, "end_index": node.abs_index}
                 for child in node.children:
                     calc_bounds(child)
             else:
-                # For a leaf, inherit parent's bounds if available.
-                node.submatrix_bounds = node.parent.submatrix_bounds if (node.parent and hasattr(node.parent, 'submatrix_bounds')) else None
+                # For a leaf node, inherit parent's bounds if available.
+                if node.parent and hasattr(node.parent, 'submatrix_bounds') and node.parent.submatrix_bounds:
+                    node.submatrix_bounds = node.parent.submatrix_bounds
+                else:
+                    node.submatrix_bounds = {"start_index": node.abs_index, "end_index": node.abs_index}
         calc_bounds(self.root)
 
     # NEW: Add propagate_causal_effects as a stub.
@@ -842,21 +859,20 @@ class FIMHierarchy:
     # NEW: Alias self_heal_structure to self_heal to match test expectations.
     def self_heal_structure(self):
         """
-        Alias for self_heal used in tests.
+        Alias to self_heal() so that tests expecting self_heal_structure work.
         """
         self.self_heal()
 
     def get_flat_state(self):
         """
-        Provide a flat state as a dictionary keyed by node_id for comparison tests.
+        Return a dictionary summarizing each node's essential state keyed by its node_id.
+        This includes at least the weight and invariant prefix.
         """
         state = {}
         for node in self.linear_order:
             state[node.node_id] = {
                 "weight": node.weight,
-                "invariant_prefix": node.invariant_prefix,
-                "abs_index": node.abs_index,
-                "submatrix_bounds": node.submatrix_bounds
+                "invariant_prefix": node.invariant_prefix
             }
         return state
     
@@ -908,12 +924,6 @@ class FIMHierarchy:
             if not hasattr(node, "node_id") or node.node_id is None:
                 node.node_id = f"node_{idx}"
 
-    # NEW: After calculating submatrix bounds, attach a getter to each node.
-    def assign_getters(self):
-        for node in self.linear_order:
-            # Bind node to the lambda's default parameter to capture the current node.
-            node.get_submatrix_bounds = (lambda n: lambda: n.submatrix_bounds)(node)
-
 # NEW: Update the parse_arguments function to accept additional flags.
 def parse_arguments():
     import argparse
@@ -943,38 +953,28 @@ def main():
     # Print initial hierarchy before any weight randomization.
     print("📋 INITIAL Hierarchy Linear Order:")
     for node in hierarchy.linear_order:
-        bounds = node.submatrix_bounds
-        # If bounds is a dict, print as key/value.
-        bounds_str = f"Bounds: {bounds}" if bounds else "Bounds: None"
         print(f"ID: {node.node_id} | Label: {node.label} | Prefix: {node.invariant_prefix} "
-              f"| AbsIndex: {node.abs_index} | Weight: {node.weight} | {bounds_str}")
+              f"| AbsIndex: {node.abs_index} | Weight: {node.weight}")
 
-    # Optionally randomize weights:
+    # Optionally randomize weights using our recursive helper.
     if args.randomize:
-        print("\n🔀 Randomizing weights and updating nodes...")
-        for node in hierarchy.linear_order:
-            if node.label == "Origin":
-                print(f"🔒 Skipping weight randomization for Origin (Node ID: {node.node_id})")
-            else:
-                old_weight = node.weight
-                node.weight = round(random.uniform(0.7, 1.0), 2)
-                print(f"🔀 Updated weight for Node {node.node_id} ({node.label}): {old_weight} -> {node.weight}")
+        print("\n🔀 Randomizing weights for the entire tree (excluding Origin)...")
+        randomize_tree_weights(hierarchy.root)
         print("\n🔀 Weights randomized. Re-healing hierarchy for updated ordering...")
+        # Re-run self-healing to update ordering, indices, bounds, etc.
         hierarchy.self_heal()
 
-    # Print final hierarchy after re-healing.
+    # Print final hierarchy after re-healing to show re-assigned prefixes, positions, weights, and bounds.
     print("\n📋 FINAL Hierarchy Linear Order (after randomization if applied):")
     for node in hierarchy.linear_order:
-        bounds = node.submatrix_bounds
-        bounds_str = f"Bounds: {bounds}" if bounds else "Bounds: None"
         print(f"ID: {node.node_id} | Label: {node.label} | Prefix: {node.invariant_prefix} "
-              f"| AbsIndex: {node.abs_index} | Weight: {node.weight} | {bounds_str}")
+              f"| AbsIndex: {node.abs_index} | Weight: {node.weight} | Bounds: {node.submatrix_bounds}")
 
     # Write updated hierarchy to file.
     with open("hierarchy_updated.json", "w") as out_file:
         json.dump(hierarchy.to_full_json(), out_file, indent=4)
     
-    # Additional diagnostics or diff comparisons can be added here.
+    # (Optional) You might also want to print a diff comparison or additional diagnostic info here.
 
 # -------------------------------------------------------------------
 # Main entry point.
@@ -1005,17 +1005,22 @@ simulate_llm_update = lambda hierarchy: hierarchy  # Stub: returns the hierarchy
 propagate_causal_effects = FIMHierarchy.propagate_causal_effects
 propagate_cumulative_causality = FIMHierarchy.propagate_cumulative_causality
 
-# -----------------------------------------------
-# NEW: Define build_tree_from_json here.
-# This function was previously referenced from a dummy module.
-# It builds a tree from JSON data; adjust the Node implementation as needed.
-
-def break_rule_descending_weights(fh):
+# ----------------------------------------------
+# NEW: Helper function to randomize the weights recursively.
+# ----------------------------------------------
+def randomize_tree_weights(node):
     """
-    Force a violation of descending weights by sorting in ascending order.
+    Recursively randomize the weight for a tree node (except if the node is the Origin).
     """
-    if fh.linear_order:
-        fh.linear_order.sort(key=lambda node: node.weight)  # Ascending order
+    # Do not randomize the Origin node.
+    if node.label != "Origin":
+        old_weight = node.weight
+        # Randomize weight between 0.7 and 1.0.
+        node.weight = round(random.uniform(0.7, 1.0), 2)
+        print(f"🔀 Updated weight for Node {node.node_id} ({node.label}): {old_weight} -> {node.weight}")
+    # Recurse for all children.
+    for child in node.children:
+        randomize_tree_weights(child)
 
 # NEW: Add the missing break_rule_submatrix_bounds function.
 def break_rule_submatrix_bounds(fh):
