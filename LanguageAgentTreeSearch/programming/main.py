@@ -946,6 +946,40 @@ class FIMHierarchy:
             if not hasattr(node, "node_id") or node.node_id is None:
                 node.node_id = f"node_{idx}"
 
+    # NEW: Helper method to find a node by matching its label or invariant_label.
+    def find_node_by_label(self, label):
+        """
+        Find a node in the hierarchy by its current label or invariant_label.
+        Returns the node if found, otherwise None.
+        """
+        for node in self.linear_order:
+            if node.label == label or node.invariant_label == label:
+                return node
+        return None
+
+    # NEW: Helper method to add a new node under a specified parent.
+    def add_node(self, parent_label, new_label, new_weight):
+        """
+        Add a new node to the hierarchy under the parent identified by parent_label.
+        After attaching the node, the method calls self-healing to update ordering,
+        indices, and skip factors.
+        Args:
+            parent_label (str): the label (or invariant_label) of the parent node.
+            new_label (str): the label for the new node.
+            new_weight (float): the weight to assign to the new node.
+        Returns:
+            The newly created Node.
+        """
+        parent = self.find_node_by_label(parent_label)
+        if not parent:
+            raise ValueError(f"Parent node with label '{parent_label}' not found.")
+        new_node = Node(label=new_label, weight=new_weight)
+        parent.add_child(new_node)
+        # Re-run self-healing routines to update ordering, absolute indices, and skip factors.
+        self.self_heal()
+        self.update_global_skip_factors(threshold=0.5, dimension=1, use_global_axis=True, result_field="skip_factor")
+        return new_node
+
     def update_global_skip_factors(self, threshold=0.5, dimension=1, use_global_axis=True, result_field="skip_factor"):
         """
         Update the skip factors for the hierarchy.
@@ -1038,7 +1072,7 @@ def get_default_hierarchy():
     """
     return {
         "Origin": {"A": 1.0, "B": 1.0, "C": 1.0},
-        "A": {"A1": 0.8, "A2": 0.75, "A3": 0.7},
+        "A": {"A1": 0.8, "A2": 0.75, "A3": 0.7, "A4": 0.77},
         "B": {"B1": 0.85, "B2": 0.8, "B3": 0.78},
         "C": {"C1": 0.9, "C2": 0.85, "C3": 0.8},
         "A1": {"A1a": 0.7, "A1b": 0.68, "A1c": 0.66},
@@ -1059,7 +1093,6 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="Run FIMHierarchy pipeline")
     parser.add_argument('--use_mock', action='store_true', help="Use mock data source")
     parser.add_argument('--run-tests', action='store_true', help="Flag to run tests mode")
-    # Instead of requiring --input-json, allow using a default hierarchy via --use-default.
     parser.add_argument('--input-json', type=str, help="Path to JSON input seed for the hierarchy")
     parser.add_argument('--use-default', action='store_true', help="Use default hierarchy (3 categories and 3 sub-categories each)")
     parser.add_argument('--self-heal', action='store_true', help="Trigger the self-healing routine on initialization")
@@ -1067,6 +1100,8 @@ def parse_arguments():
     parser.add_argument('--randomize', '--randomise', action='store_true', help="Randomize node weights before self-healing.")
     # NEW: Add a flag to trigger the LLM call for downward causal reasoning.
     parser.add_argument('--llm', action='store_true', help="Run downward causal reasoning through the LLM")
+    # NEW: Add a flag to test the add_node helper.
+    parser.add_argument('--test-add', action='store_true', help="Test the add_node helper function")
     return parser.parse_args()
 
 # ----------------------------------------------
@@ -1075,7 +1110,6 @@ def main():
     args = parse_arguments()
     import json, random
 
-    # NEW: Use default hierarchy structure if --use-default flag is provided.
     if args.use_default or not args.input_json:
         hierarchy_data = get_default_hierarchy()
         print("ℹ️  Using default hierarchy structure (40 nodes)")
@@ -1083,50 +1117,86 @@ def main():
         with open(args.input_json, "r") as f:
             hierarchy_data = json.load(f)
     
-    # Create the FIMHierarchy instance
     hierarchy = FIMHierarchy.from_json(hierarchy_data)
-
-    # Trigger an initial self-healing to build ordering if needed.
     hierarchy.self_heal()
-    # DEBUG: Print out the total number of nodes in the full hierarchy.
     print(f"DEBUG: Total nodes in full hierarchy: {len(hierarchy.linear_order)}")
 
-    # Print initial hierarchy before any weight randomization.
     print("📋 INITIAL Hierarchy Linear Order:")
     for node in hierarchy.linear_order:
-        print(f"ID: {node.node_id} | Label: {node.label} | Prefix: {node.invariant_prefix} "
-              f"| AbsIndex: {node.abs_index} | Weight: {node.weight}")
+        print(f"ID: {node.node_id} | Label: {node.label} | Prefix: {node.invariant_prefix} | AbsIndex: {node.abs_index} | Weight: {node.weight}")
 
-    # Optionally randomize weights using our recursive helper.
     if args.randomize:
         print("\n🔀 Randomizing weights for the entire tree (excluding Origin)...")
         randomize_tree_weights(hierarchy.root)
         print("\n🔀 Weights randomized. Re-healing hierarchy for updated ordering...")
-        # Re-run self-healing to update ordering, indices, bounds, etc.
         hierarchy.self_heal()
 
-    # Print final hierarchy after re-healing to show updated ordering and bounds.
     print("\n📋 FINAL Hierarchy Linear Order (after randomization if applied):")
     for node in hierarchy.linear_order:
-        print(f"ID: {node.node_id} | Label: {node.label} | Prefix: {node.invariant_prefix} "
-              f"| AbsIndex: {node.abs_index} | Weight: {node.weight} | Bounds: {node.submatrix_bounds}")
+        print(f"ID: {node.node_id} | Label: {node.label} | Prefix: {node.invariant_prefix} | AbsIndex: {node.abs_index} | Weight: {node.weight} | Bounds: {node.submatrix_bounds}")
 
-    # Write updated hierarchy to file.
     with open("hierarchy_updated.json", "w") as out_file:
         json.dump(hierarchy.to_full_json(), out_file, indent=4)
     
-    # Update skip factors for dimension 1 and dimension 2.
     hierarchy.update_global_skip_factors(threshold=0.5, dimension=1, use_global_axis=True, result_field="skip_factor")
     hierarchy.update_global_skip_factors(threshold=0.5, dimension=2, use_global_axis=True, result_field="skip_factor_2d")
-    # Print skip factors per node for both dimensions.
     print("\n--- Skip Factors Report ---")
     for node in hierarchy.linear_order:
          print(f"Node {node.label}: skip_factor (1D) = {node.skip_factor}, skip_factor (2D) = {node.skip_factor_2d}")
 
-    # NEW: If the --llm flag is provided, run the downward causal reasoning integration.
     if args.llm:
         print("\n--- Running Downward Causal Reasoning via LLM ---")
         hierarchy.apply_downward_causal_reasoning(mock_llm_function)
+
+    # NEW: Test the new add_node helper if the flag is provided.
+    if args.test_add:
+        print("\n--- Testing add_node Helper ---")
+        try:
+            new_node = hierarchy.add_node(parent_label="A", new_label="NewA", new_weight=0.93)
+            print(f"✅ Added new node: '{new_node.label}' under parent 'A'.")
+            parent_node = hierarchy.find_node_by_label("A")
+            # Print the parent's children sorted by descending weight
+            sorted_children = sorted(parent_node.children, key=lambda n: n.weight, reverse=True)
+            print("Parent 'A' children (sorted by descending weight):")
+            for child in sorted_children:
+                print(f"    {child.label} (Weight: {child.weight})")
+            # Print skip factors for each child
+            print("Skip factors for children of 'A':")
+            for child in sorted_children:
+                print(f"    {child.label}: {child.skip_factor}")
+            
+            # Verify that the parent's children are in descending order by weight:
+            weights = [child.weight for child in sorted_children]
+            if weights != sorted(weights, reverse=True):
+                print("❌ Error: Child order is not descending by weight!")
+            else:
+                print("✅ Verified: Child order is descending by weight.")
+            
+            # Check parent's skip factor --
+            # For a non-leaf node using global axis, expected skip factor = (num_children / len(linear_order))^1.
+            total = len(hierarchy.linear_order)
+            processed = len(parent_node.children)  # all children should meet the threshold (>= 0.5)
+            expected_skip = (processed / total) ** 1.0
+            actual_skip = parent_node.skip_factor
+            if abs(actual_skip - expected_skip) > 0.001:
+                print(f"❌ Error: Parent 'A' skip factor mismatch! Expected: {expected_skip}, Got: {actual_skip}")
+            else:
+                print("✅ Verified: Parent 'A' skip factor is correct.")
+                
+        except ValueError as e:
+            print(f"Error during add_node: {e}")
+
+        print("\n--- Updated Hierarchy Linear Order (After Node Addition) ---")
+        for node in hierarchy.linear_order:
+             print(f"ID: {node.node_id} | Label: {node.label} | Prefix: {node.invariant_prefix} | AbsIndex: {node.abs_index} | Weight: {node.weight} | Skip Factor: {node.skip_factor}")
+        # Validate ordering: ensure parent's ordering and skip factors are correct.
+        failed_nodes = hierarchy.report_failed_nodes()
+        if failed_nodes:
+            print("\n⚠️  Ordering Issues Detected:")
+            for node_label, reason in failed_nodes:
+                print(f"    {node_label}: {reason}")
+        else:
+            print("\n✅ No ordering issues detected.")
 
 def mock_llm_function(prompt):
     """
