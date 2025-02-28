@@ -205,8 +205,8 @@ def randomize_tree_weights(node):
     """
     if node.label != "Origin":
         old_weight = node.weight
-        # Randomize weight between 0.7 and 1.0.
-        node.weight = round(random.uniform(0.7, 1.0), 2)
+        # Randomize weight between 0.7 and 0.95 to ensure variation.
+        node.weight = round(random.uniform(0.7, 0.95), 2)
         print(f"🔀 Updated weight for Node {node.node_id} ({node.label}): {old_weight} -> {node.weight}")
     for child in node.children:
         randomize_tree_weights(child)
@@ -683,10 +683,11 @@ class FIMHierarchy:
 
     # NEW: Recursive function to sort each node's children by descending weight.
     def sort_tree(self, node):
-        if not node or not hasattr(node, "children"):
-            return
-        # Sort children for the node so that higher weights come first.
-        node.children = sorted(node.children, key=lambda n: n.weight, reverse=True)
+        """
+        Recursively sort the tree in place, ensuring that each node's children are sorted
+        in descending order by their weight.
+        """
+        node.children.sort(key=lambda n: n.weight, reverse=True)
         for child in node.children:
             self.sort_tree(child)
 
@@ -731,53 +732,56 @@ class FIMHierarchy:
 
     def build_strict_ordering(self):
         """
-        Create a 1D ordering of nodes following these rules:
-         - Origin (root) is first.
-         - Direct children of the origin (top-level nodes) appear as a contiguous block sorted in descending weight.
-         - Each top-level node is followed by its subcategories sorted in descending weight.
-        This is a placeholder for a full implementation.
+        Create a 1D ordering of nodes such that:
+          - The Origin (root) is first.
+          - All top-level nodes (direct children of Origin) appear contiguously,
+            sorted in descending order by weight.
+          - Then, for each top-level node, its subtree (direct children and their descendants)
+            is appended as a contiguous block.
         """
         ordering = []
-        # Ensure the origin (root) is first.
+        # 1) Append the Origin.
         ordering.append(self.root)
-        # Assume self.root.children holds top-level categories.
+
+        # 2) Append all top-level nodes (children of Origin) sorted descending.
         top_levels = sorted(self.root.children, key=lambda n: n.weight, reverse=True)
         ordering.extend(top_levels)
-        # Append each top-level node's subcategories.
+
+        # 3) Define a helper to add a parent's subtree as one contiguous block.
+        def add_subtree(parent):
+            # Get parent's children sorted descending.
+            children_sorted = sorted(parent.children, key=lambda n: n.weight, reverse=True)
+            # Append all direct children.
+            ordering.extend(children_sorted)
+            # Then recursively append each child's subtree.
+            for child in children_sorted:
+                add_subtree(child)
+
+        # Append the subtree for each top-level node.
         for node in top_levels:
-            subcategories = sorted(node.children, key=lambda n: n.weight, reverse=True)
-            ordering.extend(subcategories)
+            add_subtree(node)
+
         return ordering
 
     def assign_invariant_prefixes(self):
         """
-        Reassign invariant prefixes:
-         - The origin gets 'O'
-         - Top-level nodes get 'A', 'B', 'C', ... in the order of appearance.
-         - Subcategories receive their parent's prefix suffixed with an incrementing number (e.g., A1, A2).
+        Recalculate invariant prefixes for every node based on the current tree order.
+        The root node receives a fixed prefix (e.g. 'O'), and each child appends a letter based on its sibling index.
         """
-        if not self.linear_order:
-            return
+        def update_prefix(node):
+            if node == self.root:
+                node.invariant_prefix = 'O'
+            # Iterate children of the current node.
+            for i, child in enumerate(node.children):
+                if node == self.root:
+                    # Top-level nodes get a letter (A, B, C, ...) without the root's "O"
+                    child.invariant_prefix = chr(65 + i)
+                else:
+                    # Subcategories get parent's prefix followed by a sequential number (e.g., A1, A2,...)
+                    child.invariant_prefix = node.invariant_prefix + str(i + 1)
+                update_prefix(child)
 
-        # Assign 'O' for the origin at index 0.
-        self.linear_order[0].invariant_prefix = "O"
-        # Determine number of top-level nodes.
-        top_count = len(self.root.children)
-        parent_prefix_map = {}
-        # For top-level nodes (indices 1 to top_count)
-        for i, node in enumerate(self.linear_order[1:top_count+1], start=0):
-            prefix = chr(ord('A') + i)
-            node.invariant_prefix = prefix
-            parent_prefix_map[node] = prefix
-
-        # For subcategories, assign parent's prefix plus a sequential counter.
-        subcat_counters = {}
-        for node in self.linear_order[top_count+1:]:
-            parent = node.parent  # Assumes each node has a reference to its parent.
-            parent_prefix = parent_prefix_map.get(parent, "X")  # "X" as default if parent's not in the map.
-            count = subcat_counters.get(parent_prefix, 0) + 1
-            subcat_counters[parent_prefix] = count
-            node.invariant_prefix = f"{parent_prefix}{count}"
+        update_prefix(self.root)
 
     def calculate_submatrix_bounds(self):
         """
@@ -899,6 +903,8 @@ class FIMHierarchy:
         Return a full JSON (dict) representation of the hierarchy,
         including randomized weights, additive causal metadata,
         skip factors, and all other node properties.
+        The JSON includes a top-level "linear_order" key containing
+        the full ordering of nodes.
         """
         def node_to_dict(node):
             return {
@@ -913,7 +919,7 @@ class FIMHierarchy:
                 "submatrix_bounds": node.submatrix_bounds,
                 "children": [node_to_dict(child) for child in node.children]
             }
-        return node_to_dict(self.root)
+        return {"linear_order": [node_to_dict(node) for node in self.linear_order]}
 
     # NEW: Expose prompt-ready JSON as a list
     def to_prompt_json(self):
@@ -940,7 +946,7 @@ class FIMHierarchy:
             if not hasattr(node, "node_id") or node.node_id is None:
                 node.node_id = f"node_{idx}"
 
-    def update_global_skip_factors(self, threshold=0.5, dimension=1, use_global_axis=False, result_field="skip_factor"):
+    def update_global_skip_factors(self, threshold=0.5, dimension=1, use_global_axis=True, result_field="skip_factor"):
         """
         Update the skip factors for the hierarchy.
 
@@ -964,7 +970,7 @@ class FIMHierarchy:
                 total = len(self.linear_order)
             elif node == self.root:
                 total = len(self.linear_order)
-            elif node.parent == self.root:
+            elif (node.parent == self.root) or (node.parent is None and node != self.root):
                 total = len(self.linear_order)
             elif node.submatrix_bounds is not None:
                 start = int(node.submatrix_bounds.get('start_index', 0))
@@ -985,6 +991,39 @@ class FIMHierarchy:
                 update_skip_factors(child)
 
         update_skip_factors(self.root)
+
+    # NEW: Integration for downward causal reasoning via LLM
+    def apply_downward_causal_reasoning(self, llm_function):
+        """
+        Generate a prompt from the healed hierarchy, call the provided LLM function, and process its response.
+        This method attaches the resulting causal reasoning metadata to each node.
+        """
+        prompt = self.build_llm_prompt()
+        print("LLM Prompt:")
+        print(prompt)
+        llm_response = llm_function(prompt)
+        self.process_llm_response(llm_response)
+
+    def build_llm_prompt(self):
+        """
+        Build a prompt that summarizes the hierarchy.
+        For example, each line includes the invariant prefix, weight, and skip factor.
+        """
+        lines = []
+        for node in self.linear_order:
+            # You can change the prompt format as needed.
+            lines.append(f"{node.invariant_prefix} - Weight: {node.weight}, Skip Factor: {node.skip_factor}")
+        return "\n".join(lines)
+
+    def process_llm_response(self, response):
+        """
+        Process the LLM response and attach the outcome to each node.
+        Here is a stub implementation that simply sets a new attribute on each node.
+        """
+        print("LLM Response:")
+        print(response)
+        for node in self.linear_order:
+            node.downward_causal_reasoning = response
 
 # NEW: Add a helper function to return a default larger hierarchy.
 def get_default_hierarchy():
@@ -1025,8 +1064,9 @@ def parse_arguments():
     parser.add_argument('--use-default', action='store_true', help="Use default hierarchy (3 categories and 3 sub-categories each)")
     parser.add_argument('--self-heal', action='store_true', help="Trigger the self-healing routine on initialization")
     parser.add_argument('--print-hierarchy', action='store_true', help="Print the final hierarchy to terminal")
-    # NEW: Add flag to randomize weights.
-    parser.add_argument('--randomize', action='store_true', help="Randomize node weights before self-healing.")
+    parser.add_argument('--randomize', '--randomise', action='store_true', help="Randomize node weights before self-healing.")
+    # NEW: Add a flag to trigger the LLM call for downward causal reasoning.
+    parser.add_argument('--llm', action='store_true', help="Run downward causal reasoning through the LLM")
     return parser.parse_args()
 
 # ----------------------------------------------
@@ -1076,12 +1116,25 @@ def main():
         json.dump(hierarchy.to_full_json(), out_file, indent=4)
     
     # Update skip factors for dimension 1 and dimension 2.
-    hierarchy.update_global_skip_factors(threshold=0.5, dimension=1, result_field="skip_factor")
-    hierarchy.update_global_skip_factors(threshold=0.5, dimension=2, result_field="skip_factor_2d")
+    hierarchy.update_global_skip_factors(threshold=0.5, dimension=1, use_global_axis=True, result_field="skip_factor")
+    hierarchy.update_global_skip_factors(threshold=0.5, dimension=2, use_global_axis=True, result_field="skip_factor_2d")
     # Print skip factors per node for both dimensions.
     print("\n--- Skip Factors Report ---")
     for node in hierarchy.linear_order:
          print(f"Node {node.label}: skip_factor (1D) = {node.skip_factor}, skip_factor (2D) = {node.skip_factor_2d}")
+
+    # NEW: If the --llm flag is provided, run the downward causal reasoning integration.
+    if args.llm:
+        print("\n--- Running Downward Causal Reasoning via LLM ---")
+        hierarchy.apply_downward_causal_reasoning(mock_llm_function)
+
+def mock_llm_function(prompt):
+    """
+    A mock LLM function that simulates processing the prompt.
+    Replace this with the actual LLM call later.
+    """
+    # For example, return a simple message.
+    return "Mock LLM output: Downward causal reasoning applied."
 
 # -------------------------------------------------------------------
 # Main entry point.
@@ -1119,13 +1172,11 @@ def randomize_tree_weights(node):
     """
     Recursively randomize the weight for a tree node (except if the node is the Origin).
     """
-    # Do not randomize the Origin node.
     if node.label != "Origin":
         old_weight = node.weight
-        # Randomize weight between 0.7 and 1.0.
-        node.weight = round(random.uniform(0.7, 1.0), 2)
+        # Randomize weight between 0.7 and 0.95 to ensure variation.
+        node.weight = round(random.uniform(0.7, 0.95), 2)
         print(f"🔀 Updated weight for Node {node.node_id} ({node.label}): {old_weight} -> {node.weight}")
-    # Recurse for all children.
     for child in node.children:
         randomize_tree_weights(child)
 
