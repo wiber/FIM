@@ -1104,6 +1104,7 @@ def parse_arguments():
     parser.add_argument('--test-add', action='store_true', help="Test the add_node helper function")
     # NEW: Add a flag to test LLM prompts
     parser.add_argument('--test-llm-prompts', action='store_true', help="Test LLM prompts")
+    parser.add_argument('--print-llm-metadata', '--print_llm-metadata', action='store_true', help="Print composite causal metadata for each node in the hierarchy")
     return parser.parse_args()
 
 # ----------------------------------------------
@@ -1163,6 +1164,13 @@ def main():
     if args.llm:
         print("\n--- Running Downward Causal Reasoning via LLM ---")
         hierarchy.apply_downward_causal_reasoning(mock_llm_function)
+
+    # NEW: Print out the propagated composite causal metadata for each non-root node.
+    if args.print_llm_metadata:
+        print("\n--- Composite Causal Metadata for Each Node ---")
+        for node in hierarchy.linear_order:
+            if node.parent:
+                print(f"Node {node.label} (Parent: {node.parent.label}) -> Causal Metadata: {node.causal_inference}")
 
     # NEW: Test the new add_node helper if the flag is provided.
     if args.test_add:

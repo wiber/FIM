@@ -392,5 +392,53 @@ class TestFIMValidationRules(unittest.TestCase):
         self.assertEqual(baseline_order, healed_order,
                          "Self-healing is not idempotent; repeated runs must yield the same state.")
 
+class TestFIMOrderingRules(unittest.TestCase):
+    def setUp(self):
+        # Use a default hierarchy that is known and small enough to inspect.
+        self.sample_graph = {
+            "Origin": {"A": 1.0, "B": 1.0, "C": 1.0},
+            "A": {"A1": 0.8, "A2": 0.75, "A3": 0.7},
+            "B": {"B1": 0.85, "B2": 0.8, "B3": 0.78},
+            "C": {"C1": 0.9, "C2": 0.85, "C3": 0.8}
+        }
+        self.root = build_tree_from_graph(self.sample_graph, "Origin")
+        self.fh = FIMHierarchy(self.root, self.sample_graph)
+        self.fh.self_heal()
+
+    def test_descending_children_order(self):
+        """
+        Test that for every node with children, the children are sorted in descending order by weight.
+        """
+        # Ensure the hierarchy is fully healed.
+        self.fh.self_heal()
+        for node in self.fh.linear_order:
+            if node.children:
+                for i in range(len(node.children) - 1):
+                    self.assertGreaterEqual(
+                        node.children[i].weight,
+                        node.children[i+1].weight,
+                        f"Children of node {node.label} are not in descending order."
+                    )
+
+    def test_parent_child_contiguity(self):
+        """
+        Test that for every parent, its children appear as a contiguous block in the final linear ordering.
+        """
+        # Make sure abs_index has been assigned; assume assign_abs_indices() sets them in linear_order order.
+        # Here we assume that self.fh.assign_abs_indices() simply sets abs_index based on the current order.
+        # (If not, you might need to update that method accordingly.)
+        # For each parent node, determine the set of abs_index values of its immediate children 
+        # and assert that they form a contiguous block.
+        self.fh.self_heal()
+        for parent in self.fh.linear_order:
+            if parent.children:
+                child_indices = [child.abs_index for child in parent.children]
+                # The indices should be consecutive (i.e. max - min == count - 1)
+                self.assertEqual(
+                    max(child_indices) - min(child_indices),
+                    len(child_indices) - 1,
+                    f"Children of parent {parent.label} are not contiguous in the linear order."
+                )
+
 if __name__ == "__main__":
     unittest.main() 

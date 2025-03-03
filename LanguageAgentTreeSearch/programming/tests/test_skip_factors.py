@@ -106,6 +106,7 @@ class TestSkipFactorsExtended(unittest.TestCase):
         self.fh = FIMHierarchy(self.root, self.sample_graph)
         # Run initial self-healing (this sets ordering, indices, prefixes, etc.)
         self.fh.trigger_hierarchy_update()
+        self.fh.self_heal()
 
     def test_skip_factors_extended_1d_and_2d(self):
         # Find the top-level node "A"
@@ -158,6 +159,13 @@ class TestSkipFactorsExtended(unittest.TestCase):
         for category in self.fh.root.children:
             print(f"Node {category.invariant_label}: skip_factor = {category.skip_factor}")
         print(f"Node A skip_factor (dimension 2) = {nodeA.skip_factor}")
+
+    def test_full_stack_randomization_and_reorder(self):
+        initial_order = [n.label for n in self.fh.linear_order if n.parent == self.fh.root]
+        randomize_tree_weights(self.fh.root)
+        self.fh.self_heal()
+        new_order = [n.label for n in self.fh.linear_order if n.parent == self.fh.root]
+        self.assertNotEqual(initial_order, new_order, "Top-level order should change after weight randomization.")
 
 if __name__ == '__main__':
     unittest.main() 
