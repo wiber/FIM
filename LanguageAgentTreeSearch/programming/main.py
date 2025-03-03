@@ -1102,6 +1102,8 @@ def parse_arguments():
     parser.add_argument('--llm', action='store_true', help="Run downward causal reasoning through the LLM")
     # NEW: Add a flag to test the add_node helper.
     parser.add_argument('--test-add', action='store_true', help="Test the add_node helper function")
+    # NEW: Add a flag to test LLM prompts
+    parser.add_argument('--test-llm-prompts', action='store_true', help="Test LLM prompts")
     return parser.parse_args()
 
 # ----------------------------------------------
@@ -1143,6 +1145,20 @@ def main():
     print("\n--- Skip Factors Report ---")
     for node in hierarchy.linear_order:
          print(f"Node {node.label}: skip_factor (1D) = {node.skip_factor}, skip_factor (2D) = {node.skip_factor_2d}")
+
+    # NEW: Generate and log composite LLM link prompts using the FIM problem space
+    if args.test_llm_prompts:
+        from LanguageAgentTreeSearch.programming.llm_helpers import build_link_prompts_for_llm, build_combined_links_prompt
+        print("\n--- Generated LLM Link Prompts (Multi-Turn) ---")
+        llm_prompts = build_link_prompts_for_llm(hierarchy)
+        for link_key, prompt_text in llm_prompts:
+            print(f"Link key: {link_key}")
+            print(prompt_text)
+            print("-----")
+
+        print("\n--- Generated Combined LLM Link Prompt ---")
+        combined_prompt = build_combined_links_prompt(hierarchy)
+        print(combined_prompt)
 
     if args.llm:
         print("\n--- Running Downward Causal Reasoning via LLM ---")
