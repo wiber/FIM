@@ -1,205 +1,249 @@
 {
     "linear_order": [
         {
-            "node_id": "292df925-cb03-48f9-b3c2-732a38d16fc8",
+            "node_id": "99b24a31-d7e9-4644-888f-11450c08f576",
             "label": "Origin",
-            "invariant_prefix": "O",
             "weight": 1.0,
+            "invariant_prefix": "O",
             "abs_index": 0,
+            "cumulative_causality": [],
+            "skip_factor": 1.0,
+            "skip_factor_2d": null,
             "submatrix_bounds": {
                 "start_index": 1,
                 "end_index": 3
             },
-            "cumulative_causality": [],
             "children": [
                 {
-                    "node_id": "e665a95c-88de-474d-81f4-47c71c17a8cb",
-                    "label": "A",
-                    "invariant_prefix": "A",
-                    "weight": 1.0,
-                    "abs_index": 1,
-                    "submatrix_bounds": {
-                        "start_index": 4,
-                        "end_index": 6
-                    },
-                    "cumulative_causality": [
-                        "Origin"
-                    ],
-                    "children": [
-                        {
-                            "node_id": "9420c0e2-f77d-4447-afc2-96a89e5914a0",
-                            "label": "A1",
-                            "invariant_prefix": "A1",
-                            "weight": 0.8,
-                            "abs_index": 4,
-                            "submatrix_bounds": {
-                                "start_index": 4,
-                                "end_index": 6
-                            },
-                            "cumulative_causality": [
-                                "Origin",
-                                "A"
-                            ],
-                            "children": []
-                        },
-                        {
-                            "node_id": "047494f8-0721-4b0e-8648-3edd1d9d189a",
-                            "label": "A2",
-                            "invariant_prefix": "A2",
-                            "weight": 0.75,
-                            "abs_index": 5,
-                            "submatrix_bounds": {
-                                "start_index": 4,
-                                "end_index": 6
-                            },
-                            "cumulative_causality": [
-                                "Origin",
-                                "A"
-                            ],
-                            "children": []
-                        },
-                        {
-                            "node_id": "8af150d4-c264-4162-bd8e-aa3b60cda66e",
-                            "label": "A3",
-                            "invariant_prefix": "A3",
-                            "weight": 0.7,
-                            "abs_index": 6,
-                            "submatrix_bounds": {
-                                "start_index": 4,
-                                "end_index": 6
-                            },
-                            "cumulative_causality": [
-                                "Origin",
-                                "A"
-                            ],
-                            "children": []
-                        }
-                    ]
-                },
-                {
-                    "node_id": "dc81f8b2-ecff-47f5-9eca-73d5ac6f2bde",
+                    "node_id": "7fcb21ba-5639-479e-9cf9-d7098004f296",
                     "label": "B",
-                    "invariant_prefix": "B",
-                    "weight": 1.0,
-                    "abs_index": 2,
-                    "submatrix_bounds": {
-                        "start_index": 7,
-                        "end_index": 9
-                    },
+                    "weight": 0.84,
+                    "invariant_prefix": "A",
+                    "abs_index": 1,
                     "cumulative_causality": [
                         "Origin"
                     ],
+                    "skip_factor": 1.0,
+                    "skip_factor_2d": null,
+                    "submatrix_bounds": {
+                        "start_index": 4,
+                        "end_index": 6
+                    },
                     "children": [
                         {
-                            "node_id": "205695b1-4e20-4aca-9561-2084b1246d40",
-                            "label": "B1",
-                            "invariant_prefix": "B1",
-                            "weight": 0.85,
-                            "abs_index": 7,
-                            "submatrix_bounds": {
-                                "start_index": 7,
-                                "end_index": 9
-                            },
-                            "cumulative_causality": [
-                                "Origin",
-                                "B"
-                            ],
-                            "children": []
-                        },
-                        {
-                            "node_id": "c4786b5b-8549-4410-8508-ed98256b3a4e",
-                            "label": "B2",
-                            "invariant_prefix": "B2",
-                            "weight": 0.8,
-                            "abs_index": 8,
-                            "submatrix_bounds": {
-                                "start_index": 7,
-                                "end_index": 9
-                            },
-                            "cumulative_causality": [
-                                "Origin",
-                                "B"
-                            ],
-                            "children": []
-                        },
-                        {
-                            "node_id": "3e7c8825-59d8-4daa-965b-cba15c079494",
+                            "node_id": "8c92bbb1-1739-45c7-9603-8049a8d0464b",
                             "label": "B3",
-                            "invariant_prefix": "B3",
-                            "weight": 0.78,
-                            "abs_index": 9,
-                            "submatrix_bounds": {
-                                "start_index": 7,
-                                "end_index": 9
-                            },
+                            "weight": 0.93,
+                            "invariant_prefix": "A1",
+                            "abs_index": 4,
                             "cumulative_causality": [
                                 "Origin",
                                 "B"
                             ],
+                            "skip_factor": 1.0,
+                            "skip_factor_2d": null,
+                            "submatrix_bounds": {
+                                "start_index": 4,
+                                "end_index": 6
+                            },
+                            "children": []
+                        },
+                        {
+                            "node_id": "48bd278a-11b7-427c-9866-3a92d806a2ea",
+                            "label": "B1",
+                            "weight": 0.9,
+                            "invariant_prefix": "A2",
+                            "abs_index": 5,
+                            "cumulative_causality": [
+                                "Origin",
+                                "B"
+                            ],
+                            "skip_factor": 1.0,
+                            "skip_factor_2d": null,
+                            "submatrix_bounds": {
+                                "start_index": 4,
+                                "end_index": 6
+                            },
+                            "children": []
+                        },
+                        {
+                            "node_id": "cb0113cf-71ae-4658-bb22-7bad24c4a091",
+                            "label": "B2",
+                            "weight": 0.73,
+                            "invariant_prefix": "A3",
+                            "abs_index": 6,
+                            "cumulative_causality": [
+                                "Origin",
+                                "B"
+                            ],
+                            "skip_factor": 1.0,
+                            "skip_factor_2d": null,
+                            "submatrix_bounds": {
+                                "start_index": 4,
+                                "end_index": 6
+                            },
                             "children": []
                         }
                     ]
                 },
                 {
-                    "node_id": "e70b4f1d-9776-4322-9a51-c53f48ab492f",
-                    "label": "C",
-                    "invariant_prefix": "C",
-                    "weight": 1.0,
-                    "abs_index": 3,
-                    "submatrix_bounds": {
-                        "start_index": 10,
-                        "end_index": 12
-                    },
+                    "node_id": "d9e73253-e87a-480e-a6f2-e94e1786864f",
+                    "label": "A",
+                    "weight": 0.8,
+                    "invariant_prefix": "B",
+                    "abs_index": 2,
                     "cumulative_causality": [
                         "Origin"
                     ],
+                    "skip_factor": 1.0,
+                    "skip_factor_2d": null,
+                    "submatrix_bounds": {
+                        "start_index": 7,
+                        "end_index": 10
+                    },
                     "children": [
                         {
-                            "node_id": "3ba1f471-3ec4-4435-910e-fe25966163b7",
-                            "label": "C1",
-                            "invariant_prefix": "C1",
-                            "weight": 0.9,
-                            "abs_index": 10,
-                            "submatrix_bounds": {
-                                "start_index": 10,
-                                "end_index": 12
-                            },
+                            "node_id": "e6ba904f-806c-4153-97a9-1bd853794b95",
+                            "label": "A1",
+                            "weight": 0.94,
+                            "invariant_prefix": "B1",
+                            "abs_index": 7,
                             "cumulative_causality": [
                                 "Origin",
-                                "C"
+                                "A"
                             ],
+                            "skip_factor": 1.0,
+                            "skip_factor_2d": null,
+                            "submatrix_bounds": {
+                                "start_index": 7,
+                                "end_index": 10
+                            },
                             "children": []
                         },
                         {
-                            "node_id": "5cbeddfb-6db5-457c-ac94-34aaee545c28",
-                            "label": "C2",
-                            "invariant_prefix": "C2",
-                            "weight": 0.85,
-                            "abs_index": 11,
-                            "submatrix_bounds": {
-                                "start_index": 10,
-                                "end_index": 12
-                            },
+                            "node_id": "90a5d975-1fbb-4c6e-8876-d4cf9529205a",
+                            "label": "A4",
+                            "weight": 0.89,
+                            "invariant_prefix": "B2",
+                            "abs_index": 8,
                             "cumulative_causality": [
                                 "Origin",
-                                "C"
+                                "A"
                             ],
+                            "skip_factor": 1.0,
+                            "skip_factor_2d": null,
+                            "submatrix_bounds": {
+                                "start_index": 7,
+                                "end_index": 10
+                            },
                             "children": []
                         },
                         {
-                            "node_id": "a5fc9512-7773-484a-b6a3-e4ed20bdc4f9",
-                            "label": "C3",
-                            "invariant_prefix": "C3",
+                            "node_id": "c16095d3-f427-4cbd-93ed-01b345d37fe9",
+                            "label": "A3",
                             "weight": 0.8,
-                            "abs_index": 12,
+                            "invariant_prefix": "B3",
+                            "abs_index": 9,
+                            "cumulative_causality": [
+                                "Origin",
+                                "A"
+                            ],
+                            "skip_factor": 1.0,
+                            "skip_factor_2d": null,
                             "submatrix_bounds": {
-                                "start_index": 10,
-                                "end_index": 12
+                                "start_index": 7,
+                                "end_index": 10
                             },
+                            "children": []
+                        },
+                        {
+                            "node_id": "3e705ac8-4409-4898-9980-2692d29c0a25",
+                            "label": "A2",
+                            "weight": 0.78,
+                            "invariant_prefix": "B4",
+                            "abs_index": 10,
+                            "cumulative_causality": [
+                                "Origin",
+                                "A"
+                            ],
+                            "skip_factor": 1.0,
+                            "skip_factor_2d": null,
+                            "submatrix_bounds": {
+                                "start_index": 7,
+                                "end_index": 10
+                            },
+                            "children": []
+                        }
+                    ]
+                },
+                {
+                    "node_id": "9fa9f3ef-f179-4495-8aa0-3cec4294655f",
+                    "label": "C",
+                    "weight": 0.8,
+                    "invariant_prefix": "C",
+                    "abs_index": 3,
+                    "cumulative_causality": [
+                        "Origin"
+                    ],
+                    "skip_factor": 1.0,
+                    "skip_factor_2d": null,
+                    "submatrix_bounds": {
+                        "start_index": 11,
+                        "end_index": 13
+                    },
+                    "children": [
+                        {
+                            "node_id": "80ade617-9f38-48bf-a877-73f01460a741",
+                            "label": "C1",
+                            "weight": 0.9,
+                            "invariant_prefix": "C1",
+                            "abs_index": 11,
                             "cumulative_causality": [
                                 "Origin",
                                 "C"
                             ],
+                            "skip_factor": 1.0,
+                            "skip_factor_2d": null,
+                            "submatrix_bounds": {
+                                "start_index": 11,
+                                "end_index": 13
+                            },
+                            "children": []
+                        },
+                        {
+                            "node_id": "8c0ae38d-f33a-4ee2-8c08-5a8918270edb",
+                            "label": "C2",
+                            "weight": 0.84,
+                            "invariant_prefix": "C2",
+                            "abs_index": 12,
+                            "cumulative_causality": [
+                                "Origin",
+                                "C"
+                            ],
+                            "skip_factor": 1.0,
+                            "skip_factor_2d": null,
+                            "submatrix_bounds": {
+                                "start_index": 11,
+                                "end_index": 13
+                            },
+                            "children": []
+                        },
+                        {
+                            "node_id": "817feda9-abb5-43a2-bfb2-40f7e5c27c80",
+                            "label": "C3",
+                            "weight": 0.82,
+                            "invariant_prefix": "C3",
+                            "abs_index": 13,
+                            "cumulative_causality": [
+                                "Origin",
+                                "C"
+                            ],
+                            "skip_factor": 1.0,
+                            "skip_factor_2d": null,
+                            "submatrix_bounds": {
+                                "start_index": 11,
+                                "end_index": 13
+                            },
                             "children": []
                         }
                     ]
@@ -207,339 +251,417 @@
             ]
         },
         {
-            "node_id": "e665a95c-88de-474d-81f4-47c71c17a8cb",
-            "label": "A",
-            "invariant_prefix": "A",
-            "weight": 1.0,
-            "abs_index": 1,
-            "submatrix_bounds": {
-                "start_index": 4,
-                "end_index": 6
-            },
-            "cumulative_causality": [
-                "Origin"
-            ],
-            "children": [
-                {
-                    "node_id": "9420c0e2-f77d-4447-afc2-96a89e5914a0",
-                    "label": "A1",
-                    "invariant_prefix": "A1",
-                    "weight": 0.8,
-                    "abs_index": 4,
-                    "submatrix_bounds": {
-                        "start_index": 4,
-                        "end_index": 6
-                    },
-                    "cumulative_causality": [
-                        "Origin",
-                        "A"
-                    ],
-                    "children": []
-                },
-                {
-                    "node_id": "047494f8-0721-4b0e-8648-3edd1d9d189a",
-                    "label": "A2",
-                    "invariant_prefix": "A2",
-                    "weight": 0.75,
-                    "abs_index": 5,
-                    "submatrix_bounds": {
-                        "start_index": 4,
-                        "end_index": 6
-                    },
-                    "cumulative_causality": [
-                        "Origin",
-                        "A"
-                    ],
-                    "children": []
-                },
-                {
-                    "node_id": "8af150d4-c264-4162-bd8e-aa3b60cda66e",
-                    "label": "A3",
-                    "invariant_prefix": "A3",
-                    "weight": 0.7,
-                    "abs_index": 6,
-                    "submatrix_bounds": {
-                        "start_index": 4,
-                        "end_index": 6
-                    },
-                    "cumulative_causality": [
-                        "Origin",
-                        "A"
-                    ],
-                    "children": []
-                }
-            ]
-        },
-        {
-            "node_id": "dc81f8b2-ecff-47f5-9eca-73d5ac6f2bde",
+            "node_id": "7fcb21ba-5639-479e-9cf9-d7098004f296",
             "label": "B",
-            "invariant_prefix": "B",
-            "weight": 1.0,
-            "abs_index": 2,
-            "submatrix_bounds": {
-                "start_index": 7,
-                "end_index": 9
-            },
+            "weight": 0.84,
+            "invariant_prefix": "A",
+            "abs_index": 1,
             "cumulative_causality": [
                 "Origin"
             ],
+            "skip_factor": 1.0,
+            "skip_factor_2d": null,
+            "submatrix_bounds": {
+                "start_index": 4,
+                "end_index": 6
+            },
             "children": [
                 {
-                    "node_id": "205695b1-4e20-4aca-9561-2084b1246d40",
-                    "label": "B1",
-                    "invariant_prefix": "B1",
-                    "weight": 0.85,
-                    "abs_index": 7,
-                    "submatrix_bounds": {
-                        "start_index": 7,
-                        "end_index": 9
-                    },
-                    "cumulative_causality": [
-                        "Origin",
-                        "B"
-                    ],
-                    "children": []
-                },
-                {
-                    "node_id": "c4786b5b-8549-4410-8508-ed98256b3a4e",
-                    "label": "B2",
-                    "invariant_prefix": "B2",
-                    "weight": 0.8,
-                    "abs_index": 8,
-                    "submatrix_bounds": {
-                        "start_index": 7,
-                        "end_index": 9
-                    },
-                    "cumulative_causality": [
-                        "Origin",
-                        "B"
-                    ],
-                    "children": []
-                },
-                {
-                    "node_id": "3e7c8825-59d8-4daa-965b-cba15c079494",
+                    "node_id": "8c92bbb1-1739-45c7-9603-8049a8d0464b",
                     "label": "B3",
-                    "invariant_prefix": "B3",
-                    "weight": 0.78,
-                    "abs_index": 9,
-                    "submatrix_bounds": {
-                        "start_index": 7,
-                        "end_index": 9
-                    },
+                    "weight": 0.93,
+                    "invariant_prefix": "A1",
+                    "abs_index": 4,
                     "cumulative_causality": [
                         "Origin",
                         "B"
                     ],
+                    "skip_factor": 1.0,
+                    "skip_factor_2d": null,
+                    "submatrix_bounds": {
+                        "start_index": 4,
+                        "end_index": 6
+                    },
+                    "children": []
+                },
+                {
+                    "node_id": "48bd278a-11b7-427c-9866-3a92d806a2ea",
+                    "label": "B1",
+                    "weight": 0.9,
+                    "invariant_prefix": "A2",
+                    "abs_index": 5,
+                    "cumulative_causality": [
+                        "Origin",
+                        "B"
+                    ],
+                    "skip_factor": 1.0,
+                    "skip_factor_2d": null,
+                    "submatrix_bounds": {
+                        "start_index": 4,
+                        "end_index": 6
+                    },
+                    "children": []
+                },
+                {
+                    "node_id": "cb0113cf-71ae-4658-bb22-7bad24c4a091",
+                    "label": "B2",
+                    "weight": 0.73,
+                    "invariant_prefix": "A3",
+                    "abs_index": 6,
+                    "cumulative_causality": [
+                        "Origin",
+                        "B"
+                    ],
+                    "skip_factor": 1.0,
+                    "skip_factor_2d": null,
+                    "submatrix_bounds": {
+                        "start_index": 4,
+                        "end_index": 6
+                    },
                     "children": []
                 }
             ]
         },
         {
-            "node_id": "e70b4f1d-9776-4322-9a51-c53f48ab492f",
-            "label": "C",
-            "invariant_prefix": "C",
-            "weight": 1.0,
-            "abs_index": 3,
-            "submatrix_bounds": {
-                "start_index": 10,
-                "end_index": 12
-            },
+            "node_id": "d9e73253-e87a-480e-a6f2-e94e1786864f",
+            "label": "A",
+            "weight": 0.8,
+            "invariant_prefix": "B",
+            "abs_index": 2,
             "cumulative_causality": [
                 "Origin"
             ],
+            "skip_factor": 1.0,
+            "skip_factor_2d": null,
+            "submatrix_bounds": {
+                "start_index": 7,
+                "end_index": 10
+            },
             "children": [
                 {
-                    "node_id": "3ba1f471-3ec4-4435-910e-fe25966163b7",
-                    "label": "C1",
-                    "invariant_prefix": "C1",
-                    "weight": 0.9,
-                    "abs_index": 10,
-                    "submatrix_bounds": {
-                        "start_index": 10,
-                        "end_index": 12
-                    },
+                    "node_id": "e6ba904f-806c-4153-97a9-1bd853794b95",
+                    "label": "A1",
+                    "weight": 0.94,
+                    "invariant_prefix": "B1",
+                    "abs_index": 7,
                     "cumulative_causality": [
                         "Origin",
-                        "C"
+                        "A"
                     ],
+                    "skip_factor": 1.0,
+                    "skip_factor_2d": null,
+                    "submatrix_bounds": {
+                        "start_index": 7,
+                        "end_index": 10
+                    },
                     "children": []
                 },
                 {
-                    "node_id": "5cbeddfb-6db5-457c-ac94-34aaee545c28",
-                    "label": "C2",
-                    "invariant_prefix": "C2",
-                    "weight": 0.85,
-                    "abs_index": 11,
-                    "submatrix_bounds": {
-                        "start_index": 10,
-                        "end_index": 12
-                    },
+                    "node_id": "90a5d975-1fbb-4c6e-8876-d4cf9529205a",
+                    "label": "A4",
+                    "weight": 0.89,
+                    "invariant_prefix": "B2",
+                    "abs_index": 8,
                     "cumulative_causality": [
                         "Origin",
-                        "C"
+                        "A"
                     ],
+                    "skip_factor": 1.0,
+                    "skip_factor_2d": null,
+                    "submatrix_bounds": {
+                        "start_index": 7,
+                        "end_index": 10
+                    },
                     "children": []
                 },
                 {
-                    "node_id": "a5fc9512-7773-484a-b6a3-e4ed20bdc4f9",
-                    "label": "C3",
-                    "invariant_prefix": "C3",
+                    "node_id": "c16095d3-f427-4cbd-93ed-01b345d37fe9",
+                    "label": "A3",
                     "weight": 0.8,
-                    "abs_index": 12,
-                    "submatrix_bounds": {
-                        "start_index": 10,
-                        "end_index": 12
-                    },
+                    "invariant_prefix": "B3",
+                    "abs_index": 9,
                     "cumulative_causality": [
                         "Origin",
-                        "C"
+                        "A"
                     ],
+                    "skip_factor": 1.0,
+                    "skip_factor_2d": null,
+                    "submatrix_bounds": {
+                        "start_index": 7,
+                        "end_index": 10
+                    },
+                    "children": []
+                },
+                {
+                    "node_id": "3e705ac8-4409-4898-9980-2692d29c0a25",
+                    "label": "A2",
+                    "weight": 0.78,
+                    "invariant_prefix": "B4",
+                    "abs_index": 10,
+                    "cumulative_causality": [
+                        "Origin",
+                        "A"
+                    ],
+                    "skip_factor": 1.0,
+                    "skip_factor_2d": null,
+                    "submatrix_bounds": {
+                        "start_index": 7,
+                        "end_index": 10
+                    },
                     "children": []
                 }
             ]
         },
         {
-            "node_id": "9420c0e2-f77d-4447-afc2-96a89e5914a0",
-            "label": "A1",
-            "invariant_prefix": "A1",
+            "node_id": "9fa9f3ef-f179-4495-8aa0-3cec4294655f",
+            "label": "C",
             "weight": 0.8,
-            "abs_index": 4,
-            "submatrix_bounds": {
-                "start_index": 4,
-                "end_index": 6
-            },
+            "invariant_prefix": "C",
+            "abs_index": 3,
             "cumulative_causality": [
-                "Origin",
-                "A"
+                "Origin"
             ],
-            "children": []
+            "skip_factor": 1.0,
+            "skip_factor_2d": null,
+            "submatrix_bounds": {
+                "start_index": 11,
+                "end_index": 13
+            },
+            "children": [
+                {
+                    "node_id": "80ade617-9f38-48bf-a877-73f01460a741",
+                    "label": "C1",
+                    "weight": 0.9,
+                    "invariant_prefix": "C1",
+                    "abs_index": 11,
+                    "cumulative_causality": [
+                        "Origin",
+                        "C"
+                    ],
+                    "skip_factor": 1.0,
+                    "skip_factor_2d": null,
+                    "submatrix_bounds": {
+                        "start_index": 11,
+                        "end_index": 13
+                    },
+                    "children": []
+                },
+                {
+                    "node_id": "8c0ae38d-f33a-4ee2-8c08-5a8918270edb",
+                    "label": "C2",
+                    "weight": 0.84,
+                    "invariant_prefix": "C2",
+                    "abs_index": 12,
+                    "cumulative_causality": [
+                        "Origin",
+                        "C"
+                    ],
+                    "skip_factor": 1.0,
+                    "skip_factor_2d": null,
+                    "submatrix_bounds": {
+                        "start_index": 11,
+                        "end_index": 13
+                    },
+                    "children": []
+                },
+                {
+                    "node_id": "817feda9-abb5-43a2-bfb2-40f7e5c27c80",
+                    "label": "C3",
+                    "weight": 0.82,
+                    "invariant_prefix": "C3",
+                    "abs_index": 13,
+                    "cumulative_causality": [
+                        "Origin",
+                        "C"
+                    ],
+                    "skip_factor": 1.0,
+                    "skip_factor_2d": null,
+                    "submatrix_bounds": {
+                        "start_index": 11,
+                        "end_index": 13
+                    },
+                    "children": []
+                }
+            ]
         },
         {
-            "node_id": "047494f8-0721-4b0e-8648-3edd1d9d189a",
-            "label": "A2",
-            "invariant_prefix": "A2",
-            "weight": 0.75,
-            "abs_index": 5,
-            "submatrix_bounds": {
-                "start_index": 4,
-                "end_index": 6
-            },
-            "cumulative_causality": [
-                "Origin",
-                "A"
-            ],
-            "children": []
-        },
-        {
-            "node_id": "8af150d4-c264-4162-bd8e-aa3b60cda66e",
-            "label": "A3",
-            "invariant_prefix": "A3",
-            "weight": 0.7,
-            "abs_index": 6,
-            "submatrix_bounds": {
-                "start_index": 4,
-                "end_index": 6
-            },
-            "cumulative_causality": [
-                "Origin",
-                "A"
-            ],
-            "children": []
-        },
-        {
-            "node_id": "205695b1-4e20-4aca-9561-2084b1246d40",
-            "label": "B1",
-            "invariant_prefix": "B1",
-            "weight": 0.85,
-            "abs_index": 7,
-            "submatrix_bounds": {
-                "start_index": 7,
-                "end_index": 9
-            },
-            "cumulative_causality": [
-                "Origin",
-                "B"
-            ],
-            "children": []
-        },
-        {
-            "node_id": "c4786b5b-8549-4410-8508-ed98256b3a4e",
-            "label": "B2",
-            "invariant_prefix": "B2",
-            "weight": 0.8,
-            "abs_index": 8,
-            "submatrix_bounds": {
-                "start_index": 7,
-                "end_index": 9
-            },
-            "cumulative_causality": [
-                "Origin",
-                "B"
-            ],
-            "children": []
-        },
-        {
-            "node_id": "3e7c8825-59d8-4daa-965b-cba15c079494",
+            "node_id": "8c92bbb1-1739-45c7-9603-8049a8d0464b",
             "label": "B3",
-            "invariant_prefix": "B3",
-            "weight": 0.78,
-            "abs_index": 9,
-            "submatrix_bounds": {
-                "start_index": 7,
-                "end_index": 9
-            },
+            "weight": 0.93,
+            "invariant_prefix": "A1",
+            "abs_index": 4,
             "cumulative_causality": [
                 "Origin",
                 "B"
             ],
+            "skip_factor": 1.0,
+            "skip_factor_2d": null,
+            "submatrix_bounds": {
+                "start_index": 4,
+                "end_index": 6
+            },
             "children": []
         },
         {
-            "node_id": "3ba1f471-3ec4-4435-910e-fe25966163b7",
-            "label": "C1",
-            "invariant_prefix": "C1",
+            "node_id": "48bd278a-11b7-427c-9866-3a92d806a2ea",
+            "label": "B1",
             "weight": 0.9,
-            "abs_index": 10,
-            "submatrix_bounds": {
-                "start_index": 10,
-                "end_index": 12
-            },
+            "invariant_prefix": "A2",
+            "abs_index": 5,
             "cumulative_causality": [
                 "Origin",
-                "C"
+                "B"
             ],
+            "skip_factor": 1.0,
+            "skip_factor_2d": null,
+            "submatrix_bounds": {
+                "start_index": 4,
+                "end_index": 6
+            },
             "children": []
         },
         {
-            "node_id": "5cbeddfb-6db5-457c-ac94-34aaee545c28",
-            "label": "C2",
-            "invariant_prefix": "C2",
-            "weight": 0.85,
-            "abs_index": 11,
-            "submatrix_bounds": {
-                "start_index": 10,
-                "end_index": 12
-            },
+            "node_id": "cb0113cf-71ae-4658-bb22-7bad24c4a091",
+            "label": "B2",
+            "weight": 0.73,
+            "invariant_prefix": "A3",
+            "abs_index": 6,
             "cumulative_causality": [
                 "Origin",
-                "C"
+                "B"
             ],
+            "skip_factor": 1.0,
+            "skip_factor_2d": null,
+            "submatrix_bounds": {
+                "start_index": 4,
+                "end_index": 6
+            },
             "children": []
         },
         {
-            "node_id": "a5fc9512-7773-484a-b6a3-e4ed20bdc4f9",
-            "label": "C3",
-            "invariant_prefix": "C3",
+            "node_id": "e6ba904f-806c-4153-97a9-1bd853794b95",
+            "label": "A1",
+            "weight": 0.94,
+            "invariant_prefix": "B1",
+            "abs_index": 7,
+            "cumulative_causality": [
+                "Origin",
+                "A"
+            ],
+            "skip_factor": 1.0,
+            "skip_factor_2d": null,
+            "submatrix_bounds": {
+                "start_index": 7,
+                "end_index": 10
+            },
+            "children": []
+        },
+        {
+            "node_id": "90a5d975-1fbb-4c6e-8876-d4cf9529205a",
+            "label": "A4",
+            "weight": 0.89,
+            "invariant_prefix": "B2",
+            "abs_index": 8,
+            "cumulative_causality": [
+                "Origin",
+                "A"
+            ],
+            "skip_factor": 1.0,
+            "skip_factor_2d": null,
+            "submatrix_bounds": {
+                "start_index": 7,
+                "end_index": 10
+            },
+            "children": []
+        },
+        {
+            "node_id": "c16095d3-f427-4cbd-93ed-01b345d37fe9",
+            "label": "A3",
             "weight": 0.8,
-            "abs_index": 12,
+            "invariant_prefix": "B3",
+            "abs_index": 9,
+            "cumulative_causality": [
+                "Origin",
+                "A"
+            ],
+            "skip_factor": 1.0,
+            "skip_factor_2d": null,
             "submatrix_bounds": {
-                "start_index": 10,
-                "end_index": 12
+                "start_index": 7,
+                "end_index": 10
             },
+            "children": []
+        },
+        {
+            "node_id": "3e705ac8-4409-4898-9980-2692d29c0a25",
+            "label": "A2",
+            "weight": 0.78,
+            "invariant_prefix": "B4",
+            "abs_index": 10,
+            "cumulative_causality": [
+                "Origin",
+                "A"
+            ],
+            "skip_factor": 1.0,
+            "skip_factor_2d": null,
+            "submatrix_bounds": {
+                "start_index": 7,
+                "end_index": 10
+            },
+            "children": []
+        },
+        {
+            "node_id": "80ade617-9f38-48bf-a877-73f01460a741",
+            "label": "C1",
+            "weight": 0.9,
+            "invariant_prefix": "C1",
+            "abs_index": 11,
             "cumulative_causality": [
                 "Origin",
                 "C"
             ],
+            "skip_factor": 1.0,
+            "skip_factor_2d": null,
+            "submatrix_bounds": {
+                "start_index": 11,
+                "end_index": 13
+            },
+            "children": []
+        },
+        {
+            "node_id": "8c0ae38d-f33a-4ee2-8c08-5a8918270edb",
+            "label": "C2",
+            "weight": 0.84,
+            "invariant_prefix": "C2",
+            "abs_index": 12,
+            "cumulative_causality": [
+                "Origin",
+                "C"
+            ],
+            "skip_factor": 1.0,
+            "skip_factor_2d": null,
+            "submatrix_bounds": {
+                "start_index": 11,
+                "end_index": 13
+            },
+            "children": []
+        },
+        {
+            "node_id": "817feda9-abb5-43a2-bfb2-40f7e5c27c80",
+            "label": "C3",
+            "weight": 0.82,
+            "invariant_prefix": "C3",
+            "abs_index": 13,
+            "cumulative_causality": [
+                "Origin",
+                "C"
+            ],
+            "skip_factor": 1.0,
+            "skip_factor_2d": null,
+            "submatrix_bounds": {
+                "start_index": 11,
+                "end_index": 13
+            },
             "children": []
         }
     ]

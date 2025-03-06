@@ -58,6 +58,8 @@ FILES=(
   "rule_engine.py"
   "tests/test_fim_hierarchy.py"
   "tests/skip_factors.py"
+  "hierarchy_updated.py"
+  "fim.py"
 )
 
 # Clear (or create) the output log file first

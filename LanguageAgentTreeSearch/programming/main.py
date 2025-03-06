@@ -1059,6 +1059,78 @@ class FIMHierarchy:
         for node in self.linear_order:
             node.downward_causal_reasoning = response
 
+    def propagate_combined_metadata(self, node, origin_metadata=None):
+        # If no origin_metadata is provided, set to default (and seed the root if necessary)
+        if origin_metadata is None:
+            origin_metadata = getattr(self.root, "problem_space", {})
+            if not origin_metadata:
+                origin_metadata = {
+                    "description": "Funded Information Model (FIM) problem space for optimized hierarchical decision making.",
+                    "objectives": [
+                        "Optimize HPC cost",
+                        "Maintain hierarchical clarity",
+                        "Ensure accurate causal propagation"
+                    ],
+                    "constraints": [
+                        "Limited computational resources",
+                        "Real-time performance requirements"
+                    ],
+                    "cost_model": {
+                        "per_inference": 0.01,
+                        "daily_budget": 1000
+                    },
+                    "metrics": [
+                        "skip_factor",
+                        "ordering_validation",
+                        "submatrix_bounds"
+                    ]
+                }
+                self.root.problem_space = origin_metadata
+
+        # For the root node, no causal inference is necessary.
+        if node.parent is None:
+            node.causal_inference = {}
+
+        for child in node.children:
+            # Build an enhanced prompt incorporating all relevant origin metadata with clear phrasing.
+            prompt_text = (
+                f"Origin represents the overall problem space, described as: '{origin_metadata.get('description', 'No description provided')}'. "
+                f"In this hierarchy, the category '{node.label}' is considered a primary category. "
+                f"The problem space is further defined by objectives {origin_metadata.get('objectives', 'N/A')}, "
+                f"constraints {origin_metadata.get('constraints', 'N/A')}, a cost model of {origin_metadata.get('cost_model', 'N/A')}, "
+                f"and metrics {origin_metadata.get('metrics', 'N/A')}. "
+                f"Given that the link from '{node.label}' to its subcategory '{child.label}' carries an influence strength of {child.weight}, "
+                f"how does the overall problem space guide and establish this causal relationship?"
+            )
+
+            # Assign the composite causal metadata to the child.
+            child.causal_inference = {
+                "origin_problem_space": origin_metadata,
+                "link": {
+                    "parent": node.label,
+                    "child": child.label,
+                    "link_weight": child.weight
+                },
+                "prompt": prompt_text
+            }
+
+            # Recursively propagate metadata to all descendants.
+            self.propagate_combined_metadata(child, origin_metadata)
+
+    def apply_llm_to_composite_metadata(self, llm_function):
+        """
+        For every non-root node with composite metadata, call the llm_function using its prompt
+        and store the LLM response in the composite metadata under 'llm_response'.
+        """
+        for node in self.linear_order:
+            if not node.parent:
+                continue
+            ci = getattr(node, "causal_inference_links", {})
+            prompt = ci.get("prompt")
+            if prompt:
+                llm_response = llm_function(prompt)
+                ci["llm_response"] = llm_response
+
 # NEW: Add a helper function to return a default larger hierarchy.
 def get_default_hierarchy():
     """
@@ -1104,7 +1176,7 @@ def parse_arguments():
     parser.add_argument('--test-add', action='store_true', help="Test the add_node helper function")
     # NEW: Add a flag to test LLM prompts
     parser.add_argument('--test-llm-prompts', action='store_true', help="Test LLM prompts")
-    parser.add_argument('--print-llm-metadata', '--print_llm-metadata', action='store_true', help="Print composite causal metadata for each node in the hierarchy")
+    parser.add_argument('--print-llm-metadata', '--print_llm-metadata', dest="print_llm_metadata", action='store_true', help="Print composite causal metadata for each node in the hierarchy")
     return parser.parse_args()
 
 # ----------------------------------------------
@@ -1122,6 +1194,8 @@ def main():
     
     hierarchy = FIMHierarchy.from_json(hierarchy_data)
     hierarchy.self_heal()
+    # Propagate composite causal metadata on the entire hierarchy.
+    hierarchy.propagate_combined_metadata(hierarchy.root)
     print(f"DEBUG: Total nodes in full hierarchy: {len(hierarchy.linear_order)}")
 
     print("📋 INITIAL Hierarchy Linear Order:")
@@ -1162,15 +1236,28 @@ def main():
         print(combined_prompt)
 
     if args.llm:
-        print("\n--- Running Downward Causal Reasoning via LLM ---")
-        hierarchy.apply_downward_causal_reasoning(mock_llm_function)
+        print("\n--- Running LLM on Composite Causal Metadata ---")
+        hierarchy.apply_llm_to_composite_metadata(mock_llm_function)
 
-    # NEW: Print out the propagated composite causal metadata for each non-root node.
+    # Re-propagate composite metadata to account for updated (randomized) weights
+    hierarchy.propagate_combined_metadata(hierarchy.root)
+
+    # NEW: Print out the full propagated composite causal metadata for each non-root node.
     if args.print_llm_metadata:
         print("\n--- Composite Causal Metadata for Each Node ---")
+        import json
         for node in hierarchy.linear_order:
-            if node.parent:
-                print(f"Node {node.label} (Parent: {node.parent.label}) -> Causal Metadata: {node.causal_inference}")
+            if not node.parent:
+                continue
+            # Try to fetch from the updated attribute; fall back if necessary.
+            ci = getattr(node, "causal_inference", None)
+            if ci is None:
+                ci = getattr(node, "causal_inference_links", None)
+            if ci is None:
+                continue
+            print(f"Node {node.label} (Parent: {node.parent.label}):")
+            print(json.dumps(ci, indent=4))
+            print("")
 
     # NEW: Test the new add_node helper if the flag is provided.
     if args.test_add:
@@ -1224,11 +1311,11 @@ def main():
 
 def mock_llm_function(prompt):
     """
-    A mock LLM function that simulates processing the prompt.
-    Replace this with the actual LLM call later.
+    A simple mock LLM function that simulates a response by echoing part
+    of the prompt. In a real scenario, this function would call an LLM API.
     """
-    # For example, return a simple message.
-    return "Mock LLM output: Downward causal reasoning applied."
+    # For demonstration: return the first 80 characters of the prompt with a header.
+    return f"Simulated LLM response: {prompt[:80]}..."
 
 # -------------------------------------------------------------------
 # Main entry point.

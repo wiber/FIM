@@ -1,45 +1,63 @@
 DEBUG: Total nodes in full hierarchy: 13
 📋 INITIAL Hierarchy Linear Order:
-ID: 6c5551ac-30ae-4977-b047-98beb83fdc96 | Label: Origin | Prefix: O | AbsIndex: 0 | Weight: 1.0
-ID: 4c1d7294-d2a4-4814-92a3-4e723d7a5785 | Label: A | Prefix: A | AbsIndex: 1 | Weight: 1.0
-ID: 31c8a4d3-5b97-4acc-a96e-329b79e7675b | Label: B | Prefix: B | AbsIndex: 2 | Weight: 1.0
-ID: d4f1428d-7234-43a5-8774-d032847b11b0 | Label: C | Prefix: C | AbsIndex: 3 | Weight: 1.0
-ID: 0e9fa71a-1540-46a9-8acf-a2bde8d144c3 | Label: A1 | Prefix: A1 | AbsIndex: 4 | Weight: 0.8
-ID: 1157176d-178e-43f9-91ce-8d3f951ef704 | Label: A2 | Prefix: A2 | AbsIndex: 5 | Weight: 0.75
-ID: a04037c4-c49e-4ce0-b71a-fce9e41d62f1 | Label: A3 | Prefix: A3 | AbsIndex: 6 | Weight: 0.7
-ID: 36adf465-5d6d-44c2-833b-18aba4a7e123 | Label: B1 | Prefix: B1 | AbsIndex: 7 | Weight: 0.85
-ID: 619b8e77-c314-4e00-94a7-63140a729826 | Label: B2 | Prefix: B2 | AbsIndex: 8 | Weight: 0.8
-ID: faf33380-3319-4615-bd9f-3b5d5e89faf2 | Label: B3 | Prefix: B3 | AbsIndex: 9 | Weight: 0.78
-ID: f6f2fbea-47fa-4418-966f-21bfea85f7f4 | Label: C1 | Prefix: C1 | AbsIndex: 10 | Weight: 0.9
-ID: a7234b64-8540-440f-970e-9d3a40eddfd3 | Label: C2 | Prefix: C2 | AbsIndex: 11 | Weight: 0.85
-ID: b6d7278d-2cc5-4163-ac36-219121f8fd63 | Label: C3 | Prefix: C3 | AbsIndex: 12 | Weight: 0.8
+ID: a6ba3e3e-6015-478b-a77a-b5411eb927c6 | Label: Origin | Prefix: O | AbsIndex: 0 | Weight: 1.0
+ID: e9ca55b9-d56d-4acd-9772-2be3d7892efb | Label: A | Prefix: A | AbsIndex: 1 | Weight: 1.0
+ID: 824b314d-d7cd-434b-a050-ba4148d0bfef | Label: B | Prefix: B | AbsIndex: 2 | Weight: 1.0
+ID: 369815bb-7d14-4aec-8e40-4e2e585d496e | Label: C | Prefix: C | AbsIndex: 3 | Weight: 1.0
+ID: 8cf6443b-cf4d-4526-8c9b-ce7e8a10dde3 | Label: A1 | Prefix: A1 | AbsIndex: 4 | Weight: 0.8
+ID: 22ae0074-72f2-48db-ade3-b06d22756c15 | Label: A2 | Prefix: A2 | AbsIndex: 5 | Weight: 0.75
+ID: d038200e-77ee-443c-9eef-48ca3795f5e5 | Label: A3 | Prefix: A3 | AbsIndex: 6 | Weight: 0.7
+ID: 012a7c6b-2aaf-41f7-80dd-8c0db0dafc4c | Label: B1 | Prefix: B1 | AbsIndex: 7 | Weight: 0.85
+ID: 04c2e20d-746a-41fe-9034-feb4c8da2161 | Label: B2 | Prefix: B2 | AbsIndex: 8 | Weight: 0.8
+ID: edde486d-cc1b-4970-845f-036759bec41c | Label: B3 | Prefix: B3 | AbsIndex: 9 | Weight: 0.78
+ID: 891a8960-cb50-4b88-aeaa-9fed82255f9c | Label: C1 | Prefix: C1 | AbsIndex: 10 | Weight: 0.9
+ID: 56d6bde1-d552-4ed7-9d7a-57cdba2c9cdc | Label: C2 | Prefix: C2 | AbsIndex: 11 | Weight: 0.85
+ID: dc75e402-ee6b-4040-a5d1-08fbc223135e | Label: C3 | Prefix: C3 | AbsIndex: 12 | Weight: 0.8
+
+🔀 Randomizing weights for the entire tree (excluding Origin)...
+🔀 Updated weight for Node e9ca55b9-d56d-4acd-9772-2be3d7892efb (A): 1.0 -> 0.8
+🔀 Updated weight for Node 8cf6443b-cf4d-4526-8c9b-ce7e8a10dde3 (A1): 0.8 -> 0.76
+🔀 Updated weight for Node 22ae0074-72f2-48db-ade3-b06d22756c15 (A2): 0.75 -> 0.8
+🔀 Updated weight for Node d038200e-77ee-443c-9eef-48ca3795f5e5 (A3): 0.7 -> 0.79
+🔀 Updated weight for Node 824b314d-d7cd-434b-a050-ba4148d0bfef (B): 1.0 -> 0.91
+🔀 Updated weight for Node 012a7c6b-2aaf-41f7-80dd-8c0db0dafc4c (B1): 0.85 -> 0.81
+🔀 Updated weight for Node 04c2e20d-746a-41fe-9034-feb4c8da2161 (B2): 0.8 -> 0.87
+🔀 Updated weight for Node edde486d-cc1b-4970-845f-036759bec41c (B3): 0.78 -> 0.87
+🔀 Updated weight for Node 369815bb-7d14-4aec-8e40-4e2e585d496e (C): 1.0 -> 0.73
+🔀 Updated weight for Node 891a8960-cb50-4b88-aeaa-9fed82255f9c (C1): 0.9 -> 0.81
+🔀 Updated weight for Node 56d6bde1-d552-4ed7-9d7a-57cdba2c9cdc (C2): 0.85 -> 0.79
+🔀 Updated weight for Node dc75e402-ee6b-4040-a5d1-08fbc223135e (C3): 0.8 -> 0.91
+
+🔀 Weights randomized. Re-healing hierarchy for updated ordering...
 
 📋 FINAL Hierarchy Linear Order (after randomization if applied):
-ID: 6c5551ac-30ae-4977-b047-98beb83fdc96 | Label: Origin | Prefix: O | AbsIndex: 0 | Weight: 1.0 | Bounds: {'start_index': 1, 'end_index': 3}
-ID: 4c1d7294-d2a4-4814-92a3-4e723d7a5785 | Label: A | Prefix: A | AbsIndex: 1 | Weight: 1.0 | Bounds: {'start_index': 4, 'end_index': 6}
-ID: 31c8a4d3-5b97-4acc-a96e-329b79e7675b | Label: B | Prefix: B | AbsIndex: 2 | Weight: 1.0 | Bounds: {'start_index': 7, 'end_index': 9}
-ID: d4f1428d-7234-43a5-8774-d032847b11b0 | Label: C | Prefix: C | AbsIndex: 3 | Weight: 1.0 | Bounds: {'start_index': 10, 'end_index': 12}
-ID: 0e9fa71a-1540-46a9-8acf-a2bde8d144c3 | Label: A1 | Prefix: A1 | AbsIndex: 4 | Weight: 0.8 | Bounds: {'start_index': 4, 'end_index': 6}
-ID: 1157176d-178e-43f9-91ce-8d3f951ef704 | Label: A2 | Prefix: A2 | AbsIndex: 5 | Weight: 0.75 | Bounds: {'start_index': 4, 'end_index': 6}
-ID: a04037c4-c49e-4ce0-b71a-fce9e41d62f1 | Label: A3 | Prefix: A3 | AbsIndex: 6 | Weight: 0.7 | Bounds: {'start_index': 4, 'end_index': 6}
-ID: 36adf465-5d6d-44c2-833b-18aba4a7e123 | Label: B1 | Prefix: B1 | AbsIndex: 7 | Weight: 0.85 | Bounds: {'start_index': 7, 'end_index': 9}
-ID: 619b8e77-c314-4e00-94a7-63140a729826 | Label: B2 | Prefix: B2 | AbsIndex: 8 | Weight: 0.8 | Bounds: {'start_index': 7, 'end_index': 9}
-ID: faf33380-3319-4615-bd9f-3b5d5e89faf2 | Label: B3 | Prefix: B3 | AbsIndex: 9 | Weight: 0.78 | Bounds: {'start_index': 7, 'end_index': 9}
-ID: f6f2fbea-47fa-4418-966f-21bfea85f7f4 | Label: C1 | Prefix: C1 | AbsIndex: 10 | Weight: 0.9 | Bounds: {'start_index': 10, 'end_index': 12}
-ID: a7234b64-8540-440f-970e-9d3a40eddfd3 | Label: C2 | Prefix: C2 | AbsIndex: 11 | Weight: 0.85 | Bounds: {'start_index': 10, 'end_index': 12}
-ID: b6d7278d-2cc5-4163-ac36-219121f8fd63 | Label: C3 | Prefix: C3 | AbsIndex: 12 | Weight: 0.8 | Bounds: {'start_index': 10, 'end_index': 12}
+ID: a6ba3e3e-6015-478b-a77a-b5411eb927c6 | Label: Origin | Prefix: O | AbsIndex: 0 | Weight: 1.0 | Bounds: {'start_index': 1, 'end_index': 3}
+ID: 824b314d-d7cd-434b-a050-ba4148d0bfef | Label: B | Prefix: A | AbsIndex: 1 | Weight: 0.91 | Bounds: {'start_index': 4, 'end_index': 6}
+ID: e9ca55b9-d56d-4acd-9772-2be3d7892efb | Label: A | Prefix: B | AbsIndex: 2 | Weight: 0.8 | Bounds: {'start_index': 7, 'end_index': 9}
+ID: 369815bb-7d14-4aec-8e40-4e2e585d496e | Label: C | Prefix: C | AbsIndex: 3 | Weight: 0.73 | Bounds: {'start_index': 10, 'end_index': 12}
+ID: 04c2e20d-746a-41fe-9034-feb4c8da2161 | Label: B2 | Prefix: A1 | AbsIndex: 4 | Weight: 0.87 | Bounds: {'start_index': 4, 'end_index': 6}
+ID: edde486d-cc1b-4970-845f-036759bec41c | Label: B3 | Prefix: A2 | AbsIndex: 5 | Weight: 0.87 | Bounds: {'start_index': 4, 'end_index': 6}
+ID: 012a7c6b-2aaf-41f7-80dd-8c0db0dafc4c | Label: B1 | Prefix: A3 | AbsIndex: 6 | Weight: 0.81 | Bounds: {'start_index': 4, 'end_index': 6}
+ID: 22ae0074-72f2-48db-ade3-b06d22756c15 | Label: A2 | Prefix: B1 | AbsIndex: 7 | Weight: 0.8 | Bounds: {'start_index': 7, 'end_index': 9}
+ID: d038200e-77ee-443c-9eef-48ca3795f5e5 | Label: A3 | Prefix: B2 | AbsIndex: 8 | Weight: 0.79 | Bounds: {'start_index': 7, 'end_index': 9}
+ID: 8cf6443b-cf4d-4526-8c9b-ce7e8a10dde3 | Label: A1 | Prefix: B3 | AbsIndex: 9 | Weight: 0.76 | Bounds: {'start_index': 7, 'end_index': 9}
+ID: dc75e402-ee6b-4040-a5d1-08fbc223135e | Label: C3 | Prefix: C1 | AbsIndex: 10 | Weight: 0.91 | Bounds: {'start_index': 10, 'end_index': 12}
+ID: 891a8960-cb50-4b88-aeaa-9fed82255f9c | Label: C1 | Prefix: C2 | AbsIndex: 11 | Weight: 0.81 | Bounds: {'start_index': 10, 'end_index': 12}
+ID: 56d6bde1-d552-4ed7-9d7a-57cdba2c9cdc | Label: C2 | Prefix: C3 | AbsIndex: 12 | Weight: 0.79 | Bounds: {'start_index': 10, 'end_index': 12}
 
 --- Skip Factors Report ---
 Node Origin: skip_factor (1D) = 0.23076923076923078, skip_factor (2D) = 0.053254437869822494
-Node A: skip_factor (1D) = 0.23076923076923078, skip_factor (2D) = 0.053254437869822494
 Node B: skip_factor (1D) = 0.23076923076923078, skip_factor (2D) = 0.053254437869822494
+Node A: skip_factor (1D) = 0.23076923076923078, skip_factor (2D) = 0.053254437869822494
 Node C: skip_factor (1D) = 0.23076923076923078, skip_factor (2D) = 0.053254437869822494
-Node A1: skip_factor (1D) = 0.07692307692307693, skip_factor (2D) = 0.00591715976331361
-Node A2: skip_factor (1D) = 0.07692307692307693, skip_factor (2D) = 0.00591715976331361
-Node A3: skip_factor (1D) = 0.07692307692307693, skip_factor (2D) = 0.00591715976331361
-Node B1: skip_factor (1D) = 0.07692307692307693, skip_factor (2D) = 0.00591715976331361
 Node B2: skip_factor (1D) = 0.07692307692307693, skip_factor (2D) = 0.00591715976331361
 Node B3: skip_factor (1D) = 0.07692307692307693, skip_factor (2D) = 0.00591715976331361
+Node B1: skip_factor (1D) = 0.07692307692307693, skip_factor (2D) = 0.00591715976331361
+Node A2: skip_factor (1D) = 0.07692307692307693, skip_factor (2D) = 0.00591715976331361
+Node A3: skip_factor (1D) = 0.07692307692307693, skip_factor (2D) = 0.00591715976331361
+Node A1: skip_factor (1D) = 0.07692307692307693, skip_factor (2D) = 0.00591715976331361
+Node C3: skip_factor (1D) = 0.07692307692307693, skip_factor (2D) = 0.00591715976331361
 Node C1: skip_factor (1D) = 0.07692307692307693, skip_factor (2D) = 0.00591715976331361
 Node C2: skip_factor (1D) = 0.07692307692307693, skip_factor (2D) = 0.00591715976331361
-Node C3: skip_factor (1D) = 0.07692307692307693, skip_factor (2D) = 0.00591715976331361
+
+--- Composite Causal Metadata for Each Node ---
