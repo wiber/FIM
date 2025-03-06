@@ -1092,25 +1092,26 @@ class FIMHierarchy:
             node.causal_inference = {}
 
         for child in node.children:
-            # Build an enhanced prompt that bridges the mini white paper's problem space with FIM's engineered causal design.
+            # Build an enhanced prompt that defines the Fractal Identity Map (FIM) as a decision mapping tool.
             prompt_text = (
-                "Claim in Brief: The Fractal Identity Matrix (FIM) is a systematic framework designed to organize data "
-                "in high-dimensional settings by focusing attention on the most relevant sub-blocks. This approach drastically "
-                "reduces energy consumption while providing the AI with an internal 'body sense' or proprioception. \n\n"
-                "Drawing from our mini white paper on FIM and its transformative impact, FIM establishes a downward causal structure "
-                "originating from a central 'Origin'. Unlike typical similarity-based matrices that favor diagonal dominance, FIM "
-                "deliberately assigns high off-diagonal weights to denote engineered causal influences between independent categories. \n\n"
+                "What if you had a time machine for every critical decision? Imagine having a detailed map of every trade-off—a Fractal Identity Map "
+                "that charts each pivot point in your decision-making process.\n\n"
+                "Claim in Brief: The Fractal Identity Map (FIM) is not just a similarity matrix but a roadmap for decisions. "
+                "It organizes complex, high-dimensional data by focusing attention on the most relevant sub-blocks, drastically reducing energy consumption, "
+                "and providing AI with an internal 'body sense' of its causal structure. Unlike conventional matrices, FIM is engineered to assign "
+                "significant off-diagonal weights that serve as pivot points for downward causal reasoning, rather than mere similarity.\n\n"
                 "Overview:\n"
                 f"  Description: {origin_metadata.get('description', 'No description provided')}\n"
                 f"  Objectives: {origin_metadata.get('objectives', 'N/A')}\n"
                 f"  Constraints: {origin_metadata.get('constraints', 'N/A')}\n"
                 f"  Cost Model: {origin_metadata.get('cost_model', 'N/A')}\n"
                 f"  Metrics: {origin_metadata.get('metrics', 'N/A')}\n\n"
-                "Given this fractal organization where the Origin enforces a downward causal definition, "
-                f"explain how the Origin defines the causal identity of the primary category '{node.label}' and establishes "
+                "Given this fractal organization where the Origin defines a downward causal structure, "
+                f"explain how the Origin determines the causal identity of the primary category '{node.label}' and establishes "
                 f"a causal link from '{node.label}' to its subcategory '{child.label}' with an influence strength of {child.weight}. "
-                "Discuss how these deliberately high off-diagonal weights capture engineered causal influences rather than mere similarity, "
-                "thereby enabling efficient data processing and enhanced interpretability."
+                "Discuss how these deliberately high off-diagonal weights indicate engineered causal influences rather than mere similarity, "
+                "and explain why the categories and their subcategories are uniquely and clearly labeled—each sibling treated as an independent entity "
+                "with a distinct causal role in the decision landscape."
             )
 
             # Assign the composite causal metadata to the child.
