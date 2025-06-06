@@ -35,14 +35,14 @@ class FIMDataHierarchy:
             conductivity = item['conductivity_type']
             conductivity_node = self._get_or_create_child(self.root, conductivity)
 
-            # 2nd Level: Thermal Stability (in ranges of 250)
+            # 2nd Level: Thermal Stability (in ranges of 100K)
             stability = item['thermal_stability']
-            stability_range = f"Stab_{math.floor(stability / 250) * 250}K"
+            stability_range = f"Stab_{math.floor(stability / 100) * 100}K"
             stability_node = self._get_or_create_child(conductivity_node, stability_range)
             
-            # 3rd Level: Band Gap (in ranges of 0.5)
+            # 3rd Level: Band Gap (in ranges of 0.1eV)
             band_gap = item['band_gap']
-            band_gap_range = f"BG_{math.floor(band_gap * 2) / 2}"
+            band_gap_range = f"BG_{math.floor(band_gap * 10) / 10}"
             band_gap_node = self._get_or_create_child(stability_node, band_gap_range)
 
             band_gap_node.add_data_point(item)
@@ -83,14 +83,14 @@ class FIMDataHierarchy:
             if node.name.startswith("Stab_"):
                 node_stability = int(node.name.split('_')[1][:-1])
                 # If the entire range of this node is outside the query, prune it.
-                if node_stability + 250 < q_stability_min or node_stability > q_stability_max:
+                if node_stability + 100 < q_stability_min or node_stability > q_stability_max:
                     return
 
             # Check band gap ranges for pruning
             if node.name.startswith("BG_"):
                 node_bg = float(node.name.split('_')[1])
                 # If the entire range of this node is outside the query, prune it.
-                if node_bg + 0.5 < q_band_gap_min or node_bg > q_band_gap_max:
+                if node_bg + 0.1 < q_band_gap_min or node_bg > q_band_gap_max:
                     return
 
             # If it's a leaf node (or has data), check individual data points
@@ -142,14 +142,14 @@ def linear_search(data, query):
 
 def run_benchmark():
     """Sets up and runs the full benchmark test."""
-    NUM_MATERIALS = 1_000_000
+    NUM_MATERIALS = 10_000_000
     QUERY = {
-        'thermal_stability_range': (700, 850), # Specific range
-        'band_gap_range': (2.0, 2.5),         # Specific range
+        'thermal_stability_range': (750, 780), # More specific range
+        'band_gap_range': (2.1, 2.2),         # More specific range
         'conductivity_type': 'semiconductor'
     }
 
-    print("--- HPC Search Benchmark ---")
+    print("--- HPC Search Benchmark (High Granularity) ---")
     print(f"Generating {NUM_MATERIALS:,} synthetic material data points...")
     start_time = time.time()
     materials_data = generate_materials_data(NUM_MATERIALS)
@@ -195,6 +195,31 @@ def run_benchmark():
         performance_factor = linear_accesses / fim_accesses
         print(f"Memory Access Reduction: FIM search accessed the database {performance_factor:,.1f}x fewer times.")
         print("This 'Skip Factor' directly translates to massive energy and time savings on hardware like CeRAM.")
+
+        # --- Mathematical Justification ---
+        print("\n\n--- Mathematical Justification for the Skip Factor ---")
+        print("The performance gain is a direct mathematical consequence of changing the search strategy from a linear scan to a structured, hierarchical query.")
+        
+        print("\n1. The Cost of Linear Search (The Baseline)")
+        print("   A linear search must inspect every single item in the dataset to find matches.")
+        print(f"   - C_linear = N = {linear_accesses:,} memory accesses")
+
+        print("\n2. The FIM Hierarchy: Creating Searchable Partitions")
+        print("   The FIM approach builds a structured index that creates logical partitions of the data space (like a multi-level filing cabinet).")
+        print("   - Level 1: conductivity_type ('insulator', 'semiconductor', 'conductor')")
+        print("   - Level 2: thermal_stability (in 100K increments)")
+        print("   - Level 3: band_gap (in 0.1eV increments)")
+        
+        print("\n3. From Theory to Practice: Total FIM Cost")
+        print("   The FIM search navigates this hierarchy, pruning (skipping) entire branches that cannot match the query.")
+        print("   The actual cost is the sum of visiting the internal 'signpost' nodes plus inspecting the data points at the relevant leaves.")
+        print(f"   - C_fim = C_traversal + C_leaf_inspection = {fim_accesses:,} memory accesses")
+        
+        print("\n4. Final Calculation: The Skip Factor Multiple")
+        print("   The multiple is the ratio of the linear search cost to the FIM search cost, showing how many times more work the linear search performs.")
+        print(f"   - Skip Factor Multiple = C_linear / C_fim")
+        print(f"   - Skip Factor Multiple = {linear_accesses:,} / {fim_accesses:,} = {performance_factor:,.2f}x")
+
     else:
         print("FIM search did not access any items.")
 
