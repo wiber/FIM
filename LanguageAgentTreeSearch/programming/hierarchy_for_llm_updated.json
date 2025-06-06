@@ -1,0 +1,327 @@
+[
+    {
+        "node_id": "efc8c48d-9414-4d6e-8648-2cc95b7f9f99",
+        "label": "LLM_3_Origin",
+        "weight": 1.0,
+        "abs_index": 0,
+        "parent_id": null,
+        "invariant_prefix": "O",
+        "submatrix_bounds": {
+            "start_index": 1,
+            "end_index": 4,
+            "prefix": "O"
+        },
+        "causal_inference": {
+            "node": "LLM_3_Origin",
+            "category": "O",
+            "parent_category": null,
+            "parent_effect": null,
+            "cause_effect_relation": {
+                "cause": "Parent_Name",
+                "effect": "Child_Name",
+                "influence_strength": 0.75
+            },
+            "relationship_type": "category_to_subcategory"
+        }
+    },
+    {
+        "node_id": "4c6c1399-dfeb-4932-adf7-25883898151a",
+        "label": "LLM_3_C",
+        "weight": 0.6736633115129038,
+        "abs_index": 1,
+        "parent_id": "efc8c48d-9414-4d6e-8648-2cc95b7f9f99",
+        "invariant_prefix": "A",
+        "submatrix_bounds": {
+            "start_index": 2,
+            "end_index": 3,
+            "prefix": "A"
+        },
+        "causal_inference": {
+            "node": "LLM_3_C",
+            "category": "A",
+            "parent_category": "O",
+            "parent_effect": 1.0,
+            "cause_effect_relation": {
+                "cause": "Parent_Name",
+                "effect": "Child_Name",
+                "influence_strength": 0.75
+            },
+            "relationship_type": "category_to_subcategory"
+        }
+    },
+    {
+        "node_id": "7f1d118c-3f7d-41db-b61c-4cffc28d6b2b",
+        "label": "LLM_3_A",
+        "weight": 0.6078423812688011,
+        "abs_index": 2,
+        "parent_id": "efc8c48d-9414-4d6e-8648-2cc95b7f9f99",
+        "invariant_prefix": "B",
+        "submatrix_bounds": {
+            "start_index": 3,
+            "end_index": 4,
+            "prefix": "B"
+        },
+        "causal_inference": {
+            "node": "LLM_3_A",
+            "category": "B",
+            "parent_category": "O",
+            "parent_effect": 1.0,
+            "cause_effect_relation": {
+                "cause": "Parent_Name",
+                "effect": "Child_Name",
+                "influence_strength": 0.75
+            },
+            "relationship_type": "category_to_subcategory"
+        }
+    },
+    {
+        "node_id": "3a9e7564-d875-465e-82fe-2d809a2b9b58",
+        "label": "LLM_3_D",
+        "weight": 0.17149256487855202,
+        "abs_index": 3,
+        "parent_id": "efc8c48d-9414-4d6e-8648-2cc95b7f9f99",
+        "invariant_prefix": "C",
+        "submatrix_bounds": {
+            "start_index": 4,
+            "end_index": 5,
+            "prefix": "C"
+        },
+        "causal_inference": {
+            "node": "LLM_3_D",
+            "category": "C",
+            "parent_category": "O",
+            "parent_effect": 1.0,
+            "cause_effect_relation": {
+                "cause": "Parent_Name",
+                "effect": "Child_Name",
+                "influence_strength": 0.75
+            },
+            "relationship_type": "category_to_subcategory"
+        }
+    },
+    {
+        "node_id": "1b484ea4-dc91-4cdd-840e-ee1e8700a581",
+        "label": "LLM_3_B",
+        "weight": 0.16581354602691079,
+        "abs_index": 4,
+        "parent_id": "efc8c48d-9414-4d6e-8648-2cc95b7f9f99",
+        "invariant_prefix": "D",
+        "submatrix_bounds": {
+            "start_index": 5,
+            "end_index": 6,
+            "prefix": "D"
+        },
+        "causal_inference": {
+            "node": "LLM_3_B",
+            "category": "D",
+            "parent_category": "O",
+            "parent_effect": 1.0,
+            "cause_effect_relation": {
+                "cause": "Parent_Name",
+                "effect": "Child_Name",
+                "influence_strength": 0.75
+            },
+            "relationship_type": "category_to_subcategory"
+        }
+    },
+    {
+        "node_id": "7d20d4df-06e8-45b9-9d7a-70d72b8a207f",
+        "label": "LLM_3_C1",
+        "weight": 0.35887393964568814,
+        "abs_index": 5,
+        "parent_id": "4c6c1399-dfeb-4932-adf7-25883898151a",
+        "invariant_prefix": "A1",
+        "submatrix_bounds": {
+            "start_index": 5,
+            "end_index": 5,
+            "prefix": "A1"
+        },
+        "causal_inference": {
+            "node": "LLM_3_C1",
+            "category": "A1",
+            "parent_category": "A",
+            "parent_effect": 0.6736633115129038,
+            "cause_effect_relation": {
+                "cause": "Parent_Name",
+                "effect": "Child_Name",
+                "influence_strength": 0.75
+            },
+            "relationship_type": "category_to_subcategory"
+        }
+    },
+    {
+        "node_id": "cb1cc200-9c90-4248-950c-22f0b9956a0c",
+        "label": "LLM_3_C2",
+        "weight": 0.316488658360946,
+        "abs_index": 6,
+        "parent_id": "4c6c1399-dfeb-4932-adf7-25883898151a",
+        "invariant_prefix": "A2",
+        "submatrix_bounds": {
+            "start_index": 6,
+            "end_index": 6,
+            "prefix": "A2"
+        },
+        "causal_inference": {
+            "node": "LLM_3_C2",
+            "category": "A2",
+            "parent_category": "A",
+            "parent_effect": 0.6736633115129038,
+            "cause_effect_relation": {
+                "cause": "Parent_Name",
+                "effect": "Child_Name",
+                "influence_strength": 0.75
+            },
+            "relationship_type": "category_to_subcategory"
+        }
+    },
+    {
+        "node_id": "8f74dc33-ed56-45e4-a238-aeb0449c1104",
+        "label": "LLM_3_A1",
+        "weight": 0.7586452367524592,
+        "abs_index": 7,
+        "parent_id": "7f1d118c-3f7d-41db-b61c-4cffc28d6b2b",
+        "invariant_prefix": "B1",
+        "submatrix_bounds": {
+            "start_index": 7,
+            "end_index": 7,
+            "prefix": "B1"
+        },
+        "causal_inference": {
+            "node": "LLM_3_A1",
+            "category": "B1",
+            "parent_category": "B",
+            "parent_effect": 0.6078423812688011,
+            "cause_effect_relation": {
+                "cause": "Parent_Name",
+                "effect": "Child_Name",
+                "influence_strength": 0.75
+            },
+            "relationship_type": "category_to_subcategory"
+        }
+    },
+    {
+        "node_id": "81d9e38f-1893-4485-92fe-5e24afea51ba",
+        "label": "LLM_3_A2",
+        "weight": 0.20603682851686023,
+        "abs_index": 8,
+        "parent_id": "7f1d118c-3f7d-41db-b61c-4cffc28d6b2b",
+        "invariant_prefix": "B2",
+        "submatrix_bounds": {
+            "start_index": 8,
+            "end_index": 8,
+            "prefix": "B2"
+        },
+        "causal_inference": {
+            "node": "LLM_3_A2",
+            "category": "B2",
+            "parent_category": "B",
+            "parent_effect": 0.6078423812688011,
+            "cause_effect_relation": {
+                "cause": "Parent_Name",
+                "effect": "Child_Name",
+                "influence_strength": 0.75
+            },
+            "relationship_type": "category_to_subcategory"
+        }
+    },
+    {
+        "node_id": "07727358-a066-411f-8ce6-ecfbefef8d65",
+        "label": "LLM_3_D2",
+        "weight": 0.9279190091933553,
+        "abs_index": 9,
+        "parent_id": "3a9e7564-d875-465e-82fe-2d809a2b9b58",
+        "invariant_prefix": "C1",
+        "submatrix_bounds": {
+            "start_index": 9,
+            "end_index": 9,
+            "prefix": "C1"
+        },
+        "causal_inference": {
+            "node": "LLM_3_D2",
+            "category": "C1",
+            "parent_category": "C",
+            "parent_effect": 0.17149256487855202,
+            "cause_effect_relation": {
+                "cause": "Parent_Name",
+                "effect": "Child_Name",
+                "influence_strength": 0.75
+            },
+            "relationship_type": "category_to_subcategory"
+        }
+    },
+    {
+        "node_id": "c596c58a-539a-4a3a-b5d5-ac2b36d8693a",
+        "label": "LLM_3_D1",
+        "weight": 0.6404310121505963,
+        "abs_index": 10,
+        "parent_id": "3a9e7564-d875-465e-82fe-2d809a2b9b58",
+        "invariant_prefix": "C2",
+        "submatrix_bounds": {
+            "start_index": 10,
+            "end_index": 10,
+            "prefix": "C2"
+        },
+        "causal_inference": {
+            "node": "LLM_3_D1",
+            "category": "C2",
+            "parent_category": "C",
+            "parent_effect": 0.17149256487855202,
+            "cause_effect_relation": {
+                "cause": "Parent_Name",
+                "effect": "Child_Name",
+                "influence_strength": 0.75
+            },
+            "relationship_type": "category_to_subcategory"
+        }
+    },
+    {
+        "node_id": "d3e8f793-539c-4751-b9a5-2c49dd979fb0",
+        "label": "LLM_3_B2",
+        "weight": 0.8299489616045944,
+        "abs_index": 11,
+        "parent_id": "1b484ea4-dc91-4cdd-840e-ee1e8700a581",
+        "invariant_prefix": "D1",
+        "submatrix_bounds": {
+            "start_index": 11,
+            "end_index": 11,
+            "prefix": "D1"
+        },
+        "causal_inference": {
+            "node": "LLM_3_B2",
+            "category": "D1",
+            "parent_category": "D",
+            "parent_effect": 0.16581354602691079,
+            "cause_effect_relation": {
+                "cause": "Parent_Name",
+                "effect": "Child_Name",
+                "influence_strength": 0.75
+            },
+            "relationship_type": "category_to_subcategory"
+        }
+    },
+    {
+        "node_id": "2a4d4bd0-ec42-45d5-a57c-3f2a0426bb89",
+        "label": "LLM_3_B1",
+        "weight": 0.5481116854169599,
+        "abs_index": 12,
+        "parent_id": "1b484ea4-dc91-4cdd-840e-ee1e8700a581",
+        "invariant_prefix": "D2",
+        "submatrix_bounds": {
+            "start_index": 12,
+            "end_index": 12,
+            "prefix": "D2"
+        },
+        "causal_inference": {
+            "node": "LLM_3_B1",
+            "category": "D2",
+            "parent_category": "D",
+            "parent_effect": 0.16581354602691079,
+            "cause_effect_relation": {
+                "cause": "Parent_Name",
+                "effect": "Child_Name",
+                "influence_strength": 0.75
+            },
+            "relationship_type": "category_to_subcategory"
+        }
+    }
+]

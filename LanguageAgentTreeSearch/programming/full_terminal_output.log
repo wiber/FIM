@@ -1,0 +1,157 @@
+📌 Running tests...
+test_bounds_integrity (test_fim_hierarchy.TestFIMHierarchy.test_bounds_integrity)
+Ensure that all nodes have valid submatrix bounds (start_index and end_index). ... ok
+test_causal_propagation (test_fim_hierarchy.TestFIMHierarchy.test_causal_propagation)
+Test that causal effects and cumulative causality are propagated. ... ok
+test_json_export (test_fim_hierarchy.TestFIMHierarchy.test_json_export)
+Test that the full JSON export includes necessary fields. ... ok
+test_minimum_children_per_level (test_fim_hierarchy.TestFIMHierarchy.test_minimum_children_per_level)
+Ensure that every non-leaf node in the final ordering has at least 2 children. ... ok
+test_ordering_validation (test_fim_hierarchy.TestFIMHierarchy.test_ordering_validation)
+Test that ordering validations (parent abs_index < child abs_index) pass after update. ... ok
+test_randomization_effect (test_fim_hierarchy.TestFIMHierarchy.test_randomization_effect)
+Test that when randomization is applied, the weights change and the ... ok
+test_self_healing_propagates_causality (test_fim_hierarchy.TestFIMHierarchy.test_self_healing_propagates_causality)
+Test that self-healing propagates cumulative causality to all nodes. ... ok
+test_state_comparison (test_fim_hierarchy.TestFIMHierarchy.test_state_comparison)
+Test that compare_states detects a change in a node's state. ... ok
+test_descending_children_order (test_fim_hierarchy.TestFIMOrderingRules.test_descending_children_order)
+Test that for every node with children, the children are sorted in descending order by weight. ... ok
+test_parent_child_contiguity (test_fim_hierarchy.TestFIMOrderingRules.test_parent_child_contiguity)
+Test that for every parent, its children appear as a contiguous block in the final linear ordering. ... ok
+test_causal_metadata_rule (test_fim_hierarchy.TestFIMValidationRules.test_causal_metadata_rule) ... ok
+test_contiguous_parent_child_blocks (test_fim_hierarchy.TestFIMValidationRules.test_contiguous_parent_child_blocks) ... ok
+test_descending_weights_rule (test_fim_hierarchy.TestFIMValidationRules.test_descending_weights_rule) ... ok
+test_duplicate_prefix_rule (test_fim_hierarchy.TestFIMValidationRules.test_duplicate_prefix_rule) ... ok
+test_origin_index_rule (test_fim_hierarchy.TestFIMValidationRules.test_origin_index_rule) ... ok
+test_parent_child_order_rule (test_fim_hierarchy.TestFIMValidationRules.test_parent_child_order_rule) ... ok
+test_self_heal_idempotence (test_fim_hierarchy.TestFIMValidationRules.test_self_heal_idempotence) ... ok
+test_submatrix_bounds_rule (test_fim_hierarchy.TestFIMValidationRules.test_submatrix_bounds_rule) ... ok
+test_top_level_contiguity_rule (test_fim_hierarchy.TestFIMValidationRules.test_top_level_contiguity_rule) ... ok
+test_skip_factors_1d (test_skip_factors.TestSkipFactors.test_skip_factors_1d)
+Test the computation of skip factors in 1D (dimension = 1). ... ok
+test_skip_factors_2d (test_skip_factors.TestSkipFactors.test_skip_factors_2d)
+Test the computation of skip factors in 2D (dimension = 2). ... ok
+test_full_stack_randomization_and_reorder (test_skip_factors.TestSkipFactorsExtended.test_full_stack_randomization_and_reorder) ... FAIL
+test_skip_factors_extended_1d_and_2d (test_skip_factors.TestSkipFactorsExtended.test_skip_factors_extended_1d_and_2d) ... ok
+
+======================================================================
+FAIL: test_full_stack_randomization_and_reorder (test_skip_factors.TestSkipFactorsExtended.test_full_stack_randomization_and_reorder)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/eliasmoosman/Documents/GitHub/FIM/LanguageAgentTreeSearch/programming/tests/test_skip_factors.py", line 168, in test_full_stack_randomization_and_reorder
+    self.assertNotEqual(initial_order, new_order, "Top-level order should change after weight randomization.")
+AssertionError: ['A', 'B', 'C'] == ['A', 'B', 'C'] : Top-level order should change after weight randomization.
+
+----------------------------------------------------------------------
+Ran 23 tests in 0.002s
+
+FAILED (failures=1)
+🔀 Updated weight for Node ba43785e-c70e-4480-b40d-a7b4da590233 (A): 1.0 -> 0.74
+🔀 Updated weight for Node 1c70c4c2-f32c-4cb7-bb9d-50d4490ce7e8 (A1): 1.0 -> 0.89
+🔀 Updated weight for Node 36b33ce8-642b-453a-ac41-b5733208fcbd (A2): 1.0 -> 0.83
+🔀 Updated weight for Node d6ffb945-98b3-4a75-9056-3ddbeac3f687 (B): 1.0 -> 0.8
+🔀 Updated weight for Node e677d5c2-b05e-4263-a49a-b07049ba2f80 (B1): 1.0 -> 0.8
+🔀 Updated weight for Node aad41ee4-d65e-483a-9817-f8ff185c9798 (B2): 1.0 -> 0.88
+🔀 Updated weight for Node 7c38be52-a197-4d12-a86b-faf5f44a6a42 (C): 1.0 -> 0.72
+🔀 Updated weight for Node 05cea824-9bfe-4552-b562-cf2b0cc4f709 (C1): 1.0 -> 0.87
+🔀 Updated weight for Node 3d9a1631-b686-47d3-bb21-6fb6d11ae5a8 (C2): 1.0 -> 0.88
+🔀 Updated weight for Node 4e4616f4-65c5-48d2-97e5-6393dc38c6c3 (D): 1.0 -> 0.81
+🔀 Updated weight for Node 86e80a28-d628-4c99-bc3a-251cbddd0c83 (D1): 1.0 -> 0.82
+🔀 Updated weight for Node f95dfec7-990a-47d8-b3e6-4e70a3eaf9fd (D2): 1.0 -> 0.91
+
+[TEST] Original top-level weights: [1.0, 1.0, 1.0, 1.0]
+[TEST] New top-level weights: [0.81, 0.8, 0.74, 0.72]
+
+1D Skip Factors:
+Root Node: Origin -> Children: 2, Processed: 2, Computed skip_factor: 1.0 (Expected: 1.0)
+Node: A -> Children: 2, Computed skip_factor: 1.0 (Expected: 1.0)
+Node: B -> Children: 3, Computed skip_factor: 1.0 (Expected: 1.0)
+
+2D Skip Factors:
+Root Node: Origin -> Children: 2, Processed: 2, Computed skip_factor: 1.0 (Expected: 1.0)
+Node: A -> Children: 2, Computed skip_factor: 1.0 (Expected: 1.0)
+Node: B -> Children: 3, Computed skip_factor: 1.0 (Expected: 1.0)
+🔀 Updated weight for Node 36a57d3e-b711-43b7-a143-5bce747915c0 (A): 1.0 -> 0.84
+🔀 Updated weight for Node 3e781b70-425d-451e-ba18-1199ccb723b5 (A1): 0.8 -> 0.71
+🔀 Updated weight for Node 5a16fa60-51d7-4ad9-a24e-9cb0c89af74c (A2): 0.75 -> 0.91
+🔀 Updated weight for Node dbad4932-e3f6-40f9-a0c2-f317612db049 (A3): 0.7 -> 0.86
+🔀 Updated weight for Node 28183f72-829c-42ea-9b41-ffb82de995e5 (B): 1.0 -> 0.79
+🔀 Updated weight for Node 4c6d0b4e-af41-444d-acaa-5e3f7e13c4d3 (B1): 0.85 -> 0.87
+🔀 Updated weight for Node 5b691397-1a85-4b2a-9349-27bcb9fdd06f (B2): 0.8 -> 0.94
+🔀 Updated weight for Node eb3a3fe9-25dd-477f-8620-4e41c05d6672 (B3): 0.78 -> 0.71
+🔀 Updated weight for Node add4aa85-cb51-4640-9e81-a94217a72088 (C): 1.0 -> 0.73
+🔀 Updated weight for Node c22ba0b3-5538-4c37-90f8-7ebeefca705e (C1): 0.9 -> 0.92
+🔀 Updated weight for Node 9a9304e3-9e69-4446-bf10-6fc1de386935 (C2): 0.85 -> 0.92
+🔀 Updated weight for Node b8cd78ba-f7f7-412e-85a4-36b47c4b7570 (C3): 0.8 -> 0.79
+
+--- Skip Factors Report ---
+Node A: skip_factor = 0.4444444444444444
+Node B: skip_factor = 1.0
+Node C: skip_factor = 1.0
+Node A skip_factor (dimension 2) = 0.4444444444444444
+🚀 Running main.py with passed flags: --input-json sample_hierarchy.json --self-heal --run-tests --randomise
+DEBUG: Total nodes in full hierarchy: 13
+📋 INITIAL Hierarchy Linear Order:
+ID: c988fec3-7d61-44df-8e2c-2ec7061f04e1 | Label: Origin | Prefix: O | AbsIndex: 0 | Weight: 1.0
+ID: d356f7ca-88be-45b5-bf86-64fecc1188fd | Label: A | Prefix: A | AbsIndex: 1 | Weight: 1.0
+ID: efc9deb4-af04-4f6c-be75-39126b7760cf | Label: B | Prefix: B | AbsIndex: 2 | Weight: 1.0
+ID: 12981647-9d6d-41e7-a544-7339e9987e09 | Label: C | Prefix: C | AbsIndex: 3 | Weight: 1.0
+ID: 328c652d-ae12-4b73-8a7a-ea8d6dde263b | Label: A1 | Prefix: A1 | AbsIndex: 4 | Weight: 0.8
+ID: 8eed0d24-be77-4567-9e9f-c04c76ebfeca | Label: A2 | Prefix: A2 | AbsIndex: 5 | Weight: 0.75
+ID: 6af9cbf0-3e67-425c-9a8c-f3923693c369 | Label: A3 | Prefix: A3 | AbsIndex: 6 | Weight: 0.7
+ID: 9099b61b-a370-44df-85ae-c276281ca469 | Label: B1 | Prefix: B1 | AbsIndex: 7 | Weight: 0.85
+ID: 7aec6c02-4abe-4841-a3ad-f6408ba47cd3 | Label: B2 | Prefix: B2 | AbsIndex: 8 | Weight: 0.8
+ID: c25a4d61-520c-4f57-8973-68bed6476fd2 | Label: B3 | Prefix: B3 | AbsIndex: 9 | Weight: 0.78
+ID: a3ec8a68-43e8-4111-8ea5-6d851a54df5f | Label: C1 | Prefix: C1 | AbsIndex: 10 | Weight: 0.9
+ID: 0d13d950-b2a6-4c71-af52-f0ef61c04ccb | Label: C2 | Prefix: C2 | AbsIndex: 11 | Weight: 0.85
+ID: 7ba8f1d1-c935-48ef-bc57-e659dd40a410 | Label: C3 | Prefix: C3 | AbsIndex: 12 | Weight: 0.8
+
+🔀 Randomizing weights for the entire tree (excluding Origin)...
+🔀 Updated weight for Node d356f7ca-88be-45b5-bf86-64fecc1188fd (A): 1.0 -> 0.95
+🔀 Updated weight for Node 328c652d-ae12-4b73-8a7a-ea8d6dde263b (A1): 0.8 -> 0.86
+🔀 Updated weight for Node 8eed0d24-be77-4567-9e9f-c04c76ebfeca (A2): 0.75 -> 0.85
+🔀 Updated weight for Node 6af9cbf0-3e67-425c-9a8c-f3923693c369 (A3): 0.7 -> 0.9
+🔀 Updated weight for Node efc9deb4-af04-4f6c-be75-39126b7760cf (B): 1.0 -> 0.9
+🔀 Updated weight for Node 9099b61b-a370-44df-85ae-c276281ca469 (B1): 0.85 -> 0.86
+🔀 Updated weight for Node 7aec6c02-4abe-4841-a3ad-f6408ba47cd3 (B2): 0.8 -> 0.75
+🔀 Updated weight for Node c25a4d61-520c-4f57-8973-68bed6476fd2 (B3): 0.78 -> 0.76
+🔀 Updated weight for Node 12981647-9d6d-41e7-a544-7339e9987e09 (C): 1.0 -> 0.88
+🔀 Updated weight for Node a3ec8a68-43e8-4111-8ea5-6d851a54df5f (C1): 0.9 -> 0.88
+🔀 Updated weight for Node 0d13d950-b2a6-4c71-af52-f0ef61c04ccb (C2): 0.85 -> 0.72
+🔀 Updated weight for Node 7ba8f1d1-c935-48ef-bc57-e659dd40a410 (C3): 0.8 -> 0.7
+
+🔀 Weights randomized. Re-healing hierarchy for updated ordering...
+
+📋 FINAL Hierarchy Linear Order (after randomization if applied):
+ID: c988fec3-7d61-44df-8e2c-2ec7061f04e1 | Label: Origin | Prefix: O | AbsIndex: 0 | Weight: 1.0 | Bounds: {'start_index': 1, 'end_index': 3}
+ID: d356f7ca-88be-45b5-bf86-64fecc1188fd | Label: A | Prefix: A | AbsIndex: 1 | Weight: 0.95 | Bounds: {'start_index': 4, 'end_index': 6}
+ID: efc9deb4-af04-4f6c-be75-39126b7760cf | Label: B | Prefix: B | AbsIndex: 2 | Weight: 0.9 | Bounds: {'start_index': 7, 'end_index': 9}
+ID: 12981647-9d6d-41e7-a544-7339e9987e09 | Label: C | Prefix: C | AbsIndex: 3 | Weight: 0.88 | Bounds: {'start_index': 10, 'end_index': 12}
+ID: 6af9cbf0-3e67-425c-9a8c-f3923693c369 | Label: A3 | Prefix: A1 | AbsIndex: 4 | Weight: 0.9 | Bounds: {'start_index': 4, 'end_index': 6}
+ID: 328c652d-ae12-4b73-8a7a-ea8d6dde263b | Label: A1 | Prefix: A2 | AbsIndex: 5 | Weight: 0.86 | Bounds: {'start_index': 4, 'end_index': 6}
+ID: 8eed0d24-be77-4567-9e9f-c04c76ebfeca | Label: A2 | Prefix: A3 | AbsIndex: 6 | Weight: 0.85 | Bounds: {'start_index': 4, 'end_index': 6}
+ID: 9099b61b-a370-44df-85ae-c276281ca469 | Label: B1 | Prefix: B1 | AbsIndex: 7 | Weight: 0.86 | Bounds: {'start_index': 7, 'end_index': 9}
+ID: c25a4d61-520c-4f57-8973-68bed6476fd2 | Label: B3 | Prefix: B2 | AbsIndex: 8 | Weight: 0.76 | Bounds: {'start_index': 7, 'end_index': 9}
+ID: 7aec6c02-4abe-4841-a3ad-f6408ba47cd3 | Label: B2 | Prefix: B3 | AbsIndex: 9 | Weight: 0.75 | Bounds: {'start_index': 7, 'end_index': 9}
+ID: a3ec8a68-43e8-4111-8ea5-6d851a54df5f | Label: C1 | Prefix: C1 | AbsIndex: 10 | Weight: 0.88 | Bounds: {'start_index': 10, 'end_index': 12}
+ID: 0d13d950-b2a6-4c71-af52-f0ef61c04ccb | Label: C2 | Prefix: C2 | AbsIndex: 11 | Weight: 0.72 | Bounds: {'start_index': 10, 'end_index': 12}
+ID: 7ba8f1d1-c935-48ef-bc57-e659dd40a410 | Label: C3 | Prefix: C3 | AbsIndex: 12 | Weight: 0.7 | Bounds: {'start_index': 10, 'end_index': 12}
+
+--- Skip Factors Report ---
+Node Origin: skip_factor (1D) = 0.23076923076923078, skip_factor (2D) = 0.053254437869822494
+Node A: skip_factor (1D) = 0.23076923076923078, skip_factor (2D) = 0.053254437869822494
+Node B: skip_factor (1D) = 0.23076923076923078, skip_factor (2D) = 0.053254437869822494
+Node C: skip_factor (1D) = 0.23076923076923078, skip_factor (2D) = 0.053254437869822494
+Node A3: skip_factor (1D) = 0.07692307692307693, skip_factor (2D) = 0.00591715976331361
+Node A1: skip_factor (1D) = 0.07692307692307693, skip_factor (2D) = 0.00591715976331361
+Node A2: skip_factor (1D) = 0.07692307692307693, skip_factor (2D) = 0.00591715976331361
+Node B1: skip_factor (1D) = 0.07692307692307693, skip_factor (2D) = 0.00591715976331361
+Node B3: skip_factor (1D) = 0.07692307692307693, skip_factor (2D) = 0.00591715976331361
+Node B2: skip_factor (1D) = 0.07692307692307693, skip_factor (2D) = 0.00591715976331361
+Node C1: skip_factor (1D) = 0.07692307692307693, skip_factor (2D) = 0.00591715976331361
+Node C2: skip_factor (1D) = 0.07692307692307693, skip_factor (2D) = 0.00591715976331361
+Node C3: skip_factor (1D) = 0.07692307692307693, skip_factor (2D) = 0.00591715976331361
+📌 Copying full terminal output and code files to all_executed_files.log...
+✅ Copied content saved to all_executed_files.log
+✅ Script execution complete.

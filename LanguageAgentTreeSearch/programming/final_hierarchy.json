@@ -1,0 +1,212 @@
+{
+    "node_id": "39653370-261e-4ae6-9a0e-4de216e83534",
+    "label": "Origin",
+    "invariant_label": "Origin",
+    "weight": 1.0,
+    "abs_index": 0,
+    "invariant_prefix": "O",
+    "parent_id": null,
+    "submatrix_bounds": {
+        "start_index": null,
+        "end_index": null
+    },
+    "causal_inference": {},
+    "cumulative_causality": [],
+    "children": [
+        {
+            "node_id": "6b315789-33e3-43e7-9f23-8682522c9665",
+            "label": "B",
+            "invariant_label": "B",
+            "weight": 1.0,
+            "abs_index": 5,
+            "invariant_prefix": "A",
+            "parent_id": "39653370-261e-4ae6-9a0e-4de216e83534",
+            "submatrix_bounds": {
+                "start_index": null,
+                "end_index": null
+            },
+            "causal_inference": {},
+            "cumulative_causality": [],
+            "children": [
+                {
+                    "node_id": "4b6542fb-7131-4cac-b144-abf925af1c02",
+                    "label": "B2",
+                    "invariant_label": "B2",
+                    "weight": 0.8,
+                    "abs_index": 7,
+                    "invariant_prefix": "A2",
+                    "parent_id": "6b315789-33e3-43e7-9f23-8682522c9665",
+                    "submatrix_bounds": {
+                        "start_index": null,
+                        "end_index": null
+                    },
+                    "causal_inference": {},
+                    "cumulative_causality": [],
+                    "children": []
+                },
+                {
+                    "node_id": "461152d8-a2bc-42f1-8616-a473faf44b72",
+                    "label": "B3",
+                    "invariant_label": "B3",
+                    "weight": 0.78,
+                    "abs_index": 8,
+                    "invariant_prefix": "A3",
+                    "parent_id": "6b315789-33e3-43e7-9f23-8682522c9665",
+                    "submatrix_bounds": {
+                        "start_index": null,
+                        "end_index": null
+                    },
+                    "causal_inference": {},
+                    "cumulative_causality": [],
+                    "children": []
+                },
+                {
+                    "node_id": "8bd89d81-ae05-46df-88e7-1c08d373ea23",
+                    "label": "B1",
+                    "invariant_label": "B1",
+                    "weight": 0.85,
+                    "abs_index": 6,
+                    "invariant_prefix": "A1",
+                    "parent_id": "6b315789-33e3-43e7-9f23-8682522c9665",
+                    "submatrix_bounds": {
+                        "start_index": null,
+                        "end_index": null
+                    },
+                    "causal_inference": {},
+                    "cumulative_causality": [],
+                    "children": []
+                }
+            ]
+        },
+        {
+            "node_id": "dce6edb6-0a8c-499d-b012-4784008966a5",
+            "label": "A",
+            "invariant_label": "A",
+            "weight": 1.0,
+            "abs_index": 1,
+            "invariant_prefix": "B",
+            "parent_id": "39653370-261e-4ae6-9a0e-4de216e83534",
+            "submatrix_bounds": {
+                "start_index": null,
+                "end_index": null
+            },
+            "causal_inference": {},
+            "cumulative_causality": [],
+            "children": [
+                {
+                    "node_id": "c5d0f520-9b9c-45b9-8a30-b1de18558a77",
+                    "label": "A1",
+                    "invariant_label": "A1",
+                    "weight": 0.8,
+                    "abs_index": 2,
+                    "invariant_prefix": "B1",
+                    "parent_id": "dce6edb6-0a8c-499d-b012-4784008966a5",
+                    "submatrix_bounds": {
+                        "start_index": null,
+                        "end_index": null
+                    },
+                    "causal_inference": {},
+                    "cumulative_causality": [],
+                    "children": []
+                },
+                {
+                    "node_id": "48c16839-90f6-4675-89fd-df05372ba1d1",
+                    "label": "A2",
+                    "invariant_label": "A2",
+                    "weight": 0.75,
+                    "abs_index": 3,
+                    "invariant_prefix": "B2",
+                    "parent_id": "dce6edb6-0a8c-499d-b012-4784008966a5",
+                    "submatrix_bounds": {
+                        "start_index": null,
+                        "end_index": null
+                    },
+                    "causal_inference": {},
+                    "cumulative_causality": [],
+                    "children": []
+                },
+                {
+                    "node_id": "1cc23e81-dc36-4d31-ac3e-653de25fc1d0",
+                    "label": "A3",
+                    "invariant_label": "A3",
+                    "weight": 0.7,
+                    "abs_index": 4,
+                    "invariant_prefix": "B3",
+                    "parent_id": "dce6edb6-0a8c-499d-b012-4784008966a5",
+                    "submatrix_bounds": {
+                        "start_index": null,
+                        "end_index": null
+                    },
+                    "causal_inference": {},
+                    "cumulative_causality": [],
+                    "children": []
+                }
+            ]
+        },
+        {
+            "node_id": "271b3cb2-2d25-4e7f-9a07-826a5289beb5",
+            "label": "C",
+            "invariant_label": "C",
+            "weight": 1.0,
+            "abs_index": 9,
+            "invariant_prefix": "C",
+            "parent_id": "39653370-261e-4ae6-9a0e-4de216e83534",
+            "submatrix_bounds": {
+                "start_index": null,
+                "end_index": null
+            },
+            "causal_inference": {},
+            "cumulative_causality": [],
+            "children": [
+                {
+                    "node_id": "c3f3ae31-8f76-41f6-bca0-bdd35ff78dd0",
+                    "label": "C2",
+                    "invariant_label": "C2",
+                    "weight": 0.85,
+                    "abs_index": 11,
+                    "invariant_prefix": "C2",
+                    "parent_id": "271b3cb2-2d25-4e7f-9a07-826a5289beb5",
+                    "submatrix_bounds": {
+                        "start_index": null,
+                        "end_index": null
+                    },
+                    "causal_inference": {},
+                    "cumulative_causality": [],
+                    "children": []
+                },
+                {
+                    "node_id": "b3c73078-1000-4da0-b4aa-122a81e0600e",
+                    "label": "C1",
+                    "invariant_label": "C1",
+                    "weight": 0.9,
+                    "abs_index": 10,
+                    "invariant_prefix": "C1",
+                    "parent_id": "271b3cb2-2d25-4e7f-9a07-826a5289beb5",
+                    "submatrix_bounds": {
+                        "start_index": null,
+                        "end_index": null
+                    },
+                    "causal_inference": {},
+                    "cumulative_causality": [],
+                    "children": []
+                },
+                {
+                    "node_id": "5c939c98-7ca6-4035-a2ea-159b7ac6df5f",
+                    "label": "C3",
+                    "invariant_label": "C3",
+                    "weight": 0.8,
+                    "abs_index": 12,
+                    "invariant_prefix": "C3",
+                    "parent_id": "271b3cb2-2d25-4e7f-9a07-826a5289beb5",
+                    "submatrix_bounds": {
+                        "start_index": null,
+                        "end_index": null
+                    },
+                    "causal_inference": {},
+                    "cumulative_causality": [],
+                    "children": []
+                }
+            ]
+        }
+    ]
+}

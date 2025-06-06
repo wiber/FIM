@@ -1,0 +1,43 @@
+🔀 Updated weight for Node ba43785e-c70e-4480-b40d-a7b4da590233 (A): 1.0 -> 0.74
+🔀 Updated weight for Node 1c70c4c2-f32c-4cb7-bb9d-50d4490ce7e8 (A1): 1.0 -> 0.89
+🔀 Updated weight for Node 36b33ce8-642b-453a-ac41-b5733208fcbd (A2): 1.0 -> 0.83
+🔀 Updated weight for Node d6ffb945-98b3-4a75-9056-3ddbeac3f687 (B): 1.0 -> 0.8
+🔀 Updated weight for Node e677d5c2-b05e-4263-a49a-b07049ba2f80 (B1): 1.0 -> 0.8
+🔀 Updated weight for Node aad41ee4-d65e-483a-9817-f8ff185c9798 (B2): 1.0 -> 0.88
+🔀 Updated weight for Node 7c38be52-a197-4d12-a86b-faf5f44a6a42 (C): 1.0 -> 0.72
+🔀 Updated weight for Node 05cea824-9bfe-4552-b562-cf2b0cc4f709 (C1): 1.0 -> 0.87
+🔀 Updated weight for Node 3d9a1631-b686-47d3-bb21-6fb6d11ae5a8 (C2): 1.0 -> 0.88
+🔀 Updated weight for Node 4e4616f4-65c5-48d2-97e5-6393dc38c6c3 (D): 1.0 -> 0.81
+🔀 Updated weight for Node 86e80a28-d628-4c99-bc3a-251cbddd0c83 (D1): 1.0 -> 0.82
+🔀 Updated weight for Node f95dfec7-990a-47d8-b3e6-4e70a3eaf9fd (D2): 1.0 -> 0.91
+
+[TEST] Original top-level weights: [1.0, 1.0, 1.0, 1.0]
+[TEST] New top-level weights: [0.81, 0.8, 0.74, 0.72]
+
+1D Skip Factors:
+Root Node: Origin -> Children: 2, Processed: 2, Computed skip_factor: 1.0 (Expected: 1.0)
+Node: A -> Children: 2, Computed skip_factor: 1.0 (Expected: 1.0)
+Node: B -> Children: 3, Computed skip_factor: 1.0 (Expected: 1.0)
+
+2D Skip Factors:
+Root Node: Origin -> Children: 2, Processed: 2, Computed skip_factor: 1.0 (Expected: 1.0)
+Node: A -> Children: 2, Computed skip_factor: 1.0 (Expected: 1.0)
+Node: B -> Children: 3, Computed skip_factor: 1.0 (Expected: 1.0)
+🔀 Updated weight for Node 36a57d3e-b711-43b7-a143-5bce747915c0 (A): 1.0 -> 0.84
+🔀 Updated weight for Node 3e781b70-425d-451e-ba18-1199ccb723b5 (A1): 0.8 -> 0.71
+🔀 Updated weight for Node 5a16fa60-51d7-4ad9-a24e-9cb0c89af74c (A2): 0.75 -> 0.91
+🔀 Updated weight for Node dbad4932-e3f6-40f9-a0c2-f317612db049 (A3): 0.7 -> 0.86
+🔀 Updated weight for Node 28183f72-829c-42ea-9b41-ffb82de995e5 (B): 1.0 -> 0.79
+🔀 Updated weight for Node 4c6d0b4e-af41-444d-acaa-5e3f7e13c4d3 (B1): 0.85 -> 0.87
+🔀 Updated weight for Node 5b691397-1a85-4b2a-9349-27bcb9fdd06f (B2): 0.8 -> 0.94
+🔀 Updated weight for Node eb3a3fe9-25dd-477f-8620-4e41c05d6672 (B3): 0.78 -> 0.71
+🔀 Updated weight for Node add4aa85-cb51-4640-9e81-a94217a72088 (C): 1.0 -> 0.73
+🔀 Updated weight for Node c22ba0b3-5538-4c37-90f8-7ebeefca705e (C1): 0.9 -> 0.92
+🔀 Updated weight for Node 9a9304e3-9e69-4446-bf10-6fc1de386935 (C2): 0.85 -> 0.92
+🔀 Updated weight for Node b8cd78ba-f7f7-412e-85a4-36b47c4b7570 (C3): 0.8 -> 0.79
+
+--- Skip Factors Report ---
+Node A: skip_factor = 0.4444444444444444
+Node B: skip_factor = 1.0
+Node C: skip_factor = 1.0
+Node A skip_factor (dimension 2) = 0.4444444444444444
