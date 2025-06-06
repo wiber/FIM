@@ -57,6 +57,25 @@ class FIMDataHierarchy:
         self.total_nodes += 1
         return new_child
 
+    def print_hierarchy_sample(self, node=None, depth=0, max_depth=3, max_children=3):
+        """Prints a sample of the FIM tree to visualize the structure."""
+        if node is None:
+            node = self.root
+        
+        indent = "  " * depth
+        # For leaf nodes, show how many data points they hold
+        data_info = f" ({len(node.data_points)} items)" if node.data_points else ""
+        print(f"{indent}- {node.name}{data_info}")
+
+        if depth < max_depth:
+            # Sort children by name to ensure consistent output for the sample
+            sorted_children = sorted(node.children, key=lambda x: x.name)
+            for i, child in enumerate(sorted_children):
+                if i < max_children:
+                    self.print_hierarchy_sample(child, depth + 1, max_depth, max_children)
+            if len(sorted_children) > max_children:
+                print(f"{indent}  - ... and {len(sorted_children) - max_children} more ...")
+
     def search(self, query):
         """
         Searches the FIM hierarchy, skipping irrelevant branches.
@@ -161,8 +180,13 @@ def run_benchmark():
     fim_hierarchy = FIMDataHierarchy(materials_data)
     build_time = time.time() - start_time
     print(f"Hierarchy built in {build_time:.2f} seconds. Total nodes: {fim_hierarchy.total_nodes:,}\n")
+
+    print("--- FIM Hierarchy Structure (Sample) ---")
+    print("This shows the n-dimensional, shortlex-like ordering created by the build process.")
+    fim_hierarchy.print_hierarchy_sample()
+    print("-" * 40)
     
-    print("Running FIM Hierarchy Search...")
+    print("\nRunning FIM Hierarchy Search...")
     start_time = time.time()
     fim_matches, fim_accesses = fim_hierarchy.search(QUERY)
     fim_time = time.time() - start_time
